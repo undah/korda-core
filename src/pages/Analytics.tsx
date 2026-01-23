@@ -58,6 +58,40 @@ const hourlyActivity = Array.from({
   winRate: 40 + Math.floor(Math.random() * 40)
 }));
 
+// Daily P&L data for the past 30 days
+const dailyPnLData = [
+  { date: "Jan 1", pnl: 120 },
+  { date: "Jan 2", pnl: -45 },
+  { date: "Jan 3", pnl: 230 },
+  { date: "Jan 4", pnl: 85 },
+  { date: "Jan 5", pnl: -120 },
+  { date: "Jan 6", pnl: 0 },
+  { date: "Jan 7", pnl: 0 },
+  { date: "Jan 8", pnl: 175 },
+  { date: "Jan 9", pnl: -80 },
+  { date: "Jan 10", pnl: 320 },
+  { date: "Jan 11", pnl: 45 },
+  { date: "Jan 12", pnl: -200 },
+  { date: "Jan 13", pnl: 0 },
+  { date: "Jan 14", pnl: 0 },
+  { date: "Jan 15", pnl: 280 },
+  { date: "Jan 16", pnl: 150 },
+  { date: "Jan 17", pnl: -95 },
+  { date: "Jan 18", pnl: 420 },
+  { date: "Jan 19", pnl: -30 },
+  { date: "Jan 20", pnl: 0 },
+  { date: "Jan 21", pnl: 0 },
+  { date: "Jan 22", pnl: 185 },
+  { date: "Jan 23", pnl: -150 },
+  { date: "Jan 24", pnl: 290 },
+  { date: "Jan 25", pnl: 110 },
+  { date: "Jan 26", pnl: -75 },
+  { date: "Jan 27", pnl: 0 },
+  { date: "Jan 28", pnl: 0 },
+  { date: "Jan 29", pnl: 340 },
+  { date: "Jan 30", pnl: -60 },
+];
+
 // Drawdown data over time (percentage)
 const drawdownData = [{
   date: "Jan 1",
@@ -181,8 +215,45 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Drawdown Chart */}
-      
+      {/* Daily P&L Chart */}
+      <div className="glass-card p-6 animate-fade-in mb-6">
+        <h3 className="font-semibold mb-1">Daily P&L</h3>
+        <p className="text-sm text-muted-foreground mb-4">Profit and loss over the past 30 days</p>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dailyPnLData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 18%)" />
+              <XAxis 
+                dataKey="date" 
+                stroke="hsl(215 20% 55%)" 
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                stroke="hsl(215 20% 55%)" 
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v) => `$${v}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(222 47% 10%)",
+                  border: "1px solid hsl(222 30% 18%)",
+                  borderRadius: "8px",
+                }}
+                formatter={(value: number) => [`$${value.toLocaleString()}`, "P&L"]}
+              />
+              <Bar 
+                dataKey="pnl" 
+                radius={[4, 4, 0, 0]}
+                fill="hsl(173 80% 40%)"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Weekly P&L */}
