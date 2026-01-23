@@ -201,19 +201,6 @@ export default function Analytics() {
         <p className="text-muted-foreground">Deep dive into your trading performance</p>
       </div>
 
-      {/* Risk Metrics Section */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-warning" />
-          Risk Metrics
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <RiskStatCard title="Expected Value" value={`$${riskMetrics.expectedValue.toFixed(2)}`} subtitle="Per trade expectancy" icon={<Calculator className="w-5 h-5 text-primary" />} trend="positive" tooltip="Average profit expected per trade based on win rate and average win/loss" />
-          <RiskStatCard title="Average Drawdown" value={`${riskMetrics.avgDrawdown.toFixed(2)}%`} subtitle="Mean equity decline" icon={<TrendingDown className="w-5 h-5 text-warning" />} trend="neutral" tooltip="The average peak-to-trough decline in your equity curve" />
-          <RiskStatCard title="Max Drawdown" value={`${riskMetrics.maxDrawdown.toFixed(2)}%`} subtitle="Largest equity drop" icon={<TrendingDown className="w-5 h-5 text-destructive" />} trend="negative" tooltip="The maximum observed loss from a peak to a trough before a new peak" />
-          <RiskStatCard title="Risk of Ruin" value={`${riskMetrics.riskOfRuin.toFixed(1)}%`} subtitle="Probability of total loss" icon={<AlertTriangle className="w-5 h-5 text-destructive" />} trend={riskMetrics.riskOfRuin < 5 ? "positive" : "negative"} tooltip="Statistical probability of losing your entire trading capital" />
-        </div>
-      </div>
 
       {/* Daily P&L Chart */}
       <div className="glass-card p-6 animate-fade-in mb-6">
@@ -355,6 +342,20 @@ export default function Analytics() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* Risk Metrics Section */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-warning" />
+          Risk Metrics
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <RiskStatCard title="Expected Value" value={`$${riskMetrics.expectedValue.toFixed(2)}`} subtitle="Per trade expectancy" icon={<Calculator className="w-5 h-5 text-primary" />} trend="positive" tooltip="Average profit expected per trade based on win rate and average win/loss" />
+          <RiskStatCard title="Average Drawdown" value={`${riskMetrics.avgDrawdown.toFixed(2)}%`} subtitle="Mean equity decline" icon={<TrendingDown className="w-5 h-5 text-warning" />} trend="neutral" tooltip="The average peak-to-trough decline in your equity curve" />
+          <RiskStatCard title="Max Drawdown" value={`${riskMetrics.maxDrawdown.toFixed(2)}%`} subtitle="Largest equity drop" icon={<TrendingDown className="w-5 h-5 text-destructive" />} trend="negative" tooltip="The maximum observed loss from a peak to a trough before a new peak" />
+          <RiskStatCard title="Risk of Ruin" value={`${riskMetrics.riskOfRuin.toFixed(1)}%`} subtitle="Probability of total loss" icon={<AlertTriangle className="w-5 h-5 text-destructive" />} trend={riskMetrics.riskOfRuin < 5 ? "positive" : "negative"} tooltip="Statistical probability of losing your entire trading capital" />
         </div>
       </div>
     </MainLayout>;
