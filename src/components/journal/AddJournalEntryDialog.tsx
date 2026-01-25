@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
 
@@ -14,23 +14,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+type TradePrefill = {
+  id: string;
+  pair: string;
+  side: "buy" | "sell";
+  tradeTimeIso?: string | null;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
+
+  // ✅ NEW: when opened from a trade row
+  trade?: TradePrefill | null;
 };
 
 // ✅ MUST match your DB constraint
 const EMOTIONS = ["confident", "fearful", "neutral", "greedy"] as const;
 type Emotion = (typeof EMOTIONS)[number];
 
-export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) {
+function isoToDateTimeLocal(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const min = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: Props) {
   const { user } = useAuth();
 
   const [pair, setPair] = useState("");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [pnl, setPnl] = useState("");
-  const [emotion, setEmotion] = useState<Emotion>("neutral"); // ✅ default valid value
+  const [emotion, setEmotion] = useState<Emotion>("neutral");
   const [tagsText, setTagsText] = useState("");
   const [notes, setNotes] = useState("");
   const [entryTime, setEntryTime] = useState("");
@@ -40,6 +61,8 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
   const [chartFile, setChartFile] = useState<File | null>(null);
 
   const [loading, setLoading] = useState(false);
+
+  const openedFromTrade = !!trade?.id;
 
   const reset = () => {
     setPair("");
@@ -53,6 +76,19 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
     setChartFile(null);
   };
 
+  // ✅ Prefill when opened from trade row
+  useEffect(() => {
+    if (!open) return;
+
+    if (openedFromTrade && trade) {
+      setPair((trade.pair ?? "").toUpperCase());
+      setSide(trade.side ?? "buy");
+
+      const baseIso = trade.tradeTimeIso ?? new Date().toISOString();
+      setEntryTime(isoToDateTimeLocal(baseIso));
+    }
+  }, [open, openedFromTrade, trade?.id]);
+
   const uploadChartImage = async (): Promise<string | null> => {
     if (!chartFile || !user) return null;
 
@@ -60,7 +96,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("journal-charts")
+      .from("journal charts")
       .upload(path, chartFile, {
         cacheControl: "3600",
         upsert: false,
@@ -74,12 +110,13 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
     }
 
     // If bucket is public:
-    const { data } = supabase.storage.from("journal-charts").getPublicUrl(path);
+    const { data } = supabase.storage.from("journal charts").getPublicUrl(path);
     return data.publicUrl ?? null;
   };
 
   const handleCreate = async () => {
     if (!user) return;
+
     if (!pair.trim()) {
       alert("Pair is required");
       return;
@@ -95,25 +132,27 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
             .map((t) => t.trim())
             .filter(Boolean);
 
-    // Ensure entry_time always exists if DB is NOT NULL
-    const entryTimeIso = entryTime
-      ? new Date(entryTime).toISOString()
-      : new Date().toISOString();
+    const entryTimeIso = entryTime ? new Date(entryTime).toISOString() : new Date().toISOString();
 
     const tvImageUrl = await uploadChartImage();
 
-    const payload = {
+    const payload: any = {
       user_id: user.id,
       pair: pair.trim(),
       side,
       pnl: pnl === "" ? null : Number(pnl),
       notes: notes.trim() || null,
       tags,
-      emotion, // ✅ guaranteed valid by dropdown
+      emotion,
       entry_time: entryTimeIso,
       tv_url: tvUrl.trim() || null,
-      tv_image_url: tvImageUrl || null, // ✅ don't .trim() a null
+      tv_image_url: tvImageUrl || null,
     };
+
+    // ✅ link to trade if opened from trade row
+    if (openedFromTrade && trade?.id) {
+      payload.trade_id = trade.id;
+    }
 
     const { error } = await supabase.from("journal_entries").insert([payload]);
 
@@ -134,7 +173,9 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add journal entry</DialogTitle>
+          <DialogTitle>
+            {openedFromTrade ? "Add journal entry (linked to trade)" : "Add journal entry"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -142,8 +183,9 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
             <Label>Pair</Label>
             <Input
               value={pair}
-              onChange={(e) => setPair(e.target.value)}
+              onChange={(e) => setPair(e.target.value.toUpperCase())}
               placeholder="EUR/USD"
+              disabled={openedFromTrade}
             />
           </div>
 
@@ -154,6 +196,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
                 type="button"
                 variant={side === "buy" ? "default" : "outline"}
                 onClick={() => setSide("buy")}
+                disabled={openedFromTrade}
               >
                 Buy
               </Button>
@@ -161,6 +204,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
                 type="button"
                 variant={side === "sell" ? "default" : "outline"}
                 onClick={() => setSide("sell")}
+                disabled={openedFromTrade}
               >
                 Sell
               </Button>
@@ -170,14 +214,9 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>PnL</Label>
-              <Input
-                value={pnl}
-                onChange={(e) => setPnl(e.target.value)}
-                placeholder="420"
-              />
+              <Input value={pnl} onChange={(e) => setPnl(e.target.value)} placeholder="420" />
             </div>
 
-            {/* ✅ Emotion dropdown */}
             <div className="grid gap-2">
               <Label>Emotion</Label>
               <select
@@ -208,6 +247,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
               type="datetime-local"
               value={entryTime}
               onChange={(e) => setEntryTime(e.target.value)}
+              disabled={openedFromTrade}
             />
           </div>
 
@@ -227,11 +267,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
               accept="image/*"
               onChange={(e) => setChartFile(e.target.files?.[0] ?? null)}
             />
-            {chartFile && (
-              <p className="text-xs text-muted-foreground">
-                Selected: {chartFile.name}
-              </p>
-            )}
+            {chartFile && <p className="text-xs text-muted-foreground">Selected: {chartFile.name}</p>}
           </div>
 
           <div className="grid gap-2">
@@ -246,12 +282,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated }: Props) 
         </div>
 
         <DialogFooter className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-          >
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
           <Button type="button" onClick={handleCreate} disabled={loading}>
