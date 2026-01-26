@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 
 export type TradeForEdit = {
   id: string;
@@ -27,11 +28,10 @@ export type TradeForEdit = {
   pnl: number;
   duration?: string | null;
 
-  // ✅ NEW: backtest extras
+  // backtest extras
   notes?: string | null;
   chartUrl?: string | null;
 
-  // needed to apply your rule (live planned until edited)
   accountType: "live" | "backtest";
 };
 
@@ -40,6 +40,9 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   trade: TradeForEdit | null;
   onSaved?: () => void;
+
+  // called after a successful delete (so parent refreshes)
+  onDeleted: () => void;
 };
 
 function numOrZero(v: string) {
@@ -49,28 +52,46 @@ function numOrZero(v: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function EditTradeDialog({ open, onOpenChange, trade, onSaved }: Props) {
+function numOrNull(v: string) {
+  const t = v.trim();
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function EditTradeDialog({
+  open,
+  onOpenChange,
+  trade,
+  onSaved,
+  onDeleted,
+}: Props) {
   const [loading, setLoading] = useState(false);
 
   const [realizedPnl, setRealizedPnl] = useState("");
   const [duration, setDuration] = useState("");
 
-  // ✅ backtest extras local state
+  // ✅ NEW: allow editing Exit + R:R here
+  const [exit, setExit] = useState("");
+  const [riskReward, setRiskReward] = useState("");
+
+  // backtest extras local state
   const [notes, setNotes] = useState("");
   const [chartUrl, setChartUrl] = useState("");
 
   useEffect(() => {
     if (!trade) return;
 
-    // pnl is the realized pnl we’ll store
     setRealizedPnl(trade.pnl == null ? "" : String(trade.pnl));
+    setDuration(trade.duration ?? "");
 
-    // duration optional
-    setDuration(trade.duration == null ? "" : String(trade.duration));
+    // ✅ NEW prefill
+    setExit(trade.exit == null ? "" : String(trade.exit));
+    setRiskReward(trade.riskReward == null ? "" : String(trade.riskReward));
 
-    // ✅ extras
-    setNotes(trade.notes == null ? "" : String(trade.notes));
-    setChartUrl(trade.chartUrl == null ? "" : String(trade.chartUrl));
+    // extras
+    setNotes(trade.notes ?? "");
+    setChartUrl(trade.chartUrl ?? "");
   }, [trade?.id]);
 
   const handleSave = async () => {
@@ -78,31 +99,59 @@ export function EditTradeDialog({ open, onOpenChange, trade, onSaved }: Props) {
 
     setLoading(true);
     try {
-      // ✅ your rule:
-      // - Live trades are planned until edited => they start with pnl=0.
-      // - This dialog sets pnl/duration.
-      //
-      // Backtest can be edited too (including notes/chart).
       const payload: any = {
         pnl: numOrZero(realizedPnl),
-        duration: duration.trim() === "" ? null : duration.trim(),
+        duration: duration.trim() || null,
+
+        // ✅ NEW: update exit + risk_reward from this dialog
+        exit: numOrNull(exit),
+        risk_reward: numOrNull(riskReward),
       };
 
-      // ✅ Only allow notes/chart editing for BACKTEST (per your request)
+      // Only allow notes/chart editing for BACKTEST
       if (trade.accountType === "backtest") {
-        payload.notes = notes.trim() === "" ? null : notes.trim();
-        payload.chart_url = chartUrl.trim() === "" ? null : chartUrl.trim();
+        payload.notes = notes.trim() || null;
+        payload.chart_url = chartUrl.trim() || null;
       }
 
-      const { error } = await supabase.from("trades").update(payload).eq("id", trade.id);
+      const { error } = await supabase
+        .from("trades")
+        .update(payload)
+        .eq("id", trade.id);
 
       if (error) {
         console.error("Update trade error:", error);
+        alert(error.message);
         return;
       }
 
       onOpenChange(false);
       onSaved?.();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!trade) return;
+
+    const ok = window.confirm(
+      `Delete this trade plan for ${trade.pair}? This cannot be undone.`
+    );
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("trades").delete().eq("id", trade.id);
+
+      if (error) {
+        console.error("Delete trade error:", error);
+        alert(error.message);
+        return;
+      }
+
+      onOpenChange(false);
+      onDeleted();
     } finally {
       setLoading(false);
     }
@@ -151,6 +200,28 @@ export function EditTradeDialog({ open, onOpenChange, trade, onSaved }: Props) {
 
         {/* Results */}
         <div className="grid gap-4 mt-2">
+          {/* ✅ NEW: Exit + R:R inputs */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label>Exit</Label>
+              <Input
+                value={exit}
+                onChange={(e) => setExit(e.target.value)}
+                placeholder="2561"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>R:R</Label>
+              <Input
+                value={riskReward}
+                onChange={(e) => setRiskReward(e.target.value)}
+                placeholder="2.1"
+              />
+            </div>
+          </div>
+
+          {/* existing PnL + Duration row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>{isLive ? "Realized PnL" : "PnL"}</Label>
@@ -166,17 +237,20 @@ export function EditTradeDialog({ open, onOpenChange, trade, onSaved }: Props) {
               )}
             </div>
 
-            <div className="grid gap-2">
-              <Label>Duration</Label>
-              <Input
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                placeholder="15m / 1h / 2d"
-              />
-            </div>
+            <div className="grid gap-2 justify-end">
+  <Label>Duration</Label>
+  <Input
+    value={duration}
+    onChange={(e) => setDuration(e.target.value)}
+    placeholder="15m / 1h / 2d"
+  />
+  {/* spacer to visually align with PnL helper text */}
+  {isLive && <div className="h-[18px]" />}
+</div>
+
           </div>
 
-          {/* ✅ Backtest-only: notes + chart */}
+          {/* Backtest-only: notes + chart */}
           {isBacktest && (
             <>
               <div className="grid gap-2">
@@ -204,13 +278,31 @@ export function EditTradeDialog({ open, onOpenChange, trade, onSaved }: Props) {
           )}
         </div>
 
-        <DialogFooter className="mt-4">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+        <DialogFooter className="mt-4 flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
           </Button>
-          <Button type="button" onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Save"}
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSave} disabled={loading}>
+              {loading ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

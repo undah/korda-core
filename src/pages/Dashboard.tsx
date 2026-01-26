@@ -9,13 +9,21 @@ import { useTrades } from "@/hooks/useTrades";
 import { calcSummary } from "@/lib/tradeAnalytics";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { useProfileSettings } from "@/hooks/useProfileSettings";
+import { formatCurrency } from "@/lib/format";
+
 type AccountType = "live" | "backtest";
 
 export default function Dashboard() {
   const [accountType, setAccountType] = useState<AccountType>("live");
 
+  // ✅ load settings
+  const { settings, loading: settingsLoading } = useProfileSettings();
+
   // ✅ Only fetch the selected bucket (live OR backtest)
-  const { trades, loading } = useTrades({ accountType });
+  const { trades, loading: tradesLoading } = useTrades({ accountType });
+
+  const loading = tradesLoading || settingsLoading;
 
   const summary = useMemo(() => calcSummary(trades), [trades]);
 
@@ -53,7 +61,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title={`Total PnL (${modeLabel})`}
-          value={`$${summary.totalPnL.toFixed(2)}`}
+          value={formatCurrency(summary.totalPnL, settings.currency)}
           change={`${summary.wins}W / ${summary.losses}L`}
           changeType={summary.totalPnL >= 0 ? "positive" : "negative"}
           icon={DollarSign}

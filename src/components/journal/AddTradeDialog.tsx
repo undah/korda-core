@@ -65,7 +65,9 @@ export function AddTradeDialog({ open, onOpenChange, onCreated }: Props) {
 
   const handleCreate = async () => {
     if (!user) return;
-    if (!pair.trim()) return;
+
+    const cleanPair = pair.trim().toUpperCase(); // ✅ enforce uppercase on save
+    if (!cleanPair) return;
 
     setLoading(true);
 
@@ -75,7 +77,7 @@ export function AddTradeDialog({ open, onOpenChange, onCreated }: Props) {
       user_id: user.id,
       account_type: accountType,
       trade_time: new Date().toISOString(),
-      pair: pair.trim(),
+      pair: cleanPair, // ✅ saved uppercase
       side,
       entry: entry === "" ? null : Number(entry),
       exit: exit === "" ? null : Number(exit),
@@ -120,7 +122,11 @@ export function AddTradeDialog({ open, onOpenChange, onCreated }: Props) {
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label>Pair</Label>
-            <Input value={pair} onChange={(e) => setPair(e.target.value)} placeholder="EUR/USD" />
+            <Input
+              value={pair}
+              onChange={(e) => setPair(e.target.value.toUpperCase())} // ✅ uppercase while typing
+              placeholder="EUR/USD"
+            />
           </div>
 
           <div className="grid gap-2">
@@ -195,7 +201,11 @@ export function AddTradeDialog({ open, onOpenChange, onCreated }: Props) {
                 </div>
                 <div className="grid gap-2">
                   <Label>Duration</Label>
-                  <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="15m / 1h / 2d" />
+                  <Input
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    placeholder="15m / 1h / 2d"
+                  />
                 </div>
               </div>
 

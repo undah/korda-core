@@ -12,6 +12,10 @@ import {
   BookOpen,
   ExternalLink,
   NotebookPen,
+  Plus,
+  Filter,
+  Calendar,
+  ArrowUpDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +24,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { AddTradeDialog } from "@/components/journal/AddTradeDialog";
 import { AddJournalEntryDialog } from "@/components/journal/AddJournalEntryDialog";
-import { Plus } from "lucide-react";
+import { EditTradeDialog } from "@/components/journal/EditTradeDialog"; // ✅ USE REAL FILE
 
 import {
   Dialog,
@@ -29,8 +33,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 interface Trade {
   id: string;
@@ -174,6 +176,40 @@ function getTradeStatus(trade: Trade): "planned" | "completed" {
   return Number(trade.pnl ?? 0) !== 0 ? "completed" : "planned";
 }
 
+/** ---------- filtering helpers ---------- */
+function safeDateMs(iso: string | null | undefined) {
+  if (!iso) return NaN;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : NaN;
+}
+
+function dateRangeToMs(from?: string, to?: string) {
+  const fromMs = from ? new Date(`${from}T00:00:00`).getTime() : null;
+  const toMs = to ? new Date(`${to}T23:59:59.999`).getTime() : null;
+  return { fromMs, toMs };
+}
+
+type SortMode =
+  | "new_old"
+  | "old_new"
+  | "az"
+  | "za"
+  | "pnl_high_low"
+  | "pnl_low_high"
+  | "rr_high_low"
+  | "rr_low_high";
+
+const SORT_LABELS: Record<SortMode, string> = {
+  new_old: "New → Old",
+  old_new: "Old → New",
+  az: "A → Z",
+  za: "Z → A",
+  pnl_high_low: "PnL High → Low",
+  pnl_low_high: "PnL Low → High",
+  rr_high_low: "R:R High → Low",
+  rr_low_high: "R:R Low → High",
+};
+
 /** ---------- Notes Dialog ---------- */
 function NotesDialog({
   open,
@@ -238,7 +274,7 @@ function LinkedJournalDialog({
   entries: LinkedJournalEntry[];
   onOpenEntry: (entryId: string) => void;
 
-  // ✅ NEW: add button inside modal
+  // add button inside modal
   onAddJournalForTrade: (t: Trade) => void;
 }) {
   return (
@@ -255,7 +291,9 @@ function LinkedJournalDialog({
         ) : loading ? (
           <div className="text-sm text-muted-foreground">Loading entries…</div>
         ) : entries.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No journal entries linked to this trade.</div>
+          <div className="text-sm text-muted-foreground">
+            No journal entries linked to this trade.
+          </div>
         ) : (
           <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
             {entries.map((e) => (
@@ -280,13 +318,12 @@ function LinkedJournalDialog({
                             e.pnl >= 0 ? "text-success" : "text-destructive"
                           )}
                         >
-                          {e.pnl >= 0 ? "+" : ""}{e.pnl}
+                          {e.pnl >= 0 ? "+" : ""}
+                          {e.pnl}
                         </span>
                       )}
                       {e.emotion && (
-                        <span className="text-xs text-muted-foreground">
-                          • {e.emotion}
-                        </span>
+                        <span className="text-xs text-muted-foreground">• {e.emotion}</span>
                       )}
                     </div>
 
@@ -295,9 +332,7 @@ function LinkedJournalDialog({
                         {e.notes.trim()}
                       </div>
                     ) : (
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        No notes.
-                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">No notes.</div>
                     )}
 
                     {(e.tv_url || e.tv_image_url) && (
@@ -315,9 +350,7 @@ function LinkedJournalDialog({
                           </a>
                         )}
                         {e.tv_image_url && !e.tv_url && (
-                          <span className="text-muted-foreground">
-                            Chart image attached
-                          </span>
+                          <span className="text-muted-foreground">Chart image attached</span>
                         )}
                       </div>
                     )}
@@ -339,147 +372,23 @@ function LinkedJournalDialog({
           </div>
         )}
 
-       <DialogFooter className="mt-4 flex items-center justify-between gap-2">
-  {trade ? (
-    <Button
-      type="button"
-      variant="glow"
-      onClick={() => onAddJournalForTrade(trade)}
-      className="flex items-center gap-2"
-    >
-      <NotebookPen className="w-4 h-4" />
-      {entries.length === 0 ? "Create first entry" : "Link journal entry"}
-    </Button>
-  ) : (
-    <div />
-  )}
+        <DialogFooter className="mt-4 flex items-center justify-between gap-2">
+          {trade ? (
+            <Button
+              type="button"
+              variant="glow"
+              onClick={() => onAddJournalForTrade(trade)}
+              className="flex items-center gap-2"
+            >
+              <NotebookPen className="w-4 h-4" />
+              {entries.length === 0 ? "Create first entry" : "Link journal entry"}
+            </Button>
+          ) : (
+            <div />
+          )}
 
-  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-    Close
-  </Button>
-</DialogFooter>
-
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** ---------- Edit Dialog ---------- */
-function EditTradeDialog({
-  open,
-  onOpenChange,
-  trade,
-  onSaved,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  trade: Trade | null;
-  onSaved: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  const [entry, setEntry] = useState("");
-  const [exit, setExit] = useState("");
-  const [pnl, setPnl] = useState("");
-  const [riskReward, setRiskReward] = useState("");
-  const [duration, setDuration] = useState("");
-  const [strategy, setStrategy] = useState("");
-
-  useEffect(() => {
-    if (!trade) return;
-    setEntry(trade.entry ? String(trade.entry) : "");
-    setExit(trade.exit ? String(trade.exit) : "");
-    setPnl(trade.pnl !== undefined && trade.pnl !== null ? String(trade.pnl) : "");
-    setRiskReward(trade.riskReward ? String(trade.riskReward) : "");
-    setDuration(trade.duration ?? "");
-    setStrategy(trade.strategy ?? "");
-  }, [trade?.id]);
-
-  const handleSave = async () => {
-    if (!trade) return;
-
-    setLoading(true);
-    try {
-      const payload: any = {
-        entry: entry === "" ? null : Number(entry),
-        exit: exit === "" ? null : Number(exit),
-        pnl: pnl === "" ? 0 : Number(pnl),
-        risk_reward: riskReward === "" ? null : Number(riskReward),
-        duration: duration.trim() || null,
-        strategy: strategy.trim() || null,
-      };
-
-      const { error } = await supabase.from("trades").update(payload).eq("id", trade.id);
-
-      if (error) {
-        console.error("Update trade error:", error);
-        alert(error.message);
-        return;
-      }
-
-      onOpenChange(false);
-      onSaved();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit trade</DialogTitle>
-        </DialogHeader>
-
-        {!trade ? (
-          <div className="text-sm text-muted-foreground">No trade selected.</div>
-        ) : (
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Entry</Label>
-                <Input value={entry} onChange={(e) => setEntry(e.target.value)} placeholder="1.0850" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Exit</Label>
-                <Input value={exit} onChange={(e) => setExit(e.target.value)} placeholder="1.0892" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Actual PnL</Label>
-                <Input value={pnl} onChange={(e) => setPnl(e.target.value)} placeholder="0" />
-                <p className="text-xs text-muted-foreground">
-                  Tip: Keep PnL at <span className="font-medium">0</span> to remain{" "}
-                  <span className="font-medium">Planned</span>.
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label>R:R</Label>
-                <Input value={riskReward} onChange={(e) => setRiskReward(e.target.value)} placeholder="2.1" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Duration</Label>
-                <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="15m / 1h / 2d" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Strategy</Label>
-                <Input value={strategy} onChange={(e) => setStrategy(e.target.value)} placeholder="FVG / Breakout" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="mt-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={loading || !trade}>
-            {loading ? "Saving..." : "Save"}
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -600,7 +509,12 @@ function TradeRow({
 
         <div className="text-right shrink-0 flex items-center gap-3">
           <div>
-            <p className={cn("font-mono font-medium", trade.pnl >= 0 ? "text-success" : "text-destructive")}>
+            <p
+              className={cn(
+                "font-mono font-medium",
+                trade.pnl >= 0 ? "text-success" : "text-destructive"
+              )}
+            >
               {status === "planned" ? "—" : `${trade.pnl >= 0 ? "+" : ""}$${trade.pnl}`}
             </p>
             <p className="text-sm text-muted-foreground">{trade.date}</p>
@@ -611,7 +525,11 @@ function TradeRow({
             variant="outline"
             size="icon"
             onClick={() => onViewLinkedJournals(trade)}
-            title={journalCount > 0 ? `View journal entries (${journalCount})` : "View journal entries"}
+            title={
+              journalCount > 0
+                ? `View journal entries (${journalCount})`
+                : "View journal entries"
+            }
           >
             <BookOpen className="w-4 h-4" />
           </Button>
@@ -644,9 +562,6 @@ export function TradesSection({
   const [backtestTrades, setBacktestTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const liveStats = useMemo(() => calculateStats(liveTrades), [liveTrades]);
-  const backtestStats = useMemo(() => calculateStats(backtestTrades), [backtestTrades]);
-
   const [addOpen, setAddOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -656,23 +571,60 @@ export function TradesSection({
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesTrade, setNotesTrade] = useState<Trade | null>(null);
 
-  // ✅ journal dialog state
+  // add journal dialog state
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalTrade, setJournalTrade] = useState<Trade | null>(null);
 
-  // ✅ linked journal entries state
+  // linked journal entries state
   const [linkedOpen, setLinkedOpen] = useState(false);
   const [linkedTrade, setLinkedTrade] = useState<Trade | null>(null);
   const [linkedLoading, setLinkedLoading] = useState(false);
   const [linkedEntries, setLinkedEntries] = useState<LinkedJournalEntry[]>([]);
 
-  // ✅ counts map: trade_id -> count
+  // counts map: trade_id -> count
   const [journalCounts, setJournalCounts] = useState<Record<string, number>>({});
 
-  // ✅ highlight after focusing from journal
+  // highlight after focusing from journal
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
-  const allTrades = useMemo(() => [...liveTrades, ...backtestTrades], [liveTrades, backtestTrades]);
+  /** ---------- NEW: filter/sort/date-range state ---------- */
+  const [sortMode, setSortMode] = useState<SortMode>("new_old");
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
+
+  const [filterSide, setFilterSide] = useState<"all" | "buy" | "sell">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "planned" | "completed">("all");
+  const [filterPair, setFilterPair] = useState<string>("");
+  const [filterStrategy, setFilterStrategy] = useState<string>("");
+
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (filterSide !== "all") n++;
+    if (filterStatus !== "all") n++;
+    if (filterPair.trim()) n++;
+    if (filterStrategy.trim()) n++;
+    if (dateFrom) n++;
+    if (dateTo) n++;
+    return n;
+  }, [filterSide, filterStatus, filterPair, filterStrategy, dateFrom, dateTo]);
+
+  const clearFilters = () => {
+    setFilterSide("all");
+    setFilterStatus("all");
+    setFilterPair("");
+    setFilterStrategy("");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  const allTrades = useMemo(
+    () => [...liveTrades, ...backtestTrades],
+    [liveTrades, backtestTrades]
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -757,10 +709,8 @@ export function TradesSection({
     const t = allTrades.find((x) => x.id === focusTradeId);
     if (!t) return;
 
-    // switch internal tab for best UX
     setActiveTab(t.accountType === "backtest" ? "backtest" : "live");
 
-    // scroll after the tab content has rendered
     const id = focusTradeId;
     setTimeout(() => {
       const el = document.getElementById(`trade-row-${id}`);
@@ -830,6 +780,79 @@ export function TradesSection({
     }
   };
 
+  /** ---------- NEW: apply filters + sorting ---------- */
+  const filterAndSort = (trades: Trade[]) => {
+    const pairQ = filterPair.trim().toLowerCase();
+    const stratQ = filterStrategy.trim().toLowerCase();
+    const { fromMs, toMs } = dateRangeToMs(dateFrom || undefined, dateTo || undefined);
+
+    const filtered = trades.filter((t) => {
+      if (filterSide !== "all" && t.side !== filterSide) return false;
+
+      const status = getTradeStatus(t);
+      if (filterStatus !== "all" && status !== filterStatus) return false;
+
+      if (pairQ && !(t.pair ?? "").toLowerCase().includes(pairQ)) return false;
+      if (stratQ && !(t.strategy ?? "").toLowerCase().includes(stratQ)) return false;
+
+      if (fromMs !== null || toMs !== null) {
+        const ms = safeDateMs(t.tradeTimeIso ?? null);
+        if (!Number.isFinite(ms)) return false;
+        if (fromMs !== null && ms < fromMs) return false;
+        if (toMs !== null && ms > toMs) return false;
+      }
+
+      return true;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortMode === "new_old") {
+        const ta = safeDateMs(a.tradeTimeIso ?? null);
+        const tb = safeDateMs(b.tradeTimeIso ?? null);
+        return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+      }
+      if (sortMode === "old_new") {
+        const ta = safeDateMs(a.tradeTimeIso ?? null);
+        const tb = safeDateMs(b.tradeTimeIso ?? null);
+        return (Number.isFinite(ta) ? ta : 0) - (Number.isFinite(tb) ? tb : 0);
+      }
+      if (sortMode === "az") return (a.pair ?? "").localeCompare(b.pair ?? "", undefined, { sensitivity: "base" });
+      if (sortMode === "za") return (b.pair ?? "").localeCompare(a.pair ?? "", undefined, { sensitivity: "base" });
+      if (sortMode === "pnl_high_low") return (b.pnl ?? 0) - (a.pnl ?? 0);
+      if (sortMode === "pnl_low_high") return (a.pnl ?? 0) - (b.pnl ?? 0);
+      if (sortMode === "rr_high_low") return (b.riskReward ?? 0) - (a.riskReward ?? 0);
+      if (sortMode === "rr_low_high") return (a.riskReward ?? 0) - (b.riskReward ?? 0);
+      return 0;
+    });
+
+    return sorted;
+  };
+
+  const visibleLiveTrades = useMemo(() => filterAndSort(liveTrades), [
+    liveTrades,
+    sortMode,
+    filterSide,
+    filterStatus,
+    filterPair,
+    filterStrategy,
+    dateFrom,
+    dateTo,
+  ]);
+
+  const visibleBacktestTrades = useMemo(() => filterAndSort(backtestTrades), [
+    backtestTrades,
+    sortMode,
+    filterSide,
+    filterStatus,
+    filterPair,
+    filterStrategy,
+    dateFrom,
+    dateTo,
+  ]);
+
+  const liveStats = useMemo(() => calculateStats(visibleLiveTrades), [visibleLiveTrades]);
+  const backtestStats = useMemo(() => calculateStats(visibleBacktestTrades), [visibleBacktestTrades]);
+
   return (
     <div className="space-y-6">
       {loading && <div className="text-sm text-muted-foreground">Loading trades…</div>}
@@ -848,6 +871,172 @@ export function TradesSection({
           Add Trade Plan
         </Button>
       </div>
+
+      {/* ✅ NEW: controls row (sort + filter + date range) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="h-10 rounded-md border border-border bg-secondary px-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            {Object.entries(SORT_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="default"
+            className="flex items-center gap-2"
+            onClick={() => {
+              setFilterOpen((v) => !v);
+              setDateRangeOpen(false);
+            }}
+          >
+            <Filter className="w-4 h-4" />
+            Filter
+            {activeFilterCount > 0 && (
+              <span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="default"
+            className="flex items-center gap-2"
+            onClick={() => {
+              setDateRangeOpen((v) => !v);
+              setFilterOpen(false);
+            }}
+          >
+            <Calendar className="w-4 h-4" />
+            Date Range
+          </Button>
+        </div>
+      </div>
+
+      {filterOpen && (
+        <div className="glass-card p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Side</p>
+              <select
+                value={filterSide}
+                onChange={(e) => setFilterSide(e.target.value as any)}
+                className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+              >
+                <option value="all">All</option>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Status</p>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+              >
+                <option value="all">All</option>
+                <option value="planned">Planned</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Pair contains</p>
+              <input
+                value={filterPair}
+                onChange={(e) => setFilterPair(e.target.value)}
+                placeholder="e.g. XAUUSD"
+                className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Strategy contains</p>
+              <input
+                value={filterStrategy}
+                onChange={(e) => setFilterStrategy(e.target.value)}
+                placeholder="e.g. fvg"
+                className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-xs text-muted-foreground">
+              Showing{" "}
+              <span className="font-medium">
+                {visibleLiveTrades.length + visibleBacktestTrades.length}
+              </span>{" "}
+              trades
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={clearFilters}>
+                Clear filters
+              </Button>
+              <Button variant="outline" onClick={() => setFilterOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dateRangeOpen && (
+        <div className="glass-card p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">From (YYYY-MM-DD)</p>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">To (YYYY-MM-DD)</p>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+              >
+                Clear
+              </Button>
+              <Button variant="outline" onClick={() => setDateRangeOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-3">
+            Date filter is inclusive (From 00:00 → To 23:59).
+          </p>
+        </div>
+      )}
 
       <AddTradeDialog
         open={addOpen}
@@ -871,11 +1060,30 @@ export function TradesSection({
         }
       />
 
+      {/* ✅ NOW THIS USES YOUR REAL EditTradeDialog.tsx FILE */}
       <EditTradeDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        trade={editingTrade}
+        trade={
+          editingTrade
+            ? {
+                id: editingTrade.id,
+                pair: editingTrade.pair,
+                side: editingTrade.side,
+                strategy: editingTrade.strategy ?? "",
+                entry: editingTrade.entry ?? 0,
+                exit: editingTrade.exit ?? 0,
+                riskReward: editingTrade.riskReward ?? 0,
+                pnl: editingTrade.pnl ?? 0,
+                duration: editingTrade.duration ?? null,
+                notes: editingTrade.notes ?? null,
+                chartUrl: editingTrade.chartUrl ?? null,
+                accountType: editingTrade.accountType,
+              }
+            : null
+        }
         onSaved={() => setRefreshKey((k) => k + 1)}
+        onDeleted={() => setRefreshKey((k) => k + 1)}
       />
 
       <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} trade={notesTrade} />
@@ -891,7 +1099,6 @@ export function TradesSection({
           onOpenJournalEntry?.(entryId);
         }}
         onAddJournalForTrade={(t) => {
-          // ✅ open add journal dialog from inside modal
           setLinkedOpen(false);
           openJournal(t);
         }}
@@ -928,10 +1135,10 @@ export function TradesSection({
               <div className="p-4 border-b border-border flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-success" />
                 <h4 className="font-semibold">Live Trades</h4>
-                <Badge className="ml-auto">{liveTrades.length}</Badge>
+                <Badge className="ml-auto">{visibleLiveTrades.length}</Badge>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
-                {liveTrades.map((trade) => (
+                {visibleLiveTrades.map((trade) => (
                   <TradeRow
                     key={trade.id}
                     trade={trade}
@@ -950,11 +1157,11 @@ export function TradesSection({
                 <TestTube className="w-4 h-4 text-primary" />
                 <h4 className="font-semibold">Backtest Trades</h4>
                 <Badge variant="secondary" className="ml-auto">
-                  {backtestTrades.length}
+                  {visibleBacktestTrades.length}
                 </Badge>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
-                {backtestTrades.map((trade) => (
+                {visibleBacktestTrades.map((trade) => (
                   <TradeRow
                     key={trade.id}
                     trade={trade}
@@ -972,10 +1179,11 @@ export function TradesSection({
 
         <TabsContent value="live" className="animate-fade-in">
           <div className="glass-card overflow-hidden">
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border flex items-center justify-between">
               <h4 className="font-semibold">All Live Trades</h4>
+              <Badge>{visibleLiveTrades.length}</Badge>
             </div>
-            {liveTrades.map((trade) => (
+            {visibleLiveTrades.map((trade) => (
               <TradeRow
                 key={trade.id}
                 trade={trade}
@@ -991,10 +1199,11 @@ export function TradesSection({
 
         <TabsContent value="backtest" className="animate-fade-in">
           <div className="glass-card overflow-hidden">
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border flex items-center justify-between">
               <h4 className="font-semibold">All Backtest Trades</h4>
+              <Badge variant="secondary">{visibleBacktestTrades.length}</Badge>
             </div>
-            {backtestTrades.map((trade) => (
+            {visibleBacktestTrades.map((trade) => (
               <TradeRow
                 key={trade.id}
                 trade={trade}

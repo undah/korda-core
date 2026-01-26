@@ -20,14 +20,18 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type AccountView = "combined" | "live" | "backtest";
+import { useProfileSettings } from "@/hooks/useProfileSettings";
+import { formatCurrency } from "@/lib/format";
+
+// ✅ only live/backtest
+type AccountView = "live" | "backtest";
 
 type TradeRow = {
   id: string;
   user_id?: string;
   pair: string | null;
-  pnl: number | null;
-  pnl_percent: number | null;
+  pnl: number | string | null;
+  pnl_percent: number | string | null;
   account_type: "live" | "backtest" | null;
   trade_time: string | null;
   created_at: string | null;
@@ -37,8 +41,6 @@ type DailyPoint = { date: string; pnl: number };
 type WeeklyPoint = { day: string; pnl: number };
 type PairPoint = { name: string; value: number; pnl: number };
 type HourPoint = { hour: string; winRate: number };
-
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function safeNum(v: any, fallback = 0) {
   const n = Number(v);
@@ -62,7 +64,6 @@ function addDays(d: Date, days: number) {
 }
 
 function sameDayKey(d: Date) {
-  // yyyy-mm-dd local
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -70,25 +71,29 @@ function sameDayKey(d: Date) {
 }
 
 function labelForDay(d: Date) {
-  // "Jan 5"
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function getWeekStartMonday(now = new Date()) {
   const d = startOfDay(now);
-  // JS: Sun=0..Sat=6, we want Monday start
   const day = d.getDay();
-  const diff = (day + 6) % 7; // Mon=0, Sun=6
+  const diff = (day + 6) % 7;
   return addDays(d, -diff);
 }
 
-function calcEquityAndDrawdown(trades: TradeRow[]) {
-  // use pnl_percent if available; build an equity curve starting at 100
-  // equity *= (1 + pnl_percent/100)
-  const sorted = [...trades]
-    .map((t) => ({ t, iso: isoFromTrade(t) }))
-    .filter((x) => !!x.iso)
-    .sort((a, b) => Date.parse(a.iso!) - Date.parse(b.iso!));
+// ✅ closed = has pnl OR pnl_percent (planned trades usually have both null)
+function isClosedTrade(t: TradeRow) {
+  const hasPnl = t.pnl !== null && t.pnl !== undefined && Number.isFinite(Number(t.pnl));
+  const hasPct =
+    t.pnl_percent !== null &&
+    t.pnl_percent !== undefined &&
+    Number.isFinite(Number(t.pnl_percent));
+
+  return hasPnl || hasPct;
+}
+
+function calcEquityAndDrawdown(trades: (TradeRow & { _iso: string })[]) {
+  const sorted = [...trades].sort((a, b) => Date.parse(a._iso) - Date.parse(b._iso));
 
   let equity = 100;
   let peak = 100;
@@ -98,37 +103,30 @@ function calcEquityAndDrawdown(trades: TradeRow[]) {
 
   const curve: { date: string; equity: number; drawdown: number }[] = [];
 
-  for (const { t, iso } of sorted) {
-    const pct = t.pnl_percent;
-    const pnlAbs = t.pnl;
+  for (const t of sorted) {
+    const pct = safeNum(t.pnl_percent, NaN);
+    const pnlAbs = safeNum(t.pnl, NaN);
 
-    // prefer percent if present; else approximate using abs pnl against equity (rough)
-    if (pct !== null && pct !== undefined && Number.isFinite(Number(pct))) {
-      equity = equity * (1 + Number(pct) / 100);
-    } else if (pnlAbs !== null && pnlAbs !== undefined && Number.isFinite(Number(pnlAbs))) {
-      // rough fallback: treat pnl as "points" on 100 base
-      equity = equity + Number(pnlAbs) / 100;
-    }
+    if (Number.isFinite(pct)) equity = equity * (1 + pct / 100);
+    else if (Number.isFinite(pnlAbs)) equity = equity + pnlAbs / 100;
 
     if (equity > peak) peak = equity;
-    const dd = peak > 0 ? ((equity - peak) / peak) * 100 : 0; // negative %
+    const dd = peak > 0 ? ((equity - peak) / peak) * 100 : 0; // negative
     maxDd = Math.min(maxDd, dd);
 
     ddSum += Math.abs(dd);
     ddCount += 1;
 
     curve.push({
-      date: new Date(iso!).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      date: new Date(t._iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
       equity,
-      drawdown: dd, // negative
+      drawdown: dd,
     });
   }
 
-  const avgDd = ddCount ? ddSum / ddCount : 0;
-
   return {
     curve,
-    avgDrawdownPct: avgDd,
+    avgDrawdownPct: ddCount ? ddSum / ddCount : 0,
     maxDrawdownPct: Math.abs(maxDd),
   };
 }
@@ -190,9 +188,19 @@ function RiskStatCard({
 
 export default function Analytics() {
   const { user } = useAuth();
-  const [view, setView] = useState<AccountView>("combined");
+
+  // ✅ default to live (no combined)
+  const [view, setView] = useState<AccountView>("live");
+
   const [rows, setRows] = useState<TradeRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { settings, loadingSettings } = useProfileSettings();
+  const currency = (String(settings?.currency || "USD").toUpperCase() === "EUR" ? "EUR" : "USD") as
+    | "USD"
+    | "EUR";
+  const locale = settings?.locale || "en-US";
+  const money = (v: number) => formatCurrency(v, currency, locale);
 
   useEffect(() => {
     if (!user) return;
@@ -219,15 +227,13 @@ export default function Analytics() {
   }, [user]);
 
   const trades = useMemo(() => {
-    const filtered = rows.filter((t) => {
-      if (view === "combined") return true;
-      return (t.account_type ?? "live") === view;
-    });
+    // ✅ only show the selected bucket
+    const filteredByView = rows.filter((t) => (t.account_type ?? "live") === view);
 
-    // ignore trades without any timestamp
-    return filtered
+    return filteredByView
       .map((t) => ({ ...t, _iso: isoFromTrade(t) }))
-      .filter((t: any) => !!t._iso) as (TradeRow & { _iso: string })[];
+      .filter((t: any) => !!t._iso)
+      .filter((t: any) => isClosedTrade(t as TradeRow)) as (TradeRow & { _iso: string })[];
   }, [rows, view]);
 
   const dailyPnLData: DailyPoint[] = useMemo(() => {
@@ -235,41 +241,30 @@ export default function Analytics() {
     const end = startOfDay(now);
     const start = addDays(end, -29);
 
-    // init all 30 days = 0
     const map = new Map<string, number>();
-    for (let i = 0; i < 30; i++) {
-      const d = addDays(start, i);
-      map.set(sameDayKey(d), 0);
-    }
+    for (let i = 0; i < 30; i++) map.set(sameDayKey(addDays(start, i)), 0);
 
     for (const t of trades) {
-      const dt = new Date(t._iso);
-      const key = sameDayKey(dt);
+      const key = sameDayKey(new Date(t._iso));
       if (!map.has(key)) continue;
       map.set(key, (map.get(key) ?? 0) + safeNum(t.pnl, 0));
     }
 
-    const out: DailyPoint[] = [];
-    for (let i = 0; i < 30; i++) {
+    return Array.from({ length: 30 }, (_, i) => {
       const d = addDays(start, i);
-      const key = sameDayKey(d);
-      out.push({ date: labelForDay(d), pnl: map.get(key) ?? 0 });
-    }
-    return out;
+      return { date: labelForDay(d), pnl: map.get(sameDayKey(d)) ?? 0 };
+    });
   }, [trades]);
 
   const weeklyPnL: WeeklyPoint[] = useMemo(() => {
-    const start = getWeekStartMonday(new Date()); // monday
-    const map = new Map<number, number>(); // 0..6 (Mon..Sun)
+    const start = getWeekStartMonday(new Date());
+    const map = new Map<number, number>();
     for (let i = 0; i < 7; i++) map.set(i, 0);
 
     for (const t of trades) {
       const d = new Date(t._iso);
-      const day = d.getDay(); // Sun 0
-      // convert to Mon=0..Sun=6
-      const idx = (day + 6) % 7;
-      const weekStart = getWeekStartMonday(d);
-      if (weekStart.getTime() !== start.getTime()) continue;
+      const idx = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+      if (getWeekStartMonday(d).getTime() !== start.getTime()) continue;
       map.set(idx, (map.get(idx) ?? 0) + safeNum(t.pnl, 0));
     }
 
@@ -302,7 +297,6 @@ export default function Analytics() {
   }, [trades]);
 
   const pairPerformance = useMemo<PairPoint[]>(() => {
-    // P&L total per pair, and "value" is share of total abs pnl for bar length
     const map = new Map<string, { pnl: number; abs: number }>();
 
     for (const t of trades) {
@@ -328,13 +322,11 @@ export default function Analytics() {
   }, [trades]);
 
   const hourlyActivity = useMemo<HourPoint[]>(() => {
-    // winRate per hour (based on pnl>0 trades)
     const wins = new Array(24).fill(0);
     const total = new Array(24).fill(0);
 
     for (const t of trades) {
-      const d = new Date(t._iso);
-      const h = d.getHours();
+      const h = new Date(t._iso).getHours();
       total[h] += 1;
       if (safeNum(t.pnl, 0) > 0) wins[h] += 1;
     }
@@ -347,6 +339,7 @@ export default function Analytics() {
 
   const riskMetrics = useMemo(() => {
     const total = trades.length;
+
     const winsArr = trades.filter((t) => safeNum(t.pnl, 0) > 0).map((t) => safeNum(t.pnl, 0));
     const lossArr = trades.filter((t) => safeNum(t.pnl, 0) < 0).map((t) => safeNum(t.pnl, 0));
 
@@ -367,12 +360,10 @@ export default function Analytics() {
 
     const dd = calcEquityAndDrawdown(trades);
 
-    // Risk of Ruin (rough heuristic, not perfect):
-    // If edge <= 0 => high risk, else low-ish. This is just a signal card.
     let riskOfRuin = 25;
     if (expectedValue > 0 && avgLoss > 0) {
-      const edge = expectedValue / avgLoss; // 0..?
-      riskOfRuin = Math.max(0.5, 12 / Math.max(0.2, edge * 10)); // lower with better edge
+      const edge = expectedValue / avgLoss;
+      riskOfRuin = Math.max(0.5, 12 / Math.max(0.2, edge * 10));
     }
 
     return {
@@ -389,8 +380,15 @@ export default function Analytics() {
     };
   }, [trades]);
 
-  const viewLabel =
-    view === "combined" ? "Combined" : view === "live" ? "Live" : "Backtest";
+  const viewLabel = view === "live" ? "Live" : "Backtest";
+
+  if (loading || loadingSettings) {
+    return (
+      <MainLayout>
+        <div className="glass-card p-6 text-sm text-muted-foreground mb-6">Loading analytics…</div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -402,24 +400,18 @@ export default function Analytics() {
           </p>
         </div>
 
+        {/* ✅ only 2 tabs */}
         <Tabs value={view} onValueChange={(v) => setView(v as AccountView)}>
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="combined">Combined</TabsTrigger>
+          <TabsList className="grid grid-cols-2">
             <TabsTrigger value="live">Live</TabsTrigger>
             <TabsTrigger value="backtest">Backtest</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {loading && (
+      {trades.length === 0 && (
         <div className="glass-card p-6 text-sm text-muted-foreground mb-6">
-          Loading analytics…
-        </div>
-      )}
-
-      {!loading && trades.length === 0 && (
-        <div className="glass-card p-6 text-sm text-muted-foreground mb-6">
-          No trades found for this view.
+          No closed trades found for this view.
         </div>
       )}
 
@@ -433,14 +425,14 @@ export default function Analytics() {
             <BarChart data={dailyPnLData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 18%)" />
               <XAxis dataKey="date" stroke="hsl(215 20% 55%)" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="hsl(215 20% 55%)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+              <YAxis stroke="hsl(215 20% 55%)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => money(Number(v))} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(222 47% 10%)",
                   border: "1px solid hsl(222 30% 18%)",
                   borderRadius: "8px",
                 }}
-                formatter={(value: number) => [`$${value.toLocaleString()}`, "P&L"]}
+                formatter={(value: number) => [money(Number(value)), "P&L"]}
               />
               <Bar dataKey="pnl" radius={[4, 4, 0, 0]} fill="hsl(173 80% 40%)" />
             </BarChart>
@@ -458,14 +450,14 @@ export default function Analytics() {
               <BarChart data={weeklyPnL}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 18%)" />
                 <XAxis dataKey="day" stroke="hsl(215 20% 55%)" fontSize={12} />
-                <YAxis stroke="hsl(215 20% 55%)" fontSize={12} tickFormatter={(v) => `$${v}`} />
+                <YAxis stroke="hsl(215 20% 55%)" fontSize={12} tickFormatter={(v) => money(Number(v))} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(222 47% 10%)",
                     border: "1px solid hsl(222 30% 18%)",
                     borderRadius: "8px",
                   }}
-                  formatter={(value: number) => [`$${value}`, "P&L"]}
+                  formatter={(value: number) => [money(Number(value)), "P&L"]}
                 />
                 <Bar dataKey="pnl" radius={[4, 4, 0, 0]} fill="hsl(173 80% 40%)" />
               </BarChart>
@@ -486,13 +478,6 @@ export default function Analytics() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(222 47% 10%)",
-                    border: "1px solid hsl(222 30% 18%)",
-                    borderRadius: "8px",
-                  }}
-                />
               </PieChart>
             </ResponsiveContainer>
 
@@ -539,8 +524,9 @@ export default function Analytics() {
                     />
                   </div>
                 </div>
-                <div className={`font-mono text-sm w-24 text-right ${pair.pnl >= 0 ? "text-success" : "text-destructive"}`}>
-                  {pair.pnl >= 0 ? "+" : ""}${Math.round(pair.pnl)}
+                <div className={`font-mono text-sm w-28 text-right ${pair.pnl >= 0 ? "text-success" : "text-destructive"}`}>
+                  {pair.pnl >= 0 ? "+" : ""}
+                  {money(Math.round(pair.pnl))}
                 </div>
               </div>
             ))}
@@ -557,14 +543,14 @@ export default function Analytics() {
               <LineChart data={hourlyActivity.slice(6, 22)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 18%)" />
                 <XAxis dataKey="hour" stroke="hsl(215 20% 55%)" fontSize={10} />
-                <YAxis stroke="hsl(215 20% 55%)" fontSize={12} tickFormatter={(v) => `${v.toFixed(0)}%`} />
+                <YAxis stroke="hsl(215 20% 55%)" fontSize={12} tickFormatter={(v) => `${Number(v).toFixed(0)}%`} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(222 47% 10%)",
                     border: "1px solid hsl(222 30% 18%)",
                     borderRadius: "8px",
                   }}
-                  formatter={(value: number) => [`${value.toFixed(1)}%`, "Win rate"]}
+                  formatter={(value: number) => [`${Number(value).toFixed(1)}%`, "Win rate"]}
                 />
                 <Line type="monotone" dataKey="winRate" stroke="hsl(173 80% 40%)" strokeWidth={2} dot={false} />
               </LineChart>
@@ -583,7 +569,7 @@ export default function Analytics() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <RiskStatCard
             title="Expected Value"
-            value={`$${riskMetrics.expectedValue.toFixed(2)}`}
+            value={money(riskMetrics.expectedValue)}
             subtitle="Per trade expectancy"
             icon={<Calculator className="w-5 h-5 text-primary" />}
             trend={riskMetrics.expectedValue >= 0 ? "positive" : "negative"}
@@ -614,7 +600,7 @@ export default function Analytics() {
             subtitle="Heuristic estimate"
             icon={<AlertTriangle className="w-5 h-5 text-destructive" />}
             trend={riskMetrics.riskOfRuin < 5 ? "positive" : "negative"}
-            tooltip="This is a rough signal based on edge; we can make it accurate if you track risk per trade + starting balance."
+            tooltip="Rough signal based on edge; becomes accurate if you track risk per trade + starting balance."
           />
         </div>
       </div>

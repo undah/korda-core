@@ -91,7 +91,7 @@ const SORT_LABELS: Record<SortMode, string> = {
 export default function Journal() {
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("journal");
+  const [activeTab, setActiveTab] = useState("trades");
 
   // ✅ trade focus when clicking "Go to trade"
   const [focusTradeId, setFocusTradeId] = useState<string | null>(null);
@@ -147,6 +147,13 @@ export default function Journal() {
 
   const stickySentinelRef = useRef<HTMLDivElement | null>(null);
   const [showFloatingPreview, setShowFloatingPreview] = useState(false);
+
+  // ✅ NEW: ensure the floating preview never shows on the Trades tab
+  useEffect(() => {
+    if (activeTab !== "journal") {
+      setShowFloatingPreview(false);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const el = stickySentinelRef.current;
@@ -567,6 +574,7 @@ export default function Journal() {
   };
 
   const goToTrade = (tradeId: string) => {
+    setShowFloatingPreview(false); // ✅ hides popup immediately when jumping to Trades
     setActiveTab("trades");
     setFocusTradeId(tradeId);
   };
@@ -604,7 +612,8 @@ export default function Journal() {
         </div>
       )}
 
-      {showFloatingPreview && selectedEntry && !isEditing && (
+      {/* ✅ CHANGED: popup only renders while on Journal Entries tab */}
+      {activeTab === "journal" && showFloatingPreview && selectedEntry && !isEditing && (
         <div className="fixed right-6 bottom-6 z-[55] w-[760px] max-w-[calc(100vw-3rem)]">
           <div className="glass-card p-4 border border-border shadow-lg">
             <div className="flex items-start justify-between gap-4 mb-3">
@@ -1123,7 +1132,7 @@ export default function Journal() {
 
                   {/* ...YOUR EXISTING CONTENT CONTINUES... */}
 
-                  {/* NOTE: Everything below is unchanged from your version — kept for stability */}
+                  {/* NOTE: Everything below is unchanged from your pasted file — kept for stability */}
                   {/* Editing image section, fields, tags, notes, edit/save/delete buttons, etc. */}
                   {/* (I’m leaving it as-is from your pasted file) */}
 
