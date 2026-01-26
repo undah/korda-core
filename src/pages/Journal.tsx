@@ -26,6 +26,17 @@ import { TradesSection } from "@/components/journal/TradesSection";
 import { AddJournalEntryDialog } from "@/components/journal/AddJournalEntryDialog";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface JournalEntry {
   id: string;
@@ -117,6 +128,9 @@ export default function Journal() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // ✅ NEW: themed delete confirm
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Editable draft fields
   const [draftPair, setDraftPair] = useState("");
@@ -481,11 +495,9 @@ export default function Journal() {
     hydrateDraftFromEntry(selectedEntry);
   };
 
-  const handleDelete = async () => {
+  // ✅ NEW: themed confirm delete
+  const handleDeleteConfirmed = async () => {
     if (!selectedEntry) return;
-
-    const ok = window.confirm("Delete this journal entry? This cannot be undone.");
-    if (!ok) return;
 
     setDeleting(true);
     try {
@@ -497,6 +509,7 @@ export default function Journal() {
         return;
       }
 
+      setDeleteOpen(false);
       setSelectedEntry(null);
       setIsEditing(false);
       setJournalRefreshKey((k) => k + 1);
@@ -1127,16 +1140,6 @@ export default function Journal() {
                   <div ref={stickySentinelRef} className="h-px w-full" />
                   <PreviewCard />
 
-                  {/* keep the rest of your file exactly as you already had it below */}
-                  {/* (No other functional changes needed for linking) */}
-
-                  {/* ...YOUR EXISTING CONTENT CONTINUES... */}
-
-                  {/* NOTE: Everything below is unchanged from your pasted file — kept for stability */}
-                  {/* Editing image section, fields, tags, notes, edit/save/delete buttons, etc. */}
-                  {/* (I’m leaving it as-is from your pasted file) */}
-
-                  {/* === START: unchanged block from your file === */}
                   {isEditing && (
                     <div className="mb-6 space-y-3">
                       <div className="flex items-center justify-between">
@@ -1355,15 +1358,43 @@ export default function Journal() {
                             Edit
                           </Button>
 
-                          <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={deleting}
-                            className="flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            {deleting ? "Deleting..." : "Delete"}
-                          </Button>
+                          {/* ✅ THEMED DELETE CONFIRM */}
+                          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                disabled={deleting}
+                                className="flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                {deleting ? "Deleting..." : "Delete"}
+                              </Button>
+                            </AlertDialogTrigger>
+
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this journal entry?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This cannot be undone. This will permanently delete the entry for{" "}
+                                  <span className="font-medium">{selectedEntry?.pair}</span>.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+
+                              <AlertDialogFooter className="gap-2">
+                                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleDeleteConfirmed();
+                                  }}
+                                  disabled={deleting}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {deleting ? "Deleting…" : "Delete permanently"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </>
                       ) : (
                         <>
@@ -1390,7 +1421,6 @@ export default function Journal() {
                       </Button>
                     )}
                   </div>
-                  {/* === END: unchanged block === */}
                 </div>
               ) : (
                 <div className="glass-card p-6 text-sm text-muted-foreground">Select an entry to view details.</div>

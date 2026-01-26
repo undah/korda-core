@@ -17,17 +17,15 @@ type AccountType = "live" | "backtest";
 export default function Dashboard() {
   const [accountType, setAccountType] = useState<AccountType>("live");
 
-  // ✅ load settings
-  const { settings, loading: settingsLoading } = useProfileSettings();
+  // ✅ fetch user settings from profiles
+  const { settings, loadingSettings } = useProfileSettings();
 
   // ✅ Only fetch the selected bucket (live OR backtest)
-  const { trades, loading: tradesLoading } = useTrades({ accountType });
-
-  const loading = tradesLoading || settingsLoading;
+  const { trades, loading } = useTrades({ accountType });
 
   const summary = useMemo(() => calcSummary(trades), [trades]);
 
-  if (loading) {
+  if (loading || loadingSettings) {
     return (
       <MainLayout>
         <div className="p-6 text-muted-foreground">Loading dashboard…</div>
@@ -37,18 +35,31 @@ export default function Dashboard() {
 
   const modeLabel = accountType === "live" ? "Live" : "Backtest";
 
+  // ✅ Display name (fallbacks in case your settings object uses a different key)
+  const displayNameRaw =
+    (settings as any)?.display_name ??
+    (settings as any)?.displayName ??
+    (settings as any)?.name ??
+    "";
+
+  const displayName = String(displayNameRaw || "").trim();
+  const greeting = displayName ? `Hey ${displayName}, welcome back` : "Welcome back";
+
   return (
     <MainLayout>
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+          {/* ✅ Personalized greeting */}
+          <h1 className="text-3xl font-bold mb-2">{greeting}</h1>
+
+          {/* Keep “Dashboard” as context, but smaller */}
           <p className="text-muted-foreground">
-            Track your trading performance and insights ({modeLabel})
+            Dashboard • Track your trading performance and insights ({modeLabel})
           </p>
         </div>
 
-        {/* ✅ Toggle */}
+        {/* Toggle */}
         <Tabs value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
           <TabsList>
             <TabsTrigger value="live">Live</TabsTrigger>
@@ -61,7 +72,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title={`Total PnL (${modeLabel})`}
-          value={formatCurrency(summary.totalPnL, settings.currency)}
+          value={formatCurrency(summary.totalPnL, settings.currency, settings.locale)}
           change={`${summary.wins}W / ${summary.losses}L`}
           changeType={summary.totalPnL >= 0 ? "positive" : "negative"}
           icon={DollarSign}
@@ -77,7 +88,7 @@ export default function Dashboard() {
 
         <StatCard
           title={`Profit Factor (${modeLabel})`}
-          value={summary.profitFactor.toFixed(2)}
+          value={Number.isFinite(summary.profitFactor) ? summary.profitFactor.toFixed(2) : "—"}
           change="Based on closed trades"
           changeType={summary.profitFactor >= 1.5 ? "positive" : "neutral"}
           icon={TrendingUp}
@@ -96,7 +107,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <PerformanceChart trades={trades} />
-          <RecentTrades trades={trades.slice(0, 5)} />
+          {/* ✅ pass settings so values match currency + pnl format */}
+          <RecentTrades trades={trades.slice(0, 5)} settings={settings} />
         </div>
 
         <div className="space-y-6">

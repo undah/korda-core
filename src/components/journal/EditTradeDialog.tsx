@@ -7,11 +7,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent as AlertDialogContentUI,
+  AlertDialogDescription,
+  AlertDialogFooter as AlertDialogFooterUI,
+  AlertDialogHeader as AlertDialogHeaderUI,
+  AlertDialogTitle as AlertDialogTitleUI,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 
 export type TradeForEdit = {
   id: string;
@@ -71,7 +82,7 @@ export function EditTradeDialog({
   const [realizedPnl, setRealizedPnl] = useState("");
   const [duration, setDuration] = useState("");
 
-  // ✅ NEW: allow editing Exit + R:R here
+  // ✅ allow editing Exit + R:R here
   const [exit, setExit] = useState("");
   const [riskReward, setRiskReward] = useState("");
 
@@ -79,17 +90,18 @@ export function EditTradeDialog({
   const [notes, setNotes] = useState("");
   const [chartUrl, setChartUrl] = useState("");
 
+  // ✅ custom confirm modal state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   useEffect(() => {
     if (!trade) return;
 
     setRealizedPnl(trade.pnl == null ? "" : String(trade.pnl));
     setDuration(trade.duration ?? "");
 
-    // ✅ NEW prefill
     setExit(trade.exit == null ? "" : String(trade.exit));
     setRiskReward(trade.riskReward == null ? "" : String(trade.riskReward));
 
-    // extras
     setNotes(trade.notes ?? "");
     setChartUrl(trade.chartUrl ?? "");
   }, [trade?.id]);
@@ -102,8 +114,6 @@ export function EditTradeDialog({
       const payload: any = {
         pnl: numOrZero(realizedPnl),
         duration: duration.trim() || null,
-
-        // ✅ NEW: update exit + risk_reward from this dialog
         exit: numOrNull(exit),
         risk_reward: numOrNull(riskReward),
       };
@@ -114,10 +124,7 @@ export function EditTradeDialog({
         payload.chart_url = chartUrl.trim() || null;
       }
 
-      const { error } = await supabase
-        .from("trades")
-        .update(payload)
-        .eq("id", trade.id);
+      const { error } = await supabase.from("trades").update(payload).eq("id", trade.id);
 
       if (error) {
         console.error("Update trade error:", error);
@@ -132,13 +139,8 @@ export function EditTradeDialog({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteConfirmed = async () => {
     if (!trade) return;
-
-    const ok = window.confirm(
-      `Delete this trade plan for ${trade.pair}? This cannot be undone.`
-    );
-    if (!ok) return;
 
     setLoading(true);
     try {
@@ -150,6 +152,7 @@ export function EditTradeDialog({
         return;
       }
 
+      setDeleteOpen(false);
       onOpenChange(false);
       onDeleted();
     } finally {
@@ -161,6 +164,7 @@ export function EditTradeDialog({
 
   const isLive = trade.accountType === "live";
   const isBacktest = trade.accountType === "backtest";
+  const isPlanned = Number(trade.pnl ?? 0) === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,15 +204,11 @@ export function EditTradeDialog({
 
         {/* Results */}
         <div className="grid gap-4 mt-2">
-          {/* ✅ NEW: Exit + R:R inputs */}
+          {/* Exit + R:R inputs */}
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>Exit</Label>
-              <Input
-                value={exit}
-                onChange={(e) => setExit(e.target.value)}
-                placeholder="2561"
-              />
+              <Input value={exit} onChange={(e) => setExit(e.target.value)} placeholder="2561" />
             </div>
 
             <div className="grid gap-2">
@@ -221,7 +221,7 @@ export function EditTradeDialog({
             </div>
           </div>
 
-          {/* existing PnL + Duration row */}
+          {/* PnL + Duration */}
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>{isLive ? "Realized PnL" : "PnL"}</Label>
@@ -238,16 +238,14 @@ export function EditTradeDialog({
             </div>
 
             <div className="grid gap-2 justify-end">
-  <Label>Duration</Label>
-  <Input
-    value={duration}
-    onChange={(e) => setDuration(e.target.value)}
-    placeholder="15m / 1h / 2d"
-  />
-  {/* spacer to visually align with PnL helper text */}
-  {isLive && <div className="h-[18px]" />}
-</div>
-
+              <Label>Duration</Label>
+              <Input
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="15m / 1h / 2d"
+              />
+              {isLive && <div className="h-[18px]" />}
+            </div>
           </div>
 
           {/* Backtest-only: notes + chart */}
@@ -279,16 +277,53 @@ export function EditTradeDialog({
         </div>
 
         <DialogFooter className="mt-4 flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </Button>
+          {/* ✅ Custom confirm dialog (matches your UI) */}
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={loading}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContentUI>
+              <AlertDialogHeaderUI>
+                <AlertDialogTitleUI>
+                  Delete {isPlanned ? "trade plan" : "trade"} for {trade.pair}?
+                </AlertDialogTitleUI>
+                <AlertDialogDescription>
+                  This cannot be undone. This will permanently remove this {isPlanned ? "plan" : "trade"}
+                  and any linked data will no longer reference it.
+                </AlertDialogDescription>
+              </AlertDialogHeaderUI>
+
+              <AlertDialogFooterUI className="gap-2">
+                <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDeleteConfirmed();
+                  }}
+                  disabled={loading}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Deleting…
+                    </span>
+                  ) : (
+                    "Delete permanently"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooterUI>
+            </AlertDialogContentUI>
+          </AlertDialog>
 
           <div className="flex items-center gap-2">
             <Button
