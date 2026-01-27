@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
 
@@ -45,6 +45,30 @@ function isoToDateTimeLocal(iso: string) {
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
 
+function toSafeTagArray(tagsText: string): string[] | null {
+  const tags =
+    tagsText.trim().length === 0
+      ? null
+      : tagsText
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+
+  return tags && tags.length ? tags : null;
+}
+
+function uniqByName(files: File[]) {
+  const seen = new Set<string>();
+  const out: File[] = [];
+  for (const f of files) {
+    const key = `${f.name}_${f.size}_${f.lastModified}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(f);
+  }
+  return out;
+}
+
 export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: Props) {
   const { user } = useAuth();
 
@@ -57,8 +81,8 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
   const [entryTime, setEntryTime] = useState("");
   const [tvUrl, setTvUrl] = useState("");
 
-  // chart image upload
-  const [chartFile, setChartFile] = useState<File | null>(null);
+  // ✅ up to 3 chart images
+  const [chartFiles, setChartFiles] = useState<File[]>([]);
 
   const [loading, setLoading] = useState(false);
 
@@ -73,7 +97,7 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
     setNotes("");
     setEntryTime("");
     setTvUrl("");
-    setChartFile(null);
+    setChartFiles([]);
   };
 
   // ✅ Prefill when opened from trade row
@@ -89,29 +113,63 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
     }
   }, [open, openedFromTrade, trade?.id]);
 
-  const uploadChartImage = async (): Promise<string | null> => {
-    if (!chartFile || !user) return null;
+  // If dialog closes without saving, reset local state
+  useEffect(() => {
+    if (!open) return;
+    return () => {
+      // no-op (keeps state while open)
+    };
+  }, [open]);
 
-    const ext = chartFile.name.split(".").pop()?.toLowerCase() || "png";
-    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+  const remainingImages = useMemo(() => Math.max(0, 3 - chartFiles.length), [chartFiles.length]);
 
-    const { error: uploadError } = await supabase.storage
-      .from("journal charts")
-      .upload(path, chartFile, {
+  const handleFilesPicked = (files: FileList | null) => {
+    if (!files) return;
+
+    const picked = Array.from(files).filter((f) => f.type?.startsWith("image/"));
+    if (!picked.length) return;
+
+    const merged = uniqByName([...chartFiles, ...picked]).slice(0, 3);
+    setChartFiles(merged);
+  };
+
+  const removeFileAt = (idx: number) => {
+    setChartFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const uploadChartImages = async (): Promise<string[] | null> => {
+    if (!user) return null;
+    if (!chartFiles.length) return null;
+
+    const bucket = "journal charts";
+
+    const uploads = chartFiles.map(async (file) => {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, {
         cacheControl: "3600",
         upsert: false,
-        contentType: chartFile.type || undefined,
+        contentType: file.type || undefined,
       });
 
-    if (uploadError) {
-      console.error("Upload chart image error:", uploadError);
-      alert(uploadError.message);
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+      return data.publicUrl ?? null;
+    });
+
+    try {
+      const urls = await Promise.all(uploads);
+      const clean = urls.filter(Boolean) as string[];
+      return clean.length ? clean : null;
+    } catch (err: any) {
+      console.error("Upload chart images error:", err);
+      alert(err?.message ?? "Failed to upload images");
       return null;
     }
-
-    // If bucket is public:
-    const { data } = supabase.storage.from("journal charts").getPublicUrl(path);
-    return data.publicUrl ?? null;
   };
 
   const handleCreate = async () => {
@@ -122,20 +180,22 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
       return;
     }
 
+    if (chartFiles.length > 3) {
+      alert("Max 3 images");
+      return;
+    }
+
     setLoading(true);
 
-    const tags =
-      tagsText.trim().length === 0
-        ? null
-        : tagsText
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean);
-
+    const tags = toSafeTagArray(tagsText);
     const entryTimeIso = entryTime ? new Date(entryTime).toISOString() : new Date().toISOString();
 
-    const tvImageUrl = await uploadChartImage();
+    // ✅ Upload up to 3 images
+    const tvImageUrls = await uploadChartImages();
 
+    // Backward compat:
+    // - tv_image_url stays as "first image" for existing UI that expects single image
+    // - tv_image_urls is the new array you can use later (recommended)
     const payload: any = {
       user_id: user.id,
       pair: pair.trim(),
@@ -146,7 +206,12 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
       emotion,
       entry_time: entryTimeIso,
       tv_url: tvUrl.trim() || null,
-      tv_image_url: tvImageUrl || null,
+
+      // ✅ NEW
+      tv_image_urls: tvImageUrls || null,
+
+      // ✅ legacy single-image field
+      tv_image_url: (tvImageUrls && tvImageUrls.length ? tvImageUrls[0] : null) || null,
     };
 
     // ✅ link to trade if opened from trade row
@@ -170,7 +235,13 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) reset();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -261,13 +332,50 @@ export function AddJournalEntryDialog({ open, onOpenChange, onCreated, trade }: 
           </div>
 
           <div className="grid gap-2">
-            <Label>Chart image (optional)</Label>
+            <Label>Chart images (optional, up to 3)</Label>
             <Input
               type="file"
               accept="image/*"
-              onChange={(e) => setChartFile(e.target.files?.[0] ?? null)}
+              multiple
+              onChange={(e) => handleFilesPicked(e.target.files)}
+              disabled={chartFiles.length >= 3}
             />
-            {chartFile && <p className="text-xs text-muted-foreground">Selected: {chartFile.name}</p>}
+
+            <div className="text-xs text-muted-foreground">
+              {chartFiles.length === 0 ? "No images selected." : `${chartFiles.length} selected.`}
+              {remainingImages > 0 ? ` You can add ${remainingImages} more.` : " Max reached."}
+            </div>
+
+            {chartFiles.length > 0 && (
+              <div className="space-y-2">
+                {chartFiles.map((f, idx) => (
+                  <div
+                    key={`${f.name}_${f.size}_${f.lastModified}`}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-background/40 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm">{f.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {(f.size / 1024).toFixed(0)} KB
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => removeFileAt(idx)}
+                      disabled={loading}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">
+              Tip: hold <span className="font-medium">Ctrl/⌘</span> to pick multiple files at once.
+            </div>
           </div>
 
           <div className="grid gap-2">

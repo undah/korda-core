@@ -20,6 +20,8 @@ import {
   X,
   ArrowUpDown,
   CornerUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TradesSection } from "@/components/journal/TradesSection";
@@ -48,7 +50,12 @@ interface JournalEntry {
   tags: string[];
   emotion: "confident" | "fearful" | "neutral" | "greedy";
   tv_url?: string | null;
+
+  // legacy single image
   tv_image_url?: string | null;
+
+  // ✅ NEW: multiple images
+  tv_image_urls?: string[] | null;
 
   // ✅ link to trade
   trade_id?: string | null;
@@ -99,6 +106,14 @@ const SORT_LABELS: Record<SortMode, string> = {
   pnl_low_high: "PnL Low → High",
 };
 
+function getEntryImages(e: JournalEntry | null | undefined): string[] {
+  if (!e) return [];
+  const arr = Array.isArray(e.tv_image_urls) ? e.tv_image_urls.filter(Boolean) : [];
+  if (arr.length) return arr;
+  if (e.tv_image_url) return [e.tv_image_url];
+  return [];
+}
+
 export default function Journal() {
   const { user } = useAuth();
 
@@ -123,6 +138,7 @@ export default function Journal() {
 
   // Fullscreen image viewer
   const [imageOpen, setImageOpen] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Edit mode
   const [isEditing, setIsEditing] = useState(false);
@@ -277,6 +293,9 @@ export default function Journal() {
     ? new Date(selectedEntry.entry_time).toLocaleDateString()
     : "";
 
+  const selectedImages = useMemo(() => getEntryImages(selectedEntry), [selectedEntry]);
+  const activeFullscreenUrl = selectedImages[activeImageIndex] ?? null;
+
   const isDirty = useMemo(() => {
     if (!selectedEntry) return false;
 
@@ -354,6 +373,9 @@ export default function Journal() {
     setNewChartFile(null);
     if (newChartPreviewUrl) URL.revokeObjectURL(newChartPreviewUrl);
     setNewChartPreviewUrl(null);
+
+    // reset gallery
+    setActiveImageIndex(0);
   };
 
   useEffect(() => {
@@ -387,6 +409,7 @@ export default function Journal() {
         emotion: (EMOTIONS.includes(r.emotion) ? r.emotion : "neutral") as JournalEntry["emotion"],
         tv_url: r.tv_url ?? null,
         tv_image_url: r.tv_image_url ?? null,
+        tv_image_urls: Array.isArray(r.tv_image_urls) ? r.tv_image_urls : null,
         trade_id: r.trade_id ?? null,
       }));
 
@@ -518,45 +541,76 @@ export default function Journal() {
     }
   };
 
+  const openFullscreenAt = (idx: number) => {
+    setActiveImageIndex(idx);
+    setImageOpen(true);
+  };
+
+  const nextFullscreen = () => {
+    if (!selectedImages.length) return;
+    setActiveImageIndex((i) => (i + 1) % selectedImages.length);
+  };
+
+  const prevFullscreen = () => {
+    if (!selectedImages.length) return;
+    setActiveImageIndex((i) => (i - 1 + selectedImages.length) % selectedImages.length);
+  };
+
+  // keyboard: esc close, arrows nav
+  useEffect(() => {
+    if (!imageOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setImageOpen(false);
+      if (e.key === "ArrowRight") nextFullscreen();
+      if (e.key === "ArrowLeft") prevFullscreen();
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageOpen, selectedImages.length]);
+
   const PreviewCard = ({ className }: { className?: string }) => {
-    if (!selectedEntry?.tv_image_url || isEditing) return null;
+    const images = getEntryImages(selectedEntry);
+    if (!images.length || isEditing) return null;
 
     return (
       <div className={cn("mb-6", className)}>
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="font-semibold truncate">{selectedEntry.pair}</div>
+              <div className="font-semibold truncate">{selectedEntry?.pair}</div>
 
               <div
                 className={cn(
                   "font-mono font-semibold",
-                  selectedEntry.pnl >= 0 ? "text-success" : "text-destructive"
+                  (selectedEntry?.pnl ?? 0) >= 0 ? "text-success" : "text-destructive"
                 )}
               >
-                {selectedEntry.pnl >= 0 ? "+" : "-"}${Math.abs(selectedEntry.pnl)}
+                {(selectedEntry?.pnl ?? 0) >= 0 ? "+" : "-"}${Math.abs(selectedEntry?.pnl ?? 0)}
               </div>
 
               <span className="text-xs px-2 py-1 rounded-full border border-border uppercase">
-                {selectedEntry.side}
+                {selectedEntry?.side}
               </span>
 
               <span
                 className={cn(
                   "text-xs px-2 py-1 rounded-full capitalize",
-                  emotionColors[selectedEntry.emotion]
+                  selectedEntry ? emotionColors[selectedEntry.emotion] : ""
                 )}
               >
-                {selectedEntry.emotion}
+                {selectedEntry?.emotion}
               </span>
             </div>
 
             <div className="text-xs text-muted-foreground mt-1">
-              {selectedEntry.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : ""}
+              {selectedEntry?.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : ""}
             </div>
           </div>
 
-          {selectedEntry.tv_url && (
+          {selectedEntry?.tv_url && (
             <a
               href={selectedEntry.tv_url}
               target="_blank"
@@ -569,19 +623,46 @@ export default function Journal() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setImageOpen(true)}
-          className="block overflow-hidden rounded-xl border border-border hover:border-primary/40 transition-colors w-full"
-          title="Open full screen"
-        >
-          <img
-            src={selectedEntry.tv_image_url}
-            alt="TradingView chart"
-            className="w-full max-h-[520px] object-contain bg-black/20"
-            loading="lazy"
-          />
-        </button>
+        {/* Main image + thumbnails */}
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => openFullscreenAt(activeImageIndex)}
+            className="block overflow-hidden rounded-xl border border-border hover:border-primary/40 transition-colors w-full"
+            title="Open full screen"
+          >
+            <img
+              src={images[activeImageIndex] ?? images[0]}
+              alt="TradingView chart"
+              className="w-full max-h-[520px] object-contain bg-black/20"
+              loading="lazy"
+            />
+          </button>
+
+          {images.length > 1 && (
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-muted-foreground mr-2">
+                {activeImageIndex + 1}/{images.length}
+              </div>
+              <div className="flex gap-2 overflow-x-auto pr-1">
+                {images.map((url, idx) => (
+                  <button
+                    key={`${url}_${idx}`}
+                    type="button"
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={cn(
+                      "shrink-0 overflow-hidden rounded-lg border transition-colors",
+                      idx === activeImageIndex ? "border-primary/60" : "border-border hover:border-primary/40"
+                    )}
+                    title={`View image ${idx + 1}`}
+                  >
+                    <img src={url} alt={`Chart ${idx + 1}`} className="h-16 w-28 object-cover bg-black/20" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -590,6 +671,52 @@ export default function Journal() {
     setShowFloatingPreview(false); // ✅ hides popup immediately when jumping to Trades
     setActiveTab("trades");
     setFocusTradeId(tradeId);
+  };
+
+  const EntryThumbGrid = ({
+    images,
+    onOpen,
+    className,
+  }: {
+    images: string[];
+    onOpen: (idx: number) => void;
+    className?: string;
+  }) => {
+    if (!images.length) return null;
+
+    // 1: single wide thumb
+    if (images.length === 1) {
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(0);
+          }}
+          className={cn(
+            "block w-full mt-3 overflow-hidden rounded-lg border border-border hover:border-primary/40 transition-colors",
+            className
+          )}
+          title="Open full screen"
+        >
+          <img src={images[0]} alt="TradingView chart" className="w-full h-28 object-cover bg-black/20" loading="lazy" />
+        </button>
+      );
+    }
+
+    // 2-3: compact grid
+   // single-image preview (first image only)
+return (
+  <div className={cn("mt-3 overflow-hidden rounded-lg border border-border", className)}>
+    <img
+      src={images[0]}
+      alt="Chart preview"
+      className="h-28 w-full object-cover bg-black/20"
+      loading="lazy"
+    />
+  </div>
+);
+
   };
 
   return (
@@ -601,12 +728,31 @@ export default function Journal() {
         </div>
       </div>
 
-      {imageOpen && selectedEntry?.tv_image_url && (
+      {/* Fullscreen viewer (supports multi images) */}
+      {imageOpen && activeFullscreenUrl && (
         <div
           className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setImageOpen(false)}
         >
           <div className="relative max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute -top-12 left-0 flex items-center gap-2">
+              {selectedImages.length > 1 && (
+                <>
+                  <Button type="button" variant="outline" onClick={prevFullscreen}>
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Prev
+                  </Button>
+                  <Button type="button" variant="outline" onClick={nextFullscreen}>
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                  <div className="ml-2 text-xs text-muted-foreground">
+                    {activeImageIndex + 1}/{selectedImages.length}
+                  </div>
+                </>
+              )}
+            </div>
+
             <Button
               type="button"
               variant="outline"
@@ -616,10 +762,11 @@ export default function Journal() {
               <X className="w-4 h-4 mr-2" />
               Close
             </Button>
+
             <img
-              src={selectedEntry.tv_image_url}
+              src={activeFullscreenUrl}
               alt="TradingView chart full screen"
-              className="w-full max-h-[85vh] object-contain rounded-xl border border-border"
+              className="w-full max-h-[85vh] object-contain rounded-xl border border-border bg-black/20"
             />
           </div>
         </div>
@@ -699,15 +846,15 @@ export default function Journal() {
               </div>
             </div>
 
-            {selectedEntry.tv_image_url ? (
+            {getEntryImages(selectedEntry).length ? (
               <button
                 type="button"
-                onClick={() => setImageOpen(true)}
+                onClick={() => openFullscreenAt(activeImageIndex)}
                 className="block w-full overflow-hidden rounded-xl border border-border hover:border-primary/40 transition-colors"
                 title="Open full screen"
               >
                 <img
-                  src={selectedEntry.tv_image_url}
+                  src={getEntryImages(selectedEntry)[activeImageIndex] ?? getEntryImages(selectedEntry)[0]}
                   alt="TradingView chart"
                   className="w-full max-h-[520px] object-contain bg-black/20"
                   loading="lazy"
@@ -942,112 +1089,105 @@ export default function Journal() {
               {visibleEntries.length === 0 ? (
                 <div className="text-sm text-muted-foreground">No journal entries found.</div>
               ) : (
-                visibleEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    onClick={() => selectEntry(entry)}
-                    className={cn(
-                      "glass-card p-4 cursor-pointer transition-all hover:border-primary/30",
-                      selectedEntry?.id === entry.id && "border-primary/50 bg-primary/5"
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div
+                visibleEntries.map((entry) => {
+                  const imgs = getEntryImages(entry);
+                  return (
+                    <div
+                      key={entry.id}
+                      onClick={() => selectEntry(entry)}
+                      className={cn(
+                        "glass-card p-4 cursor-pointer transition-all hover:border-primary/30",
+                        selectedEntry?.id === entry.id && "border-primary/50 bg-primary/5"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center",
+                              entry.side === "buy" ? "bg-success/10" : "bg-destructive/10"
+                            )}
+                          >
+                            {entry.side === "buy" ? (
+                              <ArrowUpRight className="w-4 h-4 text-success" />
+                            ) : (
+                              <ArrowDownRight className="w-4 h-4 text-destructive" />
+                            )}
+                          </div>
+                          <span className="font-medium">{entry.pair}</span>
+                        </div>
+
+                        <span
                           className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center",
-                            entry.side === "buy" ? "bg-success/10" : "bg-destructive/10"
+                            "font-mono font-medium",
+                            entry.pnl >= 0 ? "text-success" : "text-destructive"
                           )}
                         >
-                          {entry.side === "buy" ? (
-                            <ArrowUpRight className="w-4 h-4 text-success" />
-                          ) : (
-                            <ArrowDownRight className="w-4 h-4 text-destructive" />
-                          )}
-                        </div>
-                        <span className="font-medium">{entry.pair}</span>
+                          {entry.pnl >= 0 ? "+" : ""}
+                          {entry.pnl}
+                        </span>
                       </div>
 
-                      <span
-                        className={cn(
-                          "font-mono font-medium",
-                          entry.pnl >= 0 ? "text-success" : "text-destructive"
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{entry.notes}</p>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {entry.trade_id && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              goToTrade(entry.trade_id!);
+                            }}
+                            className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
+                            title="Go to trade"
+                          >
+                            <CornerUpRight className="w-3 h-3" />
+                            Go to trade
+                          </button>
                         )}
-                      >
-                        {entry.pnl >= 0 ? "+" : ""}
-                        {entry.pnl}
-                      </span>
-                    </div>
 
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{entry.notes}</p>
+                        {entry.tv_url && (
+                          <a
+                            href={entry.tv_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Open TradingView
+                          </a>
+                        )}
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {entry.trade_id && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            goToTrade(entry.trade_id!);
-                          }}
-                          className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
-                          title="Go to trade"
-                        >
-                          <CornerUpRight className="w-3 h-3" />
-                          Go to trade
-                        </button>
-                      )}
+                        {!entry.tv_url && imgs.length > 0 && (
+                          <span className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground">
+                            <ImageIcon className="w-3 h-3" />
+                            {imgs.length === 1 ? "Chart image" : `${imgs.length} images`}
+                          </span>
+                        )}
+                      </div>
 
-                      {entry.tv_url && (
-                        <a
-                          href={entry.tv_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Open TradingView
-                        </a>
-                      )}
-
-                      {!entry.tv_url && entry.tv_image_url && (
-                        <span className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground">
-                          <ImageIcon className="w-3 h-3" />
-                          Chart image
-                        </span>
-                      )}
-                    </div>
-
-                    {entry.tv_image_url && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      {/* ✅ multi thumb grid */}
+                      <EntryThumbGrid
+                        images={imgs}
+                        onOpen={(idx) => {
                           setSelectedEntry(entry);
+                          setActiveImageIndex(idx);
                           setImageOpen(true);
                         }}
-                        className="block w-full mt-3 overflow-hidden rounded-lg border border-border hover:border-primary/40 transition-colors"
-                        title="Open full screen"
-                      >
-                        <img
-                          src={entry.tv_image_url}
-                          alt="TradingView chart"
-                          className="w-full h-28 object-cover"
-                          loading="lazy"
-                        />
-                      </button>
-                    )}
+                      />
 
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-muted-foreground">
-                        {entry.entry_time ? new Date(entry.entry_time).toLocaleDateString() : ""}
-                      </span>
-                      <span className={cn("text-xs px-2 py-1 rounded-full capitalize", emotionColors[entry.emotion])}>
-                        {entry.emotion}
-                      </span>
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-xs text-muted-foreground">
+                          {entry.entry_time ? new Date(entry.entry_time).toLocaleDateString() : ""}
+                        </span>
+                        <span className={cn("text-xs px-2 py-1 rounded-full capitalize", emotionColors[entry.emotion])}>
+                          {entry.emotion}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -1140,12 +1280,13 @@ export default function Journal() {
                   <div ref={stickySentinelRef} className="h-px w-full" />
                   <PreviewCard />
 
+                  {/* Editing single-image flow stays as-is (legacy). Multi-image edit can be added later. */}
                   {isEditing && (
                     <div className="mb-6 space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium flex items-center gap-2">
                           <ImageIcon className="w-4 h-4" />
-                          Chart image
+                          Chart image (legacy)
                         </p>
                         <div className="flex items-center gap-2">
                           {draftTvImageUrl && (
@@ -1153,7 +1294,10 @@ export default function Journal() {
                               type="button"
                               variant="outline"
                               onClick={() => {
-                                if (draftTvImageUrl) setImageOpen(true);
+                                if (draftTvImageUrl) {
+                                  setActiveImageIndex(0);
+                                  setImageOpen(true);
+                                }
                               }}
                             >
                               View
@@ -1179,7 +1323,7 @@ export default function Journal() {
                           <img
                             src={newChartPreviewUrl}
                             alt="New chart preview"
-                            className="w-full max-h-[260px] object-cover"
+                            className="w-full max-h-[260px] object-cover bg-black/20"
                           />
                         </div>
                       ) : draftTvImageUrl ? (
@@ -1187,7 +1331,7 @@ export default function Journal() {
                           <img
                             src={draftTvImageUrl}
                             alt="Chart preview"
-                            className="w-full max-h-[260px] object-cover"
+                            className="w-full max-h-[260px] object-cover bg-black/20"
                           />
                         </div>
                       ) : (
@@ -1227,6 +1371,10 @@ export default function Journal() {
                             </Button>
                           </>
                         )}
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        Note: multi-image editing will be added next. Current editor updates the legacy single image field.
                       </div>
                     </div>
                   )}
@@ -1358,7 +1506,6 @@ export default function Journal() {
                             Edit
                           </Button>
 
-                          {/* ✅ THEMED DELETE CONFIRM */}
                           <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                             <AlertDialogTrigger asChild>
                               <Button
@@ -1409,11 +1556,11 @@ export default function Journal() {
                       )}
                     </div>
 
-                    {!isEditing && selectedEntry.tv_image_url && (
+                    {!isEditing && getEntryImages(selectedEntry).length > 0 && (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setImageOpen(true)}
+                        onClick={() => openFullscreenAt(activeImageIndex)}
                         className="flex items-center gap-2"
                       >
                         <ImageIcon className="w-4 h-4" />

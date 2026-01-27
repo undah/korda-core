@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
 
-import { Calendar, Plus, Save } from "lucide-react";
+import { Calendar, Plus, Save, Sparkles, Target, NotebookPen } from "lucide-react";
 
 type Mood = "great" | "okay" | "bad";
 
@@ -17,23 +17,18 @@ type SessionLogRow = {
   id: string;
   user_id: string;
 
-  // ✅ matches your table
   log_date: string; // YYYY-MM-DD
 
   recap: string | null;
   lessons: string | null;
-
-  // ✅ matches your table
   next_plan: string | null;
 
   mood: Mood | null;
 
-  // optional columns (Supabase returns them if they exist)
   prompt_tags?: string[] | null;
   created_at?: string;
   updated_at?: string;
 
-  // you mentioned you also have `day` in the table now; we ignore it in code
   day?: string | null;
 };
 
@@ -44,15 +39,12 @@ function todayYmd() {
 }
 
 function formatUiDate(ymd: string) {
-  // render as MM/DD/YYYY
   const [y, m, d] = ymd.split("-").map(Number);
   if (!y || !m || !d) return ymd;
   return `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}/${y}`;
 }
 
 function toYmdFromUi(input: string) {
-  // Accept YYYY-MM-DD (native date input), return same
-  // If user somehow pastes MM/DD/YYYY, attempt convert
   if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
 
   const m = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -81,6 +73,46 @@ function safeNumber(v: any, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function moodUi(m: Mood | null | undefined) {
+  if (m === "great")
+    return {
+      label: "Great",
+      dot: "bg-emerald-500",
+      text: "text-emerald-500",
+      border: "border-emerald-500/30",
+      bg: "bg-emerald-500/10",
+    };
+  if (m === "okay")
+    return {
+      label: "Okay",
+      dot: "bg-zinc-400",
+      text: "text-zinc-300",
+      border: "border-zinc-400/30",
+      bg: "bg-zinc-400/10",
+    };
+  if (m === "bad")
+    return {
+      label: "Bad",
+      dot: "bg-red-500",
+      text: "text-red-500",
+      border: "border-red-500/30",
+      bg: "bg-red-500/10",
+    };
+  return {
+    label: "—",
+    dot: "bg-zinc-600",
+    text: "text-muted-foreground",
+    border: "border-border",
+    bg: "bg-secondary/20",
+  };
+}
+
+function pnlUi(pnl: number) {
+  if (pnl > 0) return { text: "text-emerald-500", border: "border-emerald-500/30", bg: "bg-emerald-500/10" };
+  if (pnl < 0) return { text: "text-red-500", border: "border-red-500/30", bg: "bg-red-500/10" };
+  return { text: "text-muted-foreground", border: "border-border", bg: "bg-secondary/20" };
+}
+
 export default function SessionLog() {
   const { user } = useAuth();
 
@@ -90,10 +122,8 @@ export default function SessionLog() {
   const [days, setDays] = useState<SessionLogRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // ✅ day -> total pnl map (key: YYYY-MM-DD)
   const [pnlByDay, setPnlByDay] = useState<Record<string, number>>({});
 
-  // Draft fields (right panel)
   const [dayYmd, setDayYmd] = useState<string>(todayYmd());
   const [mood, setMood] = useState<Mood>("great");
   const [recap, setRecap] = useState("");
@@ -102,32 +132,31 @@ export default function SessionLog() {
 
   const [focusField, setFocusField] = useState<FocusField>("recap");
 
-  // ✅ IMPORTANT: your app uses settings in other pages; SessionLog doesn't.
-  // To still use formatCurrency without adding new hooks, we pass defaults.
-  // If you want, we can wire useProfileSettings() later.
   const currency = "USD";
   const locale = "en-US";
 
   const selected = useMemo(() => days.find((d) => d.id === selectedId) ?? null, [days, selectedId]);
 
   const selectedDayPnl = useMemo(() => {
-    const key = toYmdFromUi(dayYmd); // YYYY-MM-DD
+    const key = toYmdFromUi(dayYmd);
     return pnlByDay[key] ?? 0;
   }, [pnlByDay, dayYmd]);
 
   const isDirty = useMemo(() => {
+    const curDate = toYmdFromUi(dayYmd);
+
     if (!selected) {
       return (
         !!recap.trim() ||
         !!lessons.trim() ||
         !!plan.trim() ||
         mood !== "great" ||
-        dayYmd !== todayYmd()
+        curDate !== todayYmd()
       );
     }
 
     const same =
-      (selected.log_date ?? "") === dayYmd &&
+      (selected.log_date ?? "") === curDate &&
       (selected.mood ?? null) === mood &&
       (selected.recap ?? "") === recap &&
       (selected.lessons ?? "") === lessons &&
@@ -157,7 +186,6 @@ export default function SessionLog() {
     setFocusField("recap");
   };
 
-  // ✅ load + compute daily pnl for the shown days
   const loadPnLForDays = async (rows: SessionLogRow[]) => {
     if (!user) return;
 
@@ -167,7 +195,7 @@ export default function SessionLog() {
       return;
     }
 
-    const sorted = [...dates].sort(); // asc
+    const sorted = [...dates].sort();
     const minDate = sorted[0];
     const maxDate = sorted[sorted.length - 1];
 
@@ -190,7 +218,6 @@ export default function SessionLog() {
       const iso = (t as any).trade_time as string | null;
       if (!iso) continue;
 
-      // timestamptz ISO -> YYYY-MM-DD
       const day = iso.slice(0, 10);
       const pnl = safeNumber((t as any).pnl, 0);
       map[day] = (map[day] ?? 0) + pnl;
@@ -199,7 +226,6 @@ export default function SessionLog() {
     setPnlByDay(map);
   };
 
-  // Initial load
   useEffect(() => {
     if (!user) return;
 
@@ -240,6 +266,15 @@ export default function SessionLog() {
     else setRecap((v) => (v ? `${v}\n${text}` : text));
   };
 
+  const copyToFocused = async () => {
+    const text = focusField === "lessons" ? lessons : focusField === "plan" ? plan : recap;
+    try {
+      await navigator.clipboard.writeText(text ?? "");
+    } catch (e) {
+      console.warn("Clipboard copy failed:", e);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -278,7 +313,6 @@ export default function SessionLog() {
         if (data?.id) setSelectedId(data.id);
       }
 
-      // refresh list
       const { data: refreshed, error: refreshErr } = await supabase
         .from("session_logs")
         .select("*")
@@ -309,6 +343,9 @@ export default function SessionLog() {
     }
   };
 
+  const headerMood = moodUi(mood);
+  const headerPnl = pnlUi(selectedDayPnl);
+
   if (loading) {
     return (
       <MainLayout>
@@ -320,16 +357,36 @@ export default function SessionLog() {
   return (
     <MainLayout>
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Session Log</h1>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Session Log</h1>
+            <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs", headerMood.border, headerMood.bg)}>
+              <span className={cn("h-2 w-2 rounded-full", headerMood.dot)} />
+              <span className={cn("font-medium", headerMood.text)}>{headerMood.label}</span>
+            </span>
+            <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono", headerPnl.border, headerPnl.bg, headerPnl.text)}>
+              {formatCurrency(selectedDayPnl, currency, locale)}
+            </span>
+          </div>
           <p className="text-muted-foreground">Track how your day went — trades, emotions, and lessons learned.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => hydrateNewDay()} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New day
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={copyToFocused}
+            className="flex items-center gap-2"
+            disabled={!recap && !lessons && !plan}
+            title="Copy the focused textbox to clipboard"
+          >
+            <Sparkles className="h-4 w-4" />
+            Copy focused
           </Button>
 
           <Button
@@ -338,43 +395,44 @@ export default function SessionLog() {
             disabled={saving || !isDirty}
             className="flex items-center gap-2"
           >
-            <Save className="w-4 h-4" />
-            {saving ? "Saving..." : "Save"}
+            <Save className="h-4 w-4" />
+            {saving ? "Saving..." : isDirty ? "Save changes" : "Saved"}
           </Button>
         </div>
       </div>
 
       {/* Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Days list (left) */}
         <div className="lg:col-span-3">
           <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-muted-foreground" />
                 <h3 className="font-semibold">Days</h3>
               </div>
               <span className="text-xs text-muted-foreground">{days.length}</span>
             </div>
 
             {days.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No session logs yet.</div>
+              <div className="rounded-lg border border-border bg-secondary/20 p-4 text-sm text-muted-foreground">
+                No session logs yet.
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Hit <span className="font-medium">New day</span> to start your first log.
+                </div>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[72vh] overflow-y-auto pr-1">
                 {days.map((d) => {
                   const active = d.id === selectedId;
 
-                  const moodLabel =
-                    d.mood === "great"
-                      ? "Great"
-                      : d.mood === "okay"
-                      ? "Okay"
-                      : d.mood === "bad"
-                      ? "Bad"
-                      : "—";
-
+                  const moodMeta = moodUi(d.mood);
                   const dayPnl = pnlByDay[d.log_date];
                   const hasPnl = Object.prototype.hasOwnProperty.call(pnlByDay, d.log_date);
+                  const dayPnlMeta = pnlUi(dayPnl ?? 0);
+
+                  const preview = (d.recap ?? d.lessons ?? d.next_plan ?? "").trim();
+                  const hasNotes = !!preview;
 
                   return (
                     <button
@@ -382,44 +440,52 @@ export default function SessionLog() {
                       type="button"
                       onClick={() => hydrateFromRow(d)}
                       className={cn(
-                        "w-full text-left rounded-lg border px-3 py-2 transition-colors",
-                        active
-                          ? "border-primary/40 bg-primary/10"
-                          : "border-border hover:border-primary/30 hover:bg-accent/40"
+                        "group w-full text-left rounded-xl border px-3 py-2 transition-colors",
+                        active ? "border-primary/40 bg-primary/10" : "border-border hover:border-primary/30 hover:bg-accent/40"
                       )}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="font-medium text-sm">{formatUiDate(d.log_date)}</div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-sm">{formatUiDate(d.log_date)}</div>
+                            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px]", moodMeta.border, moodMeta.bg)}>
+                              <span className={cn("h-1.5 w-1.5 rounded-full", moodMeta.dot)} />
+                              <span className={cn("font-medium", moodMeta.text)}>{moodMeta.label}</span>
+                            </span>
+                          </div>
 
-                        <div className="flex items-center gap-2">
-                          {hasPnl && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {hasNotes ? <span className="line-clamp-2">{preview}</span> : <span className="opacity-70">No notes yet</span>}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {hasPnl ? (
                             <span
                               className={cn(
-                                "text-xs px-2 py-0.5 rounded-full border font-mono",
-                                dayPnl >= 0 ? "border-success/30 text-success" : "border-destructive/30 text-destructive"
+                                "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-mono",
+                                dayPnlMeta.border,
+                                dayPnlMeta.bg,
+                                dayPnlMeta.text
                               )}
                               title="Total PnL for the day"
                             >
-                              {formatCurrency(dayPnl, currency, locale)}
+                              {formatCurrency(dayPnl ?? 0, currency, locale)}
                             </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">—</span>
                           )}
 
-                          <span
-                            className={cn(
-                              "text-xs px-2 py-0.5 rounded-full border",
-                              d.mood === "great" && "border-success/30 text-success",
-                              d.mood === "okay" && "border-muted-foreground/30 text-muted-foreground",
-                              d.mood === "bad" && "border-destructive/30 text-destructive",
-                              !d.mood && "border-border text-muted-foreground"
-                            )}
-                          >
-                            {moodLabel}
-                          </span>
+                          {active && <span className="text-[11px] text-primary/80">Selected</span>}
                         </div>
                       </div>
 
-                      <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                        {(d.recap ?? d.lessons ?? d.next_plan ?? "").trim() || "No notes yet."}
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span className={cn("inline-flex items-center gap-1", !hasNotes && "opacity-70")}>
+                          <NotebookPen className="h-3.5 w-3.5" />
+                          {hasNotes ? "Has notes" : "Empty"}
+                        </span>
+                        <span className="opacity-70">{d.updated_at ? "Updated" : ""}</span>
                       </div>
                     </button>
                   );
@@ -430,73 +496,92 @@ export default function SessionLog() {
         </div>
 
         {/* Main editor (right) */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className="space-y-6 lg:col-span-9">
           {/* Top row: Date + Mood + Quick prompts */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Date + Daily PnL */}
-            <div className="lg:col-span-7 glass-card p-4">
-              <div className="text-sm font-semibold mb-2">Date</div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* Date */}
+            <div className="glass-card p-5 lg:col-span-7">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Date</div>
+                  <div className="text-xs text-muted-foreground mt-1">Pick a day, then log recap + lessons + plan.</div>
+                </div>
 
-              <Input
-                type="date"
-                value={dayYmd}
-                onChange={(e) => setDayYmd(e.target.value)}
-                className="bg-secondary border-border"
-              />
-
-              {/* Daily PnL */}
-              <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-border bg-secondary/40 px-3 py-1.5">
-                <span className="text-xs text-muted-foreground">Daily PnL</span>
-
-                <span
-                  className={cn(
-                    "text-xs font-mono font-semibold",
-                    selectedDayPnl > 0 && "text-success",
-                    selectedDayPnl < 0 && "text-destructive",
-                    selectedDayPnl === 0 && "text-muted-foreground"
-                  )}
-                >
+                {/* Keep only this PnL badge (top-right) */}
+                <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono", headerPnl.border, headerPnl.bg, headerPnl.text)}>
                   {formatCurrency(selectedDayPnl, currency, locale)}
                 </span>
               </div>
 
-              <p className="text-xs text-muted-foreground mt-2">
-                Tip: pick a day, then write a quick recap + lessons + plan.
-              </p>
+              <div className="mt-4">
+                <Input
+                  type="date"
+                  value={dayYmd}
+                  onChange={(e) => setDayYmd(e.target.value)}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-2">
+                <Target className="h-4 w-4 text-muted-foreground" />
+                <div className="text-xs text-muted-foreground">
+                  Keep it simple: one honest recap, one lesson, one rule for tomorrow.
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-5 space-y-6">
+            <div className="space-y-6 lg:col-span-5">
               {/* Mood */}
-              <div className="glass-card p-4">
-                <div className="text-sm font-semibold mb-2">Mood</div>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button type="button" variant={mood === "great" ? "glow" : "outline"} onClick={() => setMood("great")}>
+              <div className="glass-card p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold">Mood</div>
+                    <div className="text-xs text-muted-foreground mt-1">How did the session feel overall?</div>
+                  </div>
+
+                  <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs", headerMood.border, headerMood.bg)}>
+                    <span className={cn("h-2 w-2 rounded-full", headerMood.dot)} />
+                    <span className={cn("font-medium", headerMood.text)}>{headerMood.label}</span>
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Button type="button" variant={mood === "great" ? "glow" : "outline"} onClick={() => setMood("great")} className="rounded-lg">
                     Great
                   </Button>
-                  <Button type="button" variant={mood === "okay" ? "glow" : "outline"} onClick={() => setMood("okay")}>
+                  <Button type="button" variant={mood === "okay" ? "glow" : "outline"} onClick={() => setMood("okay")} className="rounded-lg">
                     Okay
                   </Button>
-                  <Button type="button" variant={mood === "bad" ? "destructive" : "outline"} onClick={() => setMood("bad")}>
+                  <Button type="button" variant={mood === "bad" ? "destructive" : "outline"} onClick={() => setMood("bad")} className="rounded-lg">
                     Bad
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Selected:{" "}
-                  <span className="font-medium">{mood === "great" ? "Great" : mood === "okay" ? "Okay" : "Bad"}</span>
-                </div>
+
+                <div className="mt-3 text-xs text-muted-foreground">Tip: keep mood honest — it helps you spot patterns.</div>
               </div>
 
               {/* Quick prompts */}
-              <div className="glass-card p-4">
-                <div className="text-sm font-semibold mb-2">Quick prompts</div>
-                <div className="text-xs text-muted-foreground mb-3">Tap one to paste into the focused textbox.</div>
+              <div className="glass-card p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold">Quick prompts</div>
+                    <div className="text-xs text-muted-foreground mt-1">Tap one to paste into the focused textbox.</div>
+                  </div>
 
-                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Focus:{" "}
+                    <span className="font-medium">
+                      {focusField === "recap" ? "Recap" : focusField === "lessons" ? "Lessons" : focusField === "plan" ? "Plan" : "—"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
                   {QUICK_PROMPTS.map((p) => (
                     <button
                       key={p.label}
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs hover:border-primary/40 hover:bg-accent/40 transition-colors"
+                      className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs hover:border-primary/40 hover:bg-accent/40 transition-colors"
                       onClick={() => applyQuickPrompt(p.text)}
                       title="Insert prompt"
                     >
@@ -506,66 +591,86 @@ export default function SessionLog() {
                   ))}
                 </div>
 
-                <div className="mt-3 text-xs text-muted-foreground">
-                  Focus:{" "}
-                  <span className="font-medium">
-                    {focusField === "recap"
-                      ? "How did today go?"
-                      : focusField === "lessons"
-                      ? "Lessons"
-                      : focusField === "plan"
-                      ? "Plan"
-                      : "—"}
-                  </span>
+                <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <div className="text-xs text-muted-foreground">Pro tip: write one rule for tomorrow you can actually follow.</div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* 3 text boxes */}
-          <div className="glass-card p-5">
-            <div className="mb-2">
-              <div className="font-semibold">How did today go?</div>
-              <div className="text-xs text-muted-foreground">
-                Quick recap of the session (what happened, what you felt, what mattered).
+          <div className="glass-card p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <NotebookPen className="h-4 w-4 text-muted-foreground" />
+                  <div className="font-semibold">How did today go?</div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Quick recap of the session (what happened, what you felt, what mattered).
+                </div>
               </div>
+
+              <span className={cn("rounded-full border px-3 py-1 text-[11px] text-muted-foreground", focusField === "recap" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20")}>
+                Focused
+              </span>
             </div>
+
             <Textarea
               value={recap}
               onChange={(e) => setRecap(e.target.value)}
               onFocus={() => setFocusField("recap")}
               placeholder="Example: Took 3 trades. First was clean, second was FOMO, third followed plan. Emotion shifted after the loss…"
-              className="min-h-[150px] bg-muted/30 border-border resize-none"
+              className={cn("min-h-[160px] bg-muted/30 border-border resize-none rounded-xl", focusField === "recap" && "ring-1 ring-primary/30")}
             />
           </div>
 
-          <div className="glass-card p-5">
-            <div className="mb-2">
-              <div className="font-semibold">Lessons</div>
-              <div className="text-xs text-muted-foreground">
-                What did you learn today? What should you repeat or stop doing?
+          <div className="glass-card p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <div className="font-semibold">Lessons</div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">What did you learn today? What should you repeat or stop doing?</div>
               </div>
+
+              <span className={cn("rounded-full border px-3 py-1 text-[11px] text-muted-foreground", focusField === "lessons" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20")}>
+                Focused
+              </span>
             </div>
+
             <Textarea
               value={lessons}
               onChange={(e) => setLessons(e.target.value)}
               onFocus={() => setFocusField("lessons")}
               placeholder="Example: Don’t trade right after a loss. Wait for A+ setups only…"
-              className="min-h-[150px] bg-muted/30 border-border resize-none"
+              className={cn("min-h-[160px] bg-muted/30 border-border resize-none rounded-xl", focusField === "lessons" && "ring-1 ring-primary/30")}
             />
           </div>
 
-          <div className="glass-card p-5">
-            <div className="mb-2">
-              <div className="font-semibold">Plan for next session</div>
-              <div className="text-xs text-muted-foreground">Simple rules for tomorrow so you stay consistent.</div>
+          <div className="glass-card p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <div className="font-semibold">Plan for next session</div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Simple rules for tomorrow so you stay consistent.</div>
+              </div>
+
+              <span className={cn("rounded-full border px-3 py-1 text-[11px] text-muted-foreground", focusField === "plan" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20")}>
+                Focused
+              </span>
             </div>
+
             <Textarea
               value={plan}
               onChange={(e) => setPlan(e.target.value)}
               onFocus={() => setFocusField("plan")}
               placeholder="Example: Max 2 trades. No entries outside London + NY killzone. Screenshot every setup…"
-              className="min-h-[150px] bg-muted/30 border-border resize-none"
+              className={cn("min-h-[160px] bg-muted/30 border-border resize-none rounded-xl", focusField === "plan" && "ring-1 ring-primary/30")}
             />
           </div>
         </div>
