@@ -12,6 +12,9 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ComingSoon from "./pages/ComingSoon";
 
+// ✅ NEW
+import SessionLog from "./pages/SessionLog";
+
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/analytics" element={<Analytics />} />
+
+            {/* ✅ NEW */}
+            <Route path="/session-log" element={<SessionLog />} />
 
             {/* Disabled for now (easy to revert later) */}
             <Route

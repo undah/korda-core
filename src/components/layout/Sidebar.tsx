@@ -1,13 +1,14 @@
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Link2, 
-  Bot, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  BookOpen,
+  CalendarDays,
+  Link2,
+  Bot,
+  BarChart3,
   Settings,
   TrendingUp,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,10 @@ import { useAuth } from "@/auth/AuthProvider";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: BookOpen, label: "Journal", path: "/journal" },
+
+  // ✅ NEW
+  { icon: CalendarDays, label: "Session Log", path: "/session-log" },
+
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: Link2, label: "Connections", path: "/connections" },
   { icon: Bot, label: "AI Coach", path: "/coach" },
@@ -90,5 +95,3 @@ export function Sidebar() {
     </aside>
   );
 }
-
-
