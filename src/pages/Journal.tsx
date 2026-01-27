@@ -20,8 +20,6 @@ import {
   X,
   ArrowUpDown,
   CornerUpRight,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TradesSection } from "@/components/journal/TradesSection";
@@ -54,10 +52,10 @@ interface JournalEntry {
   // legacy single image
   tv_image_url?: string | null;
 
-  // ✅ NEW: multiple images
+  // new multi-image field (text[])
   tv_image_urls?: string[] | null;
 
-  // ✅ link to trade
+  // link to trade
   trade_id?: string | null;
 }
 
@@ -106,12 +104,23 @@ const SORT_LABELS: Record<SortMode, string> = {
   pnl_low_high: "PnL Low → High",
 };
 
-function getEntryImages(e: JournalEntry | null | undefined): string[] {
-  if (!e) return [];
-  const arr = Array.isArray(e.tv_image_urls) ? e.tv_image_urls.filter(Boolean) : [];
-  if (arr.length) return arr;
-  if (e.tv_image_url) return [e.tv_image_url];
-  return [];
+function getEntryImages(entry: Pick<JournalEntry, "tv_image_urls" | "tv_image_url"> | null | undefined) {
+  if (!entry) return [] as string[];
+  const arr = Array.isArray(entry.tv_image_urls) ? entry.tv_image_urls.filter(Boolean) : [];
+  if (arr.length) return arr.slice(0, 3);
+  return entry.tv_image_url ? [entry.tv_image_url] : [];
+}
+
+function toLocalDatetimeValue(iso: string) {
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+      d.getMinutes()
+    )}`;
+  } catch {
+    return "";
+  }
 }
 
 export default function Journal() {
@@ -119,36 +128,36 @@ export default function Journal() {
 
   const [activeTab, setActiveTab] = useState("trades");
 
-  // ✅ trade focus when clicking "Go to trade"
+  // trade focus when clicking "Go to trade"
   const [focusTradeId, setFocusTradeId] = useState<string | null>(null);
 
-  // ✅ open a specific journal entry when coming from trade -> linked modal -> "Open"
+  // open a specific journal entry when coming from trade -> linked modal -> "Open"
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
 
-  // Journal data
+  // data
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
 
-  // Add entry dialog
+  // add entry dialog
   const [addJournalOpen, setAddJournalOpen] = useState(false);
   const [journalRefreshKey, setJournalRefreshKey] = useState(0);
 
-  // Search
+  // search
   const [search, setSearch] = useState("");
 
-  // Fullscreen image viewer
+  // fullscreen viewer
   const [imageOpen, setImageOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  // Edit mode
+  // edit mode
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // ✅ NEW: themed delete confirm
+  // themed delete confirm
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // Editable draft fields
+  // drafts
   const [draftPair, setDraftPair] = useState("");
   const [draftSide, setDraftSide] = useState<"buy" | "sell">("buy");
   const [draftPnl, setDraftPnl] = useState<string>("0");
@@ -157,11 +166,19 @@ export default function Journal() {
   const [draftEntryTime, setDraftEntryTime] = useState<string>("");
   const [draftNotes, setDraftNotes] = useState<string>("");
   const [draftTvUrl, setDraftTvUrl] = useState<string>("");
+
+  // legacy single image (kept for backwards compatibility)
   const [draftTvImageUrl, setDraftTvImageUrl] = useState<string>("");
 
-  const [newChartFile, setNewChartFile] = useState<File | null>(null);
-  const [newChartPreviewUrl, setNewChartPreviewUrl] = useState<string | null>(null);
+  // NEW: draft image slots (up to 3)
+  const [draftImageSlots, setDraftImageSlots] = useState<(string | null)[]>([null, null, null]);
 
+  // NEW: per-slot replacement files + previews
+  const [newImageFiles, setNewImageFiles] = useState<(File | null)[]>([null, null, null]);
+  const [newImagePreviewUrls, setNewImagePreviewUrls] = useState<(string | null)[]>([null, null, null]);
+  const previewUrlsRef = useRef<(string | null)[]>([null, null, null]);
+
+  // filters
   const [filterOpen, setFilterOpen] = useState(false);
   const [dateRangeOpen, setDateRangeOpen] = useState(false);
 
@@ -175,26 +192,23 @@ export default function Journal() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
 
+  // floating preview
   const stickySentinelRef = useRef<HTMLDivElement | null>(null);
   const [showFloatingPreview, setShowFloatingPreview] = useState(false);
 
-  // ✅ NEW: ensure the floating preview never shows on the Trades tab
+  // ensure floating preview never shows on Trades tab
   useEffect(() => {
-    if (activeTab !== "journal") {
-      setShowFloatingPreview(false);
-    }
+    if (activeTab !== "journal") setShowFloatingPreview(false);
   }, [activeTab]);
 
   useEffect(() => {
     const el = stickySentinelRef.current;
     if (!el) return;
 
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        setShowFloatingPreview(!entry.isIntersecting);
-      },
-      { root: null, threshold: 0 }
-    );
+    const io = new IntersectionObserver(([entry]) => setShowFloatingPreview(!entry.isIntersecting), {
+      root: null,
+      threshold: 0,
+    });
 
     io.observe(el);
     return () => io.disconnect();
@@ -289,65 +303,27 @@ export default function Journal() {
     return arr;
   }, [filteredEntries, sortMode]);
 
-  const selectedDateLabel = selectedEntry?.entry_time
-    ? new Date(selectedEntry.entry_time).toLocaleDateString()
-    : "";
+  const selectedDateLabel = selectedEntry?.entry_time ? new Date(selectedEntry.entry_time).toLocaleDateString() : "";
 
-  const selectedImages = useMemo(() => getEntryImages(selectedEntry), [selectedEntry]);
-  const activeFullscreenUrl = selectedImages[activeImageIndex] ?? null;
+  const images = useMemo(
+    () => getEntryImages(selectedEntry),
+    [selectedEntry?.id, selectedEntry?.tv_image_url, selectedEntry?.tv_image_urls]
+  );
+  const activeImageUrl = images[activeImageIndex] ?? images[0] ?? null;
 
-  const isDirty = useMemo(() => {
-    if (!selectedEntry) return false;
+  // keep active index valid when entry changes
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [selectedEntry?.id]);
 
-    const base = {
-      pair: selectedEntry.pair ?? "",
-      side: selectedEntry.side ?? "buy",
-      pnl: safeNumber(selectedEntry.pnl ?? 0),
-      emotion: selectedEntry.emotion ?? "neutral",
-      tags: (selectedEntry.tags ?? []).join(", "),
-      notes: selectedEntry.notes ?? "",
-      tv_url: selectedEntry.tv_url ?? "",
-      tv_image_url: selectedEntry.tv_image_url ?? "",
-      entry_time: selectedEntry.entry_time ?? "",
+  // cleanup previews on unmount
+  useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach((u) => {
+        if (u) URL.revokeObjectURL(u);
+      });
     };
-
-    const draft = {
-      pair: draftPair.trim(),
-      side: draftSide,
-      pnl: safeNumber(draftPnl, 0),
-      emotion: draftEmotion,
-      tags: draftTags.trim(),
-      notes: draftNotes,
-      tv_url: draftTvUrl.trim(),
-      tv_image_url: draftTvImageUrl.trim(),
-      entry_time: draftEntryTime ? new Date(draftEntryTime).toISOString() : base.entry_time,
-    };
-
-    const same =
-      base.pair === draft.pair &&
-      base.side === draft.side &&
-      base.pnl === draft.pnl &&
-      base.emotion === draft.emotion &&
-      base.tags === draft.tags &&
-      base.notes === draft.notes &&
-      base.tv_url === draft.tv_url &&
-      base.tv_image_url === draft.tv_image_url &&
-      base.entry_time === draft.entry_time;
-
-    return !same || !!newChartFile;
-  }, [
-    selectedEntry,
-    draftPair,
-    draftSide,
-    draftPnl,
-    draftEmotion,
-    draftTags,
-    draftNotes,
-    draftTvUrl,
-    draftTvImageUrl,
-    draftEntryTime,
-    newChartFile,
-  ]);
+  }, []);
 
   const hydrateDraftFromEntry = (e: JournalEntry) => {
     setDraftPair(e.pair ?? "");
@@ -357,33 +333,25 @@ export default function Journal() {
     setDraftTags((e.tags ?? []).join(", "));
     setDraftNotes(e.notes ?? "");
     setDraftTvUrl(e.tv_url ?? "");
+    setDraftEntryTime(e.entry_time ? toLocalDatetimeValue(e.entry_time) : "");
+
+    // legacy
     setDraftTvImageUrl(e.tv_image_url ?? "");
 
-    try {
-      const d = new Date(e.entry_time);
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-        d.getHours()
-      )}:${pad(d.getMinutes())}`;
-      setDraftEntryTime(local);
-    } catch {
-      setDraftEntryTime("");
-    }
+    // multi-image -> slots
+    const imgs = getEntryImages(e);
+    setDraftImageSlots([imgs[0] ?? null, imgs[1] ?? null, imgs[2] ?? null]);
 
-    setNewChartFile(null);
-    if (newChartPreviewUrl) URL.revokeObjectURL(newChartPreviewUrl);
-    setNewChartPreviewUrl(null);
-
-    // reset gallery
-    setActiveImageIndex(0);
+    // reset files/previews
+    setNewImageFiles([null, null, null]);
+    setNewImagePreviewUrls((prev) => {
+      prev.forEach((u) => u && URL.revokeObjectURL(u));
+      previewUrlsRef.current = [null, null, null];
+      return [null, null, null];
+    });
   };
 
-  useEffect(() => {
-    return () => {
-      if (newChartPreviewUrl) URL.revokeObjectURL(newChartPreviewUrl);
-    };
-  }, [newChartPreviewUrl]);
-
+  // fetch entries
   useEffect(() => {
     if (!user) return;
 
@@ -416,9 +384,7 @@ export default function Journal() {
       setEntries(mapped);
 
       setSelectedEntry((prev) => {
-        const next = prev
-          ? mapped.find((x) => x.id === prev.id) ?? mapped[0] ?? null
-          : mapped[0] ?? null;
+        const next = prev ? mapped.find((x) => x.id === prev.id) ?? mapped[0] ?? null : mapped[0] ?? null;
         if (next) hydrateDraftFromEntry(next);
         return next;
       });
@@ -436,9 +402,10 @@ export default function Journal() {
     setIsEditing(false);
     hydrateDraftFromEntry(entry);
     setShowFloatingPreview(false);
+    setActiveImageIndex(0);
   };
 
-  // ✅ if TradesSection asks to open a specific entry, do it after entries exist
+  // open specific entry requested by TradesSection
   useEffect(() => {
     if (!pendingEntryId) return;
     if (!entries.length) return;
@@ -474,16 +441,107 @@ export default function Journal() {
     return data.publicUrl ?? null;
   };
 
+  const setSlotFile = (slotIndex: number, file: File | null) => {
+    setNewImageFiles((prev) => {
+      const next = [...prev];
+      next[slotIndex] = file;
+      return next;
+    });
+
+    setNewImagePreviewUrls((prev) => {
+      const next = [...prev];
+      const old = next[slotIndex];
+      if (old) URL.revokeObjectURL(old);
+      next[slotIndex] = file ? URL.createObjectURL(file) : null;
+      previewUrlsRef.current = next;
+      return next;
+    });
+  };
+
+  const clearSlot = (slotIndex: number) => {
+    setDraftImageSlots((prev) => {
+      const next = [...prev];
+      next[slotIndex] = null;
+      return next;
+    });
+    setSlotFile(slotIndex, null);
+  };
+
+  const isDirty = useMemo(() => {
+    if (!selectedEntry) return false;
+
+    const base = {
+      pair: selectedEntry.pair ?? "",
+      side: selectedEntry.side ?? "buy",
+      pnl: safeNumber(selectedEntry.pnl ?? 0),
+      emotion: selectedEntry.emotion ?? "neutral",
+      tags: (selectedEntry.tags ?? []).join(", "),
+      notes: selectedEntry.notes ?? "",
+      tv_url: selectedEntry.tv_url ?? "",
+      entry_time: selectedEntry.entry_time ?? "",
+      images: getEntryImages(selectedEntry),
+    };
+
+    const draft = {
+      pair: draftPair.trim(),
+      side: draftSide,
+      pnl: safeNumber(draftPnl, 0),
+      emotion: draftEmotion,
+      tags: draftTags.trim(),
+      notes: draftNotes,
+      tv_url: draftTvUrl.trim(),
+      entry_time: draftEntryTime ? new Date(draftEntryTime).toISOString() : base.entry_time,
+      images: (draftImageSlots.filter(Boolean).slice(0, 3) as string[]) ?? [],
+    };
+
+    const same =
+      base.pair === draft.pair &&
+      base.side === draft.side &&
+      base.pnl === draft.pnl &&
+      base.emotion === draft.emotion &&
+      base.tags === draft.tags &&
+      base.notes === draft.notes &&
+      base.tv_url === draft.tv_url &&
+      base.entry_time === draft.entry_time &&
+      base.images.join("|") === draft.images.join("|");
+
+    const hasNewFiles = newImageFiles.some(Boolean);
+    return !same || hasNewFiles;
+  }, [
+    selectedEntry,
+    draftPair,
+    draftSide,
+    draftPnl,
+    draftEmotion,
+    draftTags,
+    draftNotes,
+    draftTvUrl,
+    draftEntryTime,
+    draftImageSlots,
+    newImageFiles,
+  ]);
+
   const handleSave = async () => {
     if (!selectedEntry) return;
     setSaving(true);
 
     try {
-      let nextImageUrl = draftTvImageUrl.trim() || null;
-      if (newChartFile) {
-        const uploaded = await uploadChartImage(newChartFile);
-        if (uploaded) nextImageUrl = uploaded;
+      // start from current slots
+      const nextSlots: (string | null)[] = [...draftImageSlots];
+
+      // upload replacements per-slot
+      for (let i = 0; i < 3; i++) {
+        const f = newImageFiles[i];
+        if (!f) continue;
+        const uploaded = await uploadChartImage(f);
+        if (uploaded) nextSlots[i] = uploaded;
       }
+
+      // compact -> final image urls
+      const finalImages = nextSlots.filter(Boolean).slice(0, 3) as string[];
+
+      // keep legacy in sync (first image)
+      const legacyFirst = finalImages[0] ?? null;
 
       const payload: any = {
         pair: draftPair.trim(),
@@ -493,8 +551,10 @@ export default function Journal() {
         notes: draftNotes.trim() || null,
         tags: normalizeTags(draftTags),
         tv_url: draftTvUrl.trim() || null,
-        tv_image_url: nextImageUrl,
         entry_time: draftEntryTime ? new Date(draftEntryTime).toISOString() : selectedEntry.entry_time,
+
+        tv_image_urls: finalImages.length ? finalImages : null,
+        tv_image_url: legacyFirst,
       };
 
       const { error } = await supabase.from("journal_entries").update(payload).eq("id", selectedEntry.id);
@@ -518,7 +578,6 @@ export default function Journal() {
     hydrateDraftFromEntry(selectedEntry);
   };
 
-  // ✅ NEW: themed confirm delete
   const handleDeleteConfirmed = async () => {
     if (!selectedEntry) return;
 
@@ -541,76 +600,54 @@ export default function Journal() {
     }
   };
 
-  const openFullscreenAt = (idx: number) => {
-    setActiveImageIndex(idx);
-    setImageOpen(true);
+  const goToTrade = (tradeId: string) => {
+    setShowFloatingPreview(false);
+    setActiveTab("trades");
+    setFocusTradeId(tradeId);
   };
-
-  const nextFullscreen = () => {
-    if (!selectedImages.length) return;
-    setActiveImageIndex((i) => (i + 1) % selectedImages.length);
-  };
-
-  const prevFullscreen = () => {
-    if (!selectedImages.length) return;
-    setActiveImageIndex((i) => (i - 1 + selectedImages.length) % selectedImages.length);
-  };
-
-  // keyboard: esc close, arrows nav
-  useEffect(() => {
-    if (!imageOpen) return;
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setImageOpen(false);
-      if (e.key === "ArrowRight") nextFullscreen();
-      if (e.key === "ArrowLeft") prevFullscreen();
-    };
-
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageOpen, selectedImages.length]);
 
   const PreviewCard = ({ className }: { className?: string }) => {
-    const images = getEntryImages(selectedEntry);
-    if (!images.length || isEditing) return null;
+    if (!selectedEntry) return null;
+    const imgs = getEntryImages(selectedEntry);
+    if (!imgs.length || isEditing) return null;
+
+    const shown = imgs[activeImageIndex] ?? imgs[0];
 
     return (
       <div className={cn("mb-6", className)}>
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="font-semibold truncate">{selectedEntry?.pair}</div>
+              <div className="font-semibold truncate">{selectedEntry.pair}</div>
 
               <div
                 className={cn(
                   "font-mono font-semibold",
-                  (selectedEntry?.pnl ?? 0) >= 0 ? "text-success" : "text-destructive"
+                  selectedEntry.pnl >= 0 ? "text-success" : "text-destructive"
                 )}
               >
-                {(selectedEntry?.pnl ?? 0) >= 0 ? "+" : "-"}${Math.abs(selectedEntry?.pnl ?? 0)}
+                {selectedEntry.pnl >= 0 ? "+" : "-"}${Math.abs(selectedEntry.pnl)}
               </div>
 
-              <span className="text-xs px-2 py-1 rounded-full border border-border uppercase">
-                {selectedEntry?.side}
+              <span className="text-[11px] px-2 py-1 rounded-full border border-border uppercase">
+                {selectedEntry.side}
               </span>
 
-              <span
-                className={cn(
-                  "text-xs px-2 py-1 rounded-full capitalize",
-                  selectedEntry ? emotionColors[selectedEntry.emotion] : ""
-                )}
-              >
-                {selectedEntry?.emotion}
+              <span className={cn("text-[11px] px-2 py-1 rounded-full capitalize", emotionColors[selectedEntry.emotion])}>
+                {selectedEntry.emotion}
+              </span>
+
+              <span className="text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground">
+                {imgs.length} image{imgs.length === 1 ? "" : "s"}
               </span>
             </div>
 
             <div className="text-xs text-muted-foreground mt-1">
-              {selectedEntry?.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : ""}
+              {selectedEntry.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : ""}
             </div>
           </div>
 
-          {selectedEntry?.tv_url && (
+          {selectedEntry.tv_url && (
             <a
               href={selectedEntry.tv_url}
               target="_blank"
@@ -623,136 +660,134 @@ export default function Journal() {
           )}
         </div>
 
-        {/* Main image + thumbnails */}
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => openFullscreenAt(activeImageIndex)}
-            className="block overflow-hidden rounded-xl border border-border hover:border-primary/40 transition-colors w-full"
-            title="Open full screen"
-          >
-            <img
-              src={images[activeImageIndex] ?? images[0]}
-              alt="TradingView chart"
-              className="w-full max-h-[520px] object-contain bg-black/20"
-              loading="lazy"
-            />
-          </button>
-
-          {images.length > 1 && (
-            <div className="flex items-center gap-2">
-              <div className="text-xs text-muted-foreground mr-2">
-                {activeImageIndex + 1}/{images.length}
-              </div>
-              <div className="flex gap-2 overflow-x-auto pr-1">
-                {images.map((url, idx) => (
-                  <button
-                    key={`${url}_${idx}`}
-                    type="button"
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={cn(
-                      "shrink-0 overflow-hidden rounded-lg border transition-colors",
-                      idx === activeImageIndex ? "border-primary/60" : "border-border hover:border-primary/40"
-                    )}
-                    title={`View image ${idx + 1}`}
-                  >
-                    <img src={url} alt={`Chart ${idx + 1}`} className="h-16 w-28 object-cover bg-black/20" />
-                  </button>
-                ))}
+        <button
+          type="button"
+          onClick={() => setImageOpen(true)}
+          className="group block overflow-hidden rounded-2xl border border-border hover:border-primary/40 transition-colors w-full"
+          title="Open full screen"
+        >
+          <img
+            src={shown}
+            alt="TradingView chart"
+            className="w-full max-h-[520px] object-contain bg-black/20"
+            loading="lazy"
+          />
+          <div className="pointer-events-none h-0">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity -translate-y-10 px-4">
+              <div className="inline-flex text-[11px] px-2 py-1 rounded-full border border-border bg-secondary/60 backdrop-blur">
+                Click to open
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        </button>
+
+        {imgs.length > 1 && (
+          <div className="mt-3 flex items-center gap-2">
+            <div className="text-xs text-muted-foreground mr-2">
+              {activeImageIndex + 1}/{imgs.length}
+            </div>
+            <div className="flex gap-2 overflow-x-auto pr-1">
+              {imgs.map((url, idx) => (
+                <button
+                  key={`${url}_${idx}`}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveImageIndex(idx);
+                  }}
+                  className={cn(
+                    "shrink-0 overflow-hidden rounded-xl border transition-colors",
+                    idx === activeImageIndex ? "border-primary/60" : "border-border hover:border-primary/40"
+                  )}
+                  title={`View image ${idx + 1}`}
+                >
+                  <img src={url} alt={`Chart ${idx + 1}`} className="h-16 w-28 object-cover bg-black/20" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
-  const goToTrade = (tradeId: string) => {
-    setShowFloatingPreview(false); // ✅ hides popup immediately when jumping to Trades
-    setActiveTab("trades");
-    setFocusTradeId(tradeId);
+  const EntrySinglePreview = ({
+    entry,
+    className,
+    onOpen,
+  }: {
+    entry: JournalEntry;
+    className?: string;
+    onOpen: (idx: number) => void;
+  }) => {
+    const imgs = getEntryImages(entry);
+    if (!imgs.length) return null;
+
+    // only show FIRST image in list card
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen(0);
+        }}
+        className={cn(
+          "mt-3 block w-full overflow-hidden rounded-xl border border-border hover:border-primary/40 transition-colors",
+          className
+        )}
+        title="Open image"
+      >
+        <img src={imgs[0]} alt="Chart preview" className="h-24 w-full object-cover bg-black/20" loading="lazy" />
+      </button>
+    );
   };
 
-  const EntryThumbGrid = ({
-    images,
-    onOpen,
-    className,
-  }: {
-    images: string[];
-    onOpen: (idx: number) => void;
-    className?: string;
-  }) => {
-    if (!images.length) return null;
-
-    // 1: single wide thumb
-    if (images.length === 1) {
-      return (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen(0);
-          }}
-          className={cn(
-            "block w-full mt-3 overflow-hidden rounded-lg border border-border hover:border-primary/40 transition-colors",
-            className
-          )}
-          title="Open full screen"
-        >
-          <img src={images[0]} alt="TradingView chart" className="w-full h-28 object-cover bg-black/20" loading="lazy" />
-        </button>
-      );
-    }
-
-    // 2-3: compact grid
-   // single-image preview (first image only)
-return (
-  <div className={cn("mt-3 overflow-hidden rounded-lg border border-border", className)}>
-    <img
-      src={images[0]}
-      alt="Chart preview"
-      className="h-28 w-full object-cover bg-black/20"
-      loading="lazy"
-    />
-  </div>
-);
-
+  const PnlPill = ({ pnl }: { pnl: number }) => {
+    const up = pnl >= 0;
+    return (
+      <span
+        className={cn(
+          "font-mono text-xs px-2.5 py-1 rounded-full border",
+          up ? "text-success border-success/20 bg-success/10" : "text-destructive border-destructive/20 bg-destructive/10"
+        )}
+      >
+        {up ? "+" : "-"}${Math.abs(pnl)}
+      </span>
+    );
   };
 
   return (
     <MainLayout>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Trade Journal</h1>
-          <p className="text-muted-foreground">Document your trades and compare live vs backtest performance</p>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold mb-1">Trade Journal</h1>
+          <p className="text-muted-foreground">
+            Document your trades and compare live vs backtest performance
+          </p>
         </div>
+
+        {activeTab === "journal" && (
+          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+            <span className="px-2 py-1 rounded-full border border-border bg-secondary/40">
+              {entries.length} entr{entries.length === 1 ? "y" : "ies"}
+            </span>
+            {activeFilterCount > 0 && (
+              <span className="px-2 py-1 rounded-full border border-border bg-secondary/40">
+                {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Fullscreen viewer (supports multi images) */}
-      {imageOpen && activeFullscreenUrl && (
+      {/* Fullscreen viewer */}
+      {imageOpen && activeImageUrl && (
         <div
           className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setImageOpen(false)}
         >
           <div className="relative max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute -top-12 left-0 flex items-center gap-2">
-              {selectedImages.length > 1 && (
-                <>
-                  <Button type="button" variant="outline" onClick={prevFullscreen}>
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    Prev
-                  </Button>
-                  <Button type="button" variant="outline" onClick={nextFullscreen}>
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
-                  <div className="ml-2 text-xs text-muted-foreground">
-                    {activeImageIndex + 1}/{selectedImages.length}
-                  </div>
-                </>
-              )}
-            </div>
-
             <Button
               type="button"
               variant="outline"
@@ -764,15 +799,34 @@ return (
             </Button>
 
             <img
-              src={activeFullscreenUrl}
+              src={activeImageUrl}
               alt="TradingView chart full screen"
-              className="w-full max-h-[85vh] object-contain rounded-xl border border-border bg-black/20"
+              className="w-full max-h-[85vh] object-contain rounded-2xl border border-border"
             />
+
+            {images.length > 1 && (
+              <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                {images.map((url, idx) => (
+                  <button
+                    key={`${url}_${idx}`}
+                    type="button"
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={cn(
+                      "overflow-hidden rounded-xl border transition-colors",
+                      idx === activeImageIndex ? "border-primary/60" : "border-border hover:border-primary/40"
+                    )}
+                    title={`View image ${idx + 1}`}
+                  >
+                    <img src={url} alt={`Chart ${idx + 1}`} className="h-16 w-24 object-cover bg-black/20" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ✅ CHANGED: popup only renders while on Journal Entries tab */}
+      {/* Floating preview (only on Journal tab) */}
       {activeTab === "journal" && showFloatingPreview && selectedEntry && !isEditing && (
         <div className="fixed right-6 bottom-6 z-[55] w-[760px] max-w-[calc(100vw-3rem)]">
           <div className="glass-card p-4 border border-border shadow-lg">
@@ -780,26 +834,13 @@ return (
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="font-semibold truncate">{selectedEntry.pair}</div>
+                  <PnlPill pnl={selectedEntry.pnl} />
 
-                  <div
-                    className={cn(
-                      "font-mono font-semibold",
-                      selectedEntry.pnl >= 0 ? "text-success" : "text-destructive"
-                    )}
-                  >
-                    {selectedEntry.pnl >= 0 ? "+" : "-"}${Math.abs(selectedEntry.pnl)}
-                  </div>
-
-                  <span className="text-xs px-2 py-1 rounded-full border border-border uppercase">
+                  <span className="text-[11px] px-2 py-1 rounded-full border border-border uppercase">
                     {selectedEntry.side}
                   </span>
 
-                  <span
-                    className={cn(
-                      "text-xs px-2 py-1 rounded-full capitalize",
-                      emotionColors[selectedEntry.emotion]
-                    )}
-                  >
+                  <span className={cn("text-[11px] px-2 py-1 rounded-full capitalize", emotionColors[selectedEntry.emotion])}>
                     {selectedEntry.emotion}
                   </span>
 
@@ -807,7 +848,7 @@ return (
                     <button
                       type="button"
                       onClick={() => goToTrade(selectedEntry.trade_id!)}
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40"
+                      className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border hover:border-primary/40"
                       title="Go to trade"
                     >
                       <CornerUpRight className="w-3.5 h-3.5" />
@@ -846,22 +887,25 @@ return (
               </div>
             </div>
 
-            {getEntryImages(selectedEntry).length ? (
+            {images.length ? (
               <button
                 type="button"
-                onClick={() => openFullscreenAt(activeImageIndex)}
-                className="block w-full overflow-hidden rounded-xl border border-border hover:border-primary/40 transition-colors"
+                onClick={() => {
+                  setActiveImageIndex(0);
+                  setImageOpen(true);
+                }}
+                className="block w-full overflow-hidden rounded-2xl border border-border hover:border-primary/40 transition-colors"
                 title="Open full screen"
               >
                 <img
-                  src={getEntryImages(selectedEntry)[activeImageIndex] ?? getEntryImages(selectedEntry)[0]}
+                  src={images[0]}
                   alt="TradingView chart"
-                  className="w-full max-h-[520px] object-contain bg-black/20"
+                  className="w-full max-h-[320px] object-contain bg-black/20"
                   loading="lazy"
                 />
               </button>
             ) : (
-              <div className="rounded-xl border border-border p-4 bg-secondary/30">
+              <div className="rounded-2xl border border-border p-4 bg-secondary/30">
                 <div className="text-sm text-muted-foreground line-clamp-3">
                   {selectedEntry.notes?.trim() ? selectedEntry.notes : "No notes."}
                 </div>
@@ -901,73 +945,106 @@ return (
             onCreated={() => setJournalRefreshKey((k) => k + 1)}
           />
 
-          <div className="flex gap-4 mb-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search entries..."
-                className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+          {/* POLISHED TOP TOOLBAR */}
+          <div className="glass-card p-3 mb-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                {/* Search */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search pair, notes, tags, emotion..."
+                    className="w-full pl-10 pr-10 py-2.5 bg-secondary/60 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                  {search.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-border bg-secondary/60 hover:border-primary/40 transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Sort */}
+                <div className="flex items-center gap-2 md:justify-end">
+                  <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as SortMode)}
+                    className="h-10 rounded-xl border border-border bg-secondary/60 px-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary/40 w-full md:w-auto"
+                  >
+                    {Object.entries(SORT_LABELS).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions row */}
+              <div className="flex flex-wrap items-center gap-2 justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="glow"
+                    size="default"
+                    onClick={() => setAddJournalOpen(true)}
+                    className="flex items-center gap-2 transition-transform hover:scale-[1.01]"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Entry
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="default"
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      setFilterOpen((v) => !v);
+                      setDateRangeOpen(false);
+                    }}
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter
+                    {activeFilterCount > 0 && (
+                      <span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="default"
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      setDateRangeOpen((v) => !v);
+                      setFilterOpen(false);
+                    }}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Date Range
+                  </Button>
+
+                  {activeFilterCount > 0 && (
+                    <Button variant="outline" onClick={clearFilters} className="flex items-center gap-2">
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  Showing <span className="font-medium">{visibleEntries.length}</span> of{" "}
+                  <span className="font-medium">{entries.length}</span>
+                </div>
+              </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
-              <select
-                value={sortMode}
-                onChange={(e) => setSortMode(e.target.value as SortMode)}
-                className="h-10 rounded-md border border-border bg-secondary px-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                {Object.entries(SORT_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Button
-              variant="glow"
-              size="default"
-              onClick={() => setAddJournalOpen(true)}
-              className="flex items-center gap-2 transition-transform hover:scale-[1.02]"
-            >
-              <Plus className="w-4 h-4" />
-              Add Entry
-            </Button>
-
-            <Button
-              variant="outline"
-              size="default"
-              className="flex items-center gap-2"
-              onClick={() => {
-                setFilterOpen((v) => !v);
-                setDateRangeOpen(false);
-              }}
-            >
-              <Filter className="w-4 h-4" />
-              Filter
-              {activeFilterCount > 0 && (
-                <span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="default"
-              className="flex items-center gap-2"
-              onClick={() => {
-                setDateRangeOpen((v) => !v);
-                setFilterOpen(false);
-              }}
-            >
-              <Calendar className="w-4 h-4" />
-              Date Range
-            </Button>
           </div>
 
           {filterOpen && (
@@ -978,7 +1055,7 @@ return (
                   <select
                     value={filterSide}
                     onChange={(e) => setFilterSide(e.target.value as any)}
-                    className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+                    className="bg-secondary/60 text-white border border-border rounded-xl px-2 py-2 text-sm w-full"
                   >
                     <option value="all">All</option>
                     <option value="buy">Buy</option>
@@ -991,7 +1068,7 @@ return (
                   <select
                     value={filterEmotion}
                     onChange={(e) => setFilterEmotion(e.target.value as any)}
-                    className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+                    className="bg-secondary/60 text-white border border-border rounded-xl px-2 py-2 text-sm w-full"
                   >
                     <option value="all">All</option>
                     {EMOTIONS.map((em) => (
@@ -1008,7 +1085,7 @@ return (
                     value={filterPair}
                     onChange={(e) => setFilterPair(e.target.value)}
                     placeholder="e.g. XAUUSD"
-                    className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+                    className="bg-secondary/60 text-white border border-border rounded-xl px-2 py-2 text-sm w-full"
                   />
                 </div>
 
@@ -1018,18 +1095,18 @@ return (
                     value={filterTag}
                     onChange={(e) => setFilterTag(e.target.value)}
                     placeholder="e.g. fvg"
-                    className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+                    className="bg-secondary/60 text-white border border-border rounded-xl px-2 py-2 text-sm w-full"
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-between mt-4">
                 <p className="text-xs text-muted-foreground">
-                  Showing <span className="font-medium">{visibleEntries.length}</span> entries
+                  Active filters: <span className="font-medium">{activeFilterCount}</span>
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={clearFilters}>
-                    Clear filters
+                    Reset
                   </Button>
                   <Button variant="outline" onClick={() => setFilterOpen(false)}>
                     Close
@@ -1043,22 +1120,22 @@ return (
             <div className="glass-card p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">From (YYYY-MM-DD)</p>
+                  <p className="text-xs text-muted-foreground">From</p>
                   <input
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+                    className="bg-secondary/60 text-white border border-border rounded-xl px-2 py-2 text-sm w-full"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">To (YYYY-MM-DD)</p>
+                  <p className="text-xs text-muted-foreground">To</p>
                   <input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="bg-secondary text-white border border-border rounded-md px-2 py-1 text-sm w-full"
+                    className="bg-secondary/60 text-white border border-border rounded-xl px-2 py-2 text-sm w-full"
                   />
                 </div>
 
@@ -1085,160 +1162,190 @@ return (
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="space-y-4">
+            {/* LEFT LIST */}
+            <div className="space-y-3">
               {visibleEntries.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No journal entries found.</div>
+                <div className="glass-card p-6">
+                  <div className="text-sm text-muted-foreground">No journal entries found.</div>
+                </div>
               ) : (
                 visibleEntries.map((entry) => {
-                  const imgs = getEntryImages(entry);
+                  const entryImgs = getEntryImages(entry);
+                  const dateLabel = entry.entry_time ? new Date(entry.entry_time).toLocaleDateString() : "";
+
+                  const tags = (entry.tags ?? []).filter(Boolean);
+                  const shownTags = tags.slice(0, 3);
+                  const extraTagCount = Math.max(0, tags.length - shownTags.length);
+
                   return (
                     <div
                       key={entry.id}
                       onClick={() => selectEntry(entry)}
                       className={cn(
-                        "glass-card p-4 cursor-pointer transition-all hover:border-primary/30",
-                        selectedEntry?.id === entry.id && "border-primary/50 bg-primary/5"
+                        "glass-card p-4 cursor-pointer transition-all hover:border-primary/30 hover:-translate-y-[1px]",
+                        selectedEntry?.id === entry.id && "border-primary/60 bg-primary/5 ring-1 ring-primary/25"
                       )}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={cn(
-                              "w-8 h-8 rounded-lg flex items-center justify-center",
-                              entry.side === "buy" ? "bg-success/10" : "bg-destructive/10"
-                            )}
-                          >
-                            {entry.side === "buy" ? (
-                              <ArrowUpRight className="w-4 h-4 text-success" />
-                            ) : (
-                              <ArrowDownRight className="w-4 h-4 text-destructive" />
-                            )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={cn(
+                                "w-9 h-9 rounded-xl flex items-center justify-center border border-border bg-secondary/30",
+                                entry.side === "buy" ? "text-success" : "text-destructive"
+                              )}
+                            >
+                              {entry.side === "buy" ? (
+                                <ArrowUpRight className="w-4 h-4" />
+                              ) : (
+                                <ArrowDownRight className="w-4 h-4" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold truncate">{entry.pair}</span>
+                                <span className="text-[11px] px-2 py-0.5 rounded-full border border-border uppercase text-muted-foreground">
+                                  {entry.side}
+                                </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">{dateLabel}</div>
+                            </div>
                           </div>
-                          <span className="font-medium">{entry.pair}</span>
                         </div>
 
-                        <span
-                          className={cn(
-                            "font-mono font-medium",
-                            entry.pnl >= 0 ? "text-success" : "text-destructive"
-                          )}
-                        >
-                          {entry.pnl >= 0 ? "+" : ""}
-                          {entry.pnl}
-                        </span>
+                        <div className="shrink-0">
+                          <PnlPill pnl={entry.pnl} />
+                        </div>
                       </div>
 
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{entry.notes}</p>
+                      <div className="mt-3">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {entry.notes?.trim() ? entry.notes : "No notes."}
+                        </p>
+                      </div>
 
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {entry.trade_id && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              goToTrade(entry.trade_id!);
-                            }}
-                            className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
-                            title="Go to trade"
-                          >
-                            <CornerUpRight className="w-3 h-3" />
-                            Go to trade
-                          </button>
-                        )}
-
-                        {entry.tv_url && (
-                          <a
-                            href={entry.tv_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Open TradingView
-                          </a>
-                        )}
-
-                        {!entry.tv_url && imgs.length > 0 && (
-                          <span className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border border-border text-muted-foreground">
-                            <ImageIcon className="w-3 h-3" />
-                            {imgs.length === 1 ? "Chart image" : `${imgs.length} images`}
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn("text-[11px] px-2 py-1 rounded-full capitalize", emotionColors[entry.emotion])}>
+                            {entry.emotion}
                           </span>
-                        )}
+
+                          {entryImgs.length > 0 && (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              {entryImgs.length}
+                            </span>
+                          )}
+
+                          {shownTags.length > 0 && (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground">
+                              <Tag className="w-3.5 h-3.5" />
+                              {shownTags.join(", ")}
+                              {extraTagCount > 0 ? ` +${extraTagCount}` : ""}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {entry.trade_id && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goToTrade(entry.trade_id!);
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
+                              title="Go to trade"
+                            >
+                              <CornerUpRight className="w-3.5 h-3.5" />
+                              Trade
+                            </button>
+                          )}
+
+                          {entry.tv_url && (
+                            <a
+                              href={entry.tv_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border hover:border-primary/40 transition-colors"
+                              title="Open TradingView"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              TV
+                            </a>
+                          )}
+                        </div>
                       </div>
 
-                      {/* ✅ multi thumb grid */}
-                      <EntryThumbGrid
-                        images={imgs}
-                        onOpen={(idx) => {
+                      <EntrySinglePreview
+                        entry={entry}
+                        onOpen={() => {
                           setSelectedEntry(entry);
-                          setActiveImageIndex(idx);
+                          setActiveImageIndex(0);
                           setImageOpen(true);
                         }}
                       />
-
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-xs text-muted-foreground">
-                          {entry.entry_time ? new Date(entry.entry_time).toLocaleDateString() : ""}
-                        </span>
-                        <span className={cn("text-xs px-2 py-1 rounded-full capitalize", emotionColors[entry.emotion])}>
-                          {entry.emotion}
-                        </span>
-                      </div>
                     </div>
                   );
                 })
               )}
             </div>
 
+            {/* RIGHT PANEL */}
             <div className="lg:col-span-2">
               {selectedEntry ? (
                 <div className="glass-card p-6 animate-fade-in">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
+                  {/* Header */}
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+                    <div className="flex items-start gap-4 min-w-0">
                       <div
                         className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center",
-                          selectedEntry.side === "buy" ? "bg-success/10" : "bg-destructive/10"
+                          "w-12 h-12 rounded-2xl flex items-center justify-center border border-border bg-secondary/30",
+                          selectedEntry.side === "buy" ? "text-success" : "text-destructive"
                         )}
                       >
                         {selectedEntry.side === "buy" ? (
-                          <ArrowUpRight className="w-6 h-6 text-success" />
+                          <ArrowUpRight className="w-6 h-6" />
                         ) : (
-                          <ArrowDownRight className="w-6 h-6 text-destructive" />
+                          <ArrowDownRight className="w-6 h-6" />
                         )}
                       </div>
-                      <div>
-                        <h2 className="text-xl font-semibold">
+
+                      <div className="min-w-0">
+                        <h2 className="text-xl font-semibold flex items-center gap-2 flex-wrap">
                           {isEditing ? (
                             <input
                               value={draftPair}
                               onChange={(e) => setDraftPair(e.target.value)}
-                              className="bg-transparent border border-border rounded-md px-2 py-1 text-xl w-[220px]"
+                              className="bg-transparent border border-border rounded-xl px-3 py-1 text-xl w-[220px] focus:outline-none focus:ring-2 focus:ring-primary/40"
                             />
                           ) : (
-                            selectedEntry.pair
+                            <span className="truncate">{selectedEntry.pair}</span>
                           )}
+
+                          <span className="text-[11px] px-2 py-1 rounded-full border border-border uppercase text-muted-foreground">
+                            {(isEditing ? draftSide : selectedEntry.side).toUpperCase()}
+                          </span>
+
+                          <span className={cn("text-[11px] px-2 py-1 rounded-full capitalize", emotionColors[selectedEntry.emotion])}>
+                            {selectedEntry.emotion}
+                          </span>
                         </h2>
-                        <p className="text-sm text-muted-foreground">{selectedDateLabel}</p>
+
+                        <p className="text-sm text-muted-foreground">
+                          {selectedEntry.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : selectedDateLabel}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <p
-                        className={cn(
-                          "text-2xl font-mono font-semibold",
-                          selectedEntry.pnl >= 0 ? "text-success" : "text-destructive"
-                        )}
-                      >
-                        {selectedEntry.pnl >= 0 ? "+" : ""}${Math.abs(selectedEntry.pnl)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {(isEditing ? draftSide : selectedEntry.side).toUpperCase()} Trade
-                      </p>
+                    <div className="text-left md:text-right shrink-0">
+                      <PnlPill pnl={selectedEntry.pnl} />
                     </div>
                   </div>
 
+                  {/* Quick actions */}
                   <div className="flex items-center gap-2 mb-4 flex-wrap">
                     {selectedEntry.trade_id && !isEditing && (
                       <Button
@@ -1253,13 +1360,13 @@ return (
                     )}
 
                     {isEditing ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap w-full">
                         <span className="text-xs text-muted-foreground">TradingView URL</span>
                         <input
                           value={draftTvUrl}
                           onChange={(e) => setDraftTvUrl(e.target.value)}
                           placeholder="https://www.tradingview.com/x/AbCdEf12/"
-                          className="bg-transparent border border-border rounded-md px-2 py-1 text-sm w-[420px] max-w-full"
+                          className="bg-transparent border border-border rounded-xl px-3 py-2 text-sm w-full md:w-[520px] max-w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </div>
                     ) : (
@@ -1268,7 +1375,7 @@ return (
                           href={selectedEntry.tv_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-md border border-border hover:border-primary/40 transition-colors"
+                          className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-xl border border-border hover:border-primary/40 transition-colors"
                         >
                           <ExternalLink className="w-4 h-4" />
                           Open TradingView
@@ -1280,218 +1387,207 @@ return (
                   <div ref={stickySentinelRef} className="h-px w-full" />
                   <PreviewCard />
 
-                  {/* Editing single-image flow stays as-is (legacy). Multi-image edit can be added later. */}
+                  {/* Multi-image editor */}
                   {isEditing && (
                     <div className="mb-6 space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium flex items-center gap-2">
                           <ImageIcon className="w-4 h-4" />
-                          Chart image (legacy)
+                          Chart images (up to 3)
                         </p>
-                        <div className="flex items-center gap-2">
-                          {draftTvImageUrl && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                if (draftTvImageUrl) {
-                                  setActiveImageIndex(0);
-                                  setImageOpen(true);
-                                }
-                              }}
-                            >
-                              View
-                            </Button>
-                          )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setDraftTvImageUrl("");
-                              setNewChartFile(null);
-                              if (newChartPreviewUrl) URL.revokeObjectURL(newChartPreviewUrl);
-                              setNewChartPreviewUrl(null);
-                            }}
-                          >
-                            Clear
-                          </Button>
+                        <div className="text-xs text-muted-foreground">
+                          {draftImageSlots.filter(Boolean).length}/3
                         </div>
                       </div>
 
-                      {newChartPreviewUrl ? (
-                        <div className="overflow-hidden rounded-xl border border-border">
-                          <img
-                            src={newChartPreviewUrl}
-                            alt="New chart preview"
-                            className="w-full max-h-[260px] object-cover bg-black/20"
-                          />
-                        </div>
-                      ) : draftTvImageUrl ? (
-                        <div className="overflow-hidden rounded-xl border border-border">
-                          <img
-                            src={draftTvImageUrl}
-                            alt="Chart preview"
-                            className="w-full max-h-[260px] object-cover bg-black/20"
-                          />
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground border border-dashed border-border rounded-xl p-4">
-                          No chart image set.
-                        </div>
-                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {[0, 1, 2].map((slotIdx) => {
+                          const url = draftImageSlots[slotIdx];
+                          const preview = newImagePreviewUrls[slotIdx];
+                          const file = newImageFiles[slotIdx];
+                          const shown = preview || url;
 
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <label className="text-sm text-muted-foreground">Replace image:</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] ?? null;
-                            if (newChartPreviewUrl) URL.revokeObjectURL(newChartPreviewUrl);
-                            setNewChartFile(file);
-                            setNewChartPreviewUrl(file ? URL.createObjectURL(file) : null);
-                          }}
-                          className="text-sm"
-                        />
+                          return (
+                            <div key={slotIdx} className="rounded-2xl border border-border bg-secondary/20 overflow-hidden">
+                              <div className="p-3 flex items-center justify-between">
+                                <div className="text-xs text-muted-foreground">Image {slotIdx + 1}</div>
+                                <div className="flex items-center gap-2">
+                                  <label className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-xl border border-border hover:border-primary/40 cursor-pointer">
+                                    Replace
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0] ?? null;
+                                        setSlotFile(slotIdx, f);
+                                      }}
+                                    />
+                                  </label>
 
-                        {newChartFile && (
-                          <>
-                            <span className="text-xs text-muted-foreground">Selected: {newChartFile.name}</span>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => {
-                                setNewChartFile(null);
-                                if (newChartPreviewUrl) URL.revokeObjectURL(newChartPreviewUrl);
-                                setNewChartPreviewUrl(null);
-                              }}
-                            >
-                              Clear selected file
-                            </Button>
-                          </>
-                        )}
+                                  <button
+                                    type="button"
+                                    className="text-xs px-2 py-1 rounded-xl border border-border hover:border-destructive/50 hover:text-destructive transition-colors"
+                                    onClick={() => clearSlot(slotIdx)}
+                                    title="Remove this image"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+
+                              {shown ? (
+                                <div className="border-t border-border">
+                                  <img
+                                    src={shown}
+                                    alt={`Slot ${slotIdx + 1}`}
+                                    className="h-28 w-full object-cover bg-black/20"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="border-t border-border p-4 text-xs text-muted-foreground">
+                                  Empty slot. Click “Replace” to add.
+                                </div>
+                              )}
+
+                              {file && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border">
+                                  Selected: <span className="font-medium">{file.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
 
-                      <div className="text-xs text-muted-foreground">
-                        Note: multi-image editing will be added next. Current editor updates the legacy single image field.
-                      </div>
+                      {/* keep legacy draft around (backwards compat) */}
+                      <div className="hidden">{draftTvImageUrl}</div>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Side</p>
-                      {isEditing ? (
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant={draftSide === "buy" ? "default" : "outline"}
-                            onClick={() => setDraftSide("buy")}
+                  {/* Meta grid (polished) */}
+                  <div className="rounded-2xl border border-border bg-secondary/20 p-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Side</p>
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={draftSide === "buy" ? "default" : "outline"}
+                              onClick={() => setDraftSide("buy")}
+                            >
+                              Buy
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={draftSide === "sell" ? "default" : "outline"}
+                              onClick={() => setDraftSide("sell")}
+                            >
+                              Sell
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-medium uppercase">{selectedEntry.side}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">PnL</p>
+                        {isEditing ? (
+                          <input
+                            value={draftPnl}
+                            onChange={(e) => setDraftPnl(e.target.value)}
+                            className="bg-transparent border border-border rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            placeholder="0"
+                          />
+                        ) : (
+                          <p className="text-sm font-medium">{selectedEntry.pnl}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Emotion</p>
+                        {isEditing ? (
+                          <select
+                            value={draftEmotion}
+                            onChange={(e) => setDraftEmotion(e.target.value as JournalEntry["emotion"])}
+                            className="bg-transparent border border-border rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
                           >
-                            Buy
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={draftSide === "sell" ? "default" : "outline"}
-                            onClick={() => setDraftSide("sell")}
-                          >
-                            Sell
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-sm font-medium uppercase">{selectedEntry.side}</p>
-                      )}
+                            {EMOTIONS.map((em) => (
+                              <option key={em} value={em}>
+                                {em}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={cn("inline-flex text-xs px-2 py-1 rounded-full capitalize", emotionColors[selectedEntry.emotion])}>
+                            {selectedEntry.emotion}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Entry time</p>
+                        {isEditing ? (
+                          <input
+                            type="datetime-local"
+                            value={draftEntryTime}
+                            onChange={(e) => setDraftEntryTime(e.target.value)}
+                            className="bg-transparent border border-border rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          />
+                        ) : (
+                          <p className="text-sm font-medium">
+                            {selectedEntry.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : "-"}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">PnL</p>
+                    <div className="mt-4 flex items-center gap-2 flex-wrap">
+                      <Tag className="w-4 h-4 text-muted-foreground" />
                       {isEditing ? (
                         <input
-                          value={draftPnl}
-                          onChange={(e) => setDraftPnl(e.target.value)}
-                          className="bg-transparent border border-border rounded-md px-2 py-1 text-sm w-full"
-                          placeholder="0"
+                          value={draftTags}
+                          onChange={(e) => setDraftTags(e.target.value)}
+                          placeholder="comma,separated,tags"
+                          className="bg-transparent border border-border rounded-xl px-3 py-2 text-sm w-full md:w-[520px] max-w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       ) : (
-                        <p className="text-sm font-medium">{selectedEntry.pnl}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Emotion</p>
-                      {isEditing ? (
-                        <select
-                          value={draftEmotion}
-                          onChange={(e) => setDraftEmotion(e.target.value as JournalEntry["emotion"])}
-                          className="bg-transparent border border-border rounded-md px-2 py-1 text-sm w-full"
-                        >
-                          {EMOTIONS.map((em) => (
-                            <option key={em} value={em}>
-                              {em}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span
-                          className={cn(
-                            "inline-flex text-xs px-2 py-1 rounded-full capitalize",
-                            emotionColors[selectedEntry.emotion]
+                        <>
+                          {(selectedEntry.tags ?? []).length ? (
+                            (selectedEntry.tags ?? []).map((tag) => (
+                              <span key={tag} className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/10">
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No tags</span>
                           )}
-                        >
-                          {selectedEntry.emotion}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Entry time</p>
-                      {isEditing ? (
-                        <input
-                          type="datetime-local"
-                          value={draftEntryTime}
-                          onChange={(e) => setDraftEntryTime(e.target.value)}
-                          className="bg-transparent border border-border rounded-md px-2 py-1 text-sm w-full"
-                        />
-                      ) : (
-                        <p className="text-sm font-medium">
-                          {selectedEntry.entry_time ? new Date(selectedEntry.entry_time).toLocaleString() : "-"}
-                        </p>
+                        </>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-6 flex-wrap">
-                    <Tag className="w-4 h-4 text-muted-foreground" />
-                    {isEditing ? (
-                      <input
-                        value={draftTags}
-                        onChange={(e) => setDraftTags(e.target.value)}
-                        placeholder="comma,separated,tags"
-                        className="bg-transparent border border-border rounded-md px-2 py-1 text-sm w-full max-w-[520px]"
-                      />
-                    ) : (
-                      (selectedEntry.tags ?? []).map((tag) => (
-                        <span key={tag} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full">
-                          {tag}
-                        </span>
-                      ))
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Trade Notes</label>
+                  {/* Notes */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Trade Notes</label>
                     <Textarea
                       value={isEditing ? draftNotes : selectedEntry.notes ?? ""}
                       onChange={(e) => isEditing && setDraftNotes(e.target.value)}
                       readOnly={!isEditing}
                       placeholder="Document your thoughts about this trade..."
-                      className={cn("min-h-[200px] bg-muted/50 border-border resize-none", !isEditing && "opacity-90")}
+                      className={cn(
+                        "min-h-[220px] bg-muted/40 border-border resize-none rounded-2xl",
+                        !isEditing && "opacity-90"
+                      )}
                     />
                   </div>
 
-                  <div className="flex justify-between gap-4 mt-6">
-                    <div className="flex gap-2">
+                  {/* Footer actions */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-6">
+                    <div className="flex gap-2 flex-wrap">
                       {!isEditing ? (
                         <>
                           <Button
@@ -1508,11 +1604,7 @@ return (
 
                           <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                             <AlertDialogTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                disabled={deleting}
-                                className="flex items-center gap-2"
-                              >
+                              <Button variant="destructive" disabled={deleting} className="flex items-center gap-2">
                                 <Trash2 className="w-4 h-4" />
                                 {deleting ? "Deleting..." : "Delete"}
                               </Button>
@@ -1556,11 +1648,11 @@ return (
                       )}
                     </div>
 
-                    {!isEditing && getEntryImages(selectedEntry).length > 0 && (
+                    {!isEditing && images.length > 0 && (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => openFullscreenAt(activeImageIndex)}
+                        onClick={() => setImageOpen(true)}
                         className="flex items-center gap-2"
                       >
                         <ImageIcon className="w-4 h-4" />
@@ -1570,7 +1662,9 @@ return (
                   </div>
                 </div>
               ) : (
-                <div className="glass-card p-6 text-sm text-muted-foreground">Select an entry to view details.</div>
+                <div className="glass-card p-6 text-sm text-muted-foreground">
+                  Select an entry to view details.
+                </div>
               )}
             </div>
           </div>
