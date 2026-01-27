@@ -9,7 +9,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
 
-import { Calendar, Plus, Save, Sparkles, Target, NotebookPen } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent as AlertDialogContentUI,
+  AlertDialogDescription,
+  AlertDialogFooter as AlertDialogFooterUI,
+  AlertDialogHeader as AlertDialogHeaderUI,
+  AlertDialogTitle as AlertDialogTitleUI,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+import { Calendar, Plus, Save, Sparkles, Target, NotebookPen, Trash2, Loader2 } from "lucide-react";
 
 type Mood = "great" | "okay" | "bad";
 
@@ -132,6 +144,10 @@ export default function SessionLog() {
 
   const [focusField, setFocusField] = useState<FocusField>("recap");
 
+  // ✅ delete session log state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const currency = "USD";
   const locale = "en-US";
 
@@ -146,13 +162,7 @@ export default function SessionLog() {
     const curDate = toYmdFromUi(dayYmd);
 
     if (!selected) {
-      return (
-        !!recap.trim() ||
-        !!lessons.trim() ||
-        !!plan.trim() ||
-        mood !== "great" ||
-        curDate !== todayYmd()
-      );
+      return !!recap.trim() || !!lessons.trim() || !!plan.trim() || mood !== "great" || curDate !== todayYmd();
     }
 
     const same =
@@ -224,6 +234,28 @@ export default function SessionLog() {
     }
 
     setPnlByDay(map);
+  };
+
+  const refreshDays = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("session_logs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("log_date", { ascending: false });
+
+    if (error) {
+      console.error("Refresh session logs error:", error);
+      setDays([]);
+      setPnlByDay({});
+      hydrateNewDay();
+      return;
+    }
+
+    const rows = (data ?? []) as SessionLogRow[];
+    setDays(rows);
+    await loadPnLForDays(rows);
   };
 
   useEffect(() => {
@@ -313,7 +345,63 @@ export default function SessionLog() {
         if (data?.id) setSelectedId(data.id);
       }
 
-      const { data: refreshed, error: refreshErr } = await supabase
+      await refreshDays();
+
+      const currentLogDate = toYmdFromUi(dayYmd);
+      const next =
+        (selectedId ? days.find((r) => r.id === selectedId) : null) ??
+        days.find((r) => r.log_date === currentLogDate) ??
+        days[0] ??
+        null;
+
+      // after refreshDays, the `days` state updates async; pick from the freshly fetched list instead:
+      const { data: refreshed } = await supabase
+        .from("session_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("log_date", { ascending: false });
+
+      const rows = (refreshed ?? []) as SessionLogRow[];
+      const nextRow =
+        (selectedId ? rows.find((r) => r.id === selectedId) : null) ??
+        rows.find((r) => r.log_date === currentLogDate) ??
+        rows[0] ??
+        null;
+
+      if (nextRow) hydrateFromRow(nextRow);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ✅ delete selected session log
+  const handleDeleteSelected = async () => {
+    if (!user) return;
+    if (!selectedId) {
+      setDeleteOpen(false);
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const deletingRow = days.find((d) => d.id === selectedId) ?? null;
+
+      const { error } = await supabase
+        .from("session_logs")
+        .delete()
+        .eq("id", selectedId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Delete session log error:", error);
+        alert(error.message);
+        return;
+      }
+
+      setDeleteOpen(false);
+
+      // fetch fresh list
+      const { data, error: refreshErr } = await supabase
         .from("session_logs")
         .select("*")
         .eq("user_id", user.id)
@@ -321,25 +409,24 @@ export default function SessionLog() {
 
       if (refreshErr) {
         console.error("Refresh session logs error:", refreshErr);
+        hydrateNewDay();
+        setDays([]);
+        setPnlByDay({});
         return;
       }
 
-      const rows = (refreshed ?? []) as SessionLogRow[];
+      const rows = (data ?? []) as SessionLogRow[];
       setDays(rows);
-
       await loadPnLForDays(rows);
 
-      const currentLogDate = toYmdFromUi(dayYmd);
+      // choose next selection: same date (if exists) else first row else new day
+      const deletedDate = deletingRow?.log_date ?? toYmdFromUi(dayYmd);
+      const nextRow = rows.find((r) => r.log_date === deletedDate) ?? rows[0] ?? null;
 
-      const next =
-        (selectedId ? rows.find((r) => r.id === selectedId) : null) ??
-        rows.find((r) => r.log_date === currentLogDate) ??
-        rows[0] ??
-        null;
-
-      if (next) hydrateFromRow(next);
+      if (nextRow) hydrateFromRow(nextRow);
+      else hydrateNewDay();
     } finally {
-      setSaving(false);
+      setDeleting(false);
     }
   };
 
@@ -361,11 +448,24 @@ export default function SessionLog() {
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">Session Log</h1>
-            <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs", headerMood.border, headerMood.bg)}>
+            <span
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs",
+                headerMood.border,
+                headerMood.bg
+              )}
+            >
               <span className={cn("h-2 w-2 rounded-full", headerMood.dot)} />
               <span className={cn("font-medium", headerMood.text)}>{headerMood.label}</span>
             </span>
-            <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono", headerPnl.border, headerPnl.bg, headerPnl.text)}>
+            <span
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono",
+                headerPnl.border,
+                headerPnl.bg,
+                headerPnl.text
+              )}
+            >
               {formatCurrency(selectedDayPnl, currency, locale)}
             </span>
           </div>
@@ -389,12 +489,54 @@ export default function SessionLog() {
             Copy focused
           </Button>
 
-          <Button
-            variant="glow"
-            onClick={handleSave}
-            disabled={saving || !isDirty}
-            className="flex items-center gap-2"
-          >
+          {/* ✅ Delete session log (only when an existing log is selected) */}
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                className="flex items-center gap-2"
+                disabled={!selectedId || saving || deleting}
+                title={!selectedId ? "Select an existing day to delete" : "Delete this session log"}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete log
+              </Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContentUI>
+              <AlertDialogHeaderUI>
+                <AlertDialogTitleUI>
+                  Delete session log for {formatUiDate(toYmdFromUi(dayYmd))}?
+                </AlertDialogTitleUI>
+                <AlertDialogDescription>
+                  This cannot be undone. This will permanently remove this day’s session log.
+                </AlertDialogDescription>
+              </AlertDialogHeaderUI>
+
+              <AlertDialogFooterUI className="gap-2">
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDeleteSelected();
+                  }}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Deleting…
+                    </span>
+                  ) : (
+                    "Delete permanently"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooterUI>
+            </AlertDialogContentUI>
+          </AlertDialog>
+
+          <Button variant="glow" onClick={handleSave} disabled={saving || !isDirty} className="flex items-center gap-2">
             <Save className="h-4 w-4" />
             {saving ? "Saving..." : isDirty ? "Save changes" : "Saved"}
           </Button>
@@ -441,21 +583,33 @@ export default function SessionLog() {
                       onClick={() => hydrateFromRow(d)}
                       className={cn(
                         "group w-full text-left rounded-xl border px-3 py-2 transition-colors",
-                        active ? "border-primary/40 bg-primary/10" : "border-border hover:border-primary/30 hover:bg-accent/40"
+                        active
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-border hover:border-primary/30 hover:bg-accent/40"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <div className="font-medium text-sm">{formatUiDate(d.log_date)}</div>
-                            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px]", moodMeta.border, moodMeta.bg)}>
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px]",
+                                moodMeta.border,
+                                moodMeta.bg
+                              )}
+                            >
                               <span className={cn("h-1.5 w-1.5 rounded-full", moodMeta.dot)} />
                               <span className={cn("font-medium", moodMeta.text)}>{moodMeta.label}</span>
                             </span>
                           </div>
 
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {hasNotes ? <span className="line-clamp-2">{preview}</span> : <span className="opacity-70">No notes yet</span>}
+                            {hasNotes ? (
+                              <span className="line-clamp-2">{preview}</span>
+                            ) : (
+                              <span className="opacity-70">No notes yet</span>
+                            )}
                           </div>
                         </div>
 
@@ -508,7 +662,14 @@ export default function SessionLog() {
                 </div>
 
                 {/* Keep only this PnL badge (top-right) */}
-                <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono", headerPnl.border, headerPnl.bg, headerPnl.text)}>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono",
+                    headerPnl.border,
+                    headerPnl.bg,
+                    headerPnl.text
+                  )}
+                >
                   {formatCurrency(selectedDayPnl, currency, locale)}
                 </span>
               </div>
@@ -524,9 +685,7 @@ export default function SessionLog() {
 
               <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-2">
                 <Target className="h-4 w-4 text-muted-foreground" />
-                <div className="text-xs text-muted-foreground">
-                  Keep it simple: one honest recap, one lesson, one rule for tomorrow.
-                </div>
+                <div className="text-xs text-muted-foreground">Keep it simple: one honest recap, one lesson, one rule for tomorrow.</div>
               </div>
             </div>
 
@@ -607,12 +766,15 @@ export default function SessionLog() {
                   <NotebookPen className="h-4 w-4 text-muted-foreground" />
                   <div className="font-semibold">How did today go?</div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Quick recap of the session (what happened, what you felt, what mattered).
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Quick recap of the session (what happened, what you felt, what mattered).</div>
               </div>
 
-              <span className={cn("rounded-full border px-3 py-1 text-[11px] text-muted-foreground", focusField === "recap" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20")}>
+              <span
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[11px] text-muted-foreground",
+                  focusField === "recap" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20"
+                )}
+              >
                 Focused
               </span>
             </div>
@@ -636,7 +798,12 @@ export default function SessionLog() {
                 <div className="text-xs text-muted-foreground mt-1">What did you learn today? What should you repeat or stop doing?</div>
               </div>
 
-              <span className={cn("rounded-full border px-3 py-1 text-[11px] text-muted-foreground", focusField === "lessons" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20")}>
+              <span
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[11px] text-muted-foreground",
+                  focusField === "lessons" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20"
+                )}
+              >
                 Focused
               </span>
             </div>
@@ -660,7 +827,12 @@ export default function SessionLog() {
                 <div className="text-xs text-muted-foreground mt-1">Simple rules for tomorrow so you stay consistent.</div>
               </div>
 
-              <span className={cn("rounded-full border px-3 py-1 text-[11px] text-muted-foreground", focusField === "plan" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20")}>
+              <span
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[11px] text-muted-foreground",
+                  focusField === "plan" ? "border-primary/40 bg-primary/10 text-primary/90" : "border-border bg-secondary/20"
+                )}
+              >
                 Focused
               </span>
             </div>
