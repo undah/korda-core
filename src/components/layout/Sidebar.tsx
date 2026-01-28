@@ -21,11 +21,8 @@ const navItems = [
   { icon: BookOpen, label: "Journal", path: "/journal" },
 
   { icon: CalendarDays, label: "Session Log", path: "/session-log" },
-
-  // ✅ NEW: Charts
-  { icon: CandlestickChart, label: "Charts", path: "/charting" },
-
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
+  { icon: CandlestickChart, label: "Charts", path: "/charting" },
   { icon: Link2, label: "Connections", path: "/connections" },
   { icon: Bot, label: "AI Coach", path: "/coach" },
   { icon: Settings, label: "Settings", path: "/settings" },
