@@ -9,6 +9,7 @@ import {
   TrendingUp,
   LogOut,
   User as UserIcon,
+  CandlestickChart, // ✅ NEW
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -19,8 +20,10 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: BookOpen, label: "Journal", path: "/journal" },
 
-  // ✅ NEW
   { icon: CalendarDays, label: "Session Log", path: "/session-log" },
+
+  // ✅ NEW: Charts
+  { icon: CandlestickChart, label: "Charts", path: "/charting" },
 
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: Link2, label: "Connections", path: "/connections" },

@@ -12,8 +12,11 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ComingSoon from "./pages/ComingSoon";
 
-// ✅ NEW
+// ✅ existing
 import SessionLog from "./pages/SessionLog";
+
+// ✅ NEW: charting page
+import Charting from "./pages/Charting";
 
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 
@@ -26,17 +29,20 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public */}
           <Route path="/login" element={<Login />} />
 
+          {/* Protected */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Index />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/analytics" element={<Analytics />} />
-
-            {/* ✅ NEW */}
             <Route path="/session-log" element={<SessionLog />} />
 
-            {/* Disabled for now (easy to revert later) */}
+            {/* ✅ NEW */}
+            <Route path="/Charting" element={<Charting />} />
+
+            {/* Disabled for now */}
             <Route
               path="/connections"
               element={
@@ -59,6 +65,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
           </Route>
 
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
