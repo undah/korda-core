@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { AddTradeDialog } from "@/components/journal/AddTradeDialog";
 import { AddJournalEntryDialog } from "@/components/journal/AddJournalEntryDialog";
 import { EditTradeDialog } from "@/components/journal/EditTradeDialog";
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface Trade {
@@ -43,9 +42,7 @@ interface Trade {
   duration: string;
   strategy: string;
   accountType: "live" | "backtest";
-
   tradeTimeIso?: string | null;
-
   notes?: string | null;
   chartUrl?: string | null;
 }
@@ -151,6 +148,37 @@ function StatComparison({
           <p className="text-lg font-mono font-semibold text-muted-foreground">{formatValue(backtest)}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** ✅ Simple stat card for Live/Backtest tabs */
+function StatCard({
+  label,
+  value,
+  format = "number",
+}: {
+  label: string;
+  value: number;
+  format?: "number" | "percent" | "currency" | "ratio";
+}) {
+  const formatValue = (val: number) => {
+    switch (format) {
+      case "percent":
+        return `${val.toFixed(1)}%`;
+      case "currency":
+        return `$${val.toFixed(0)}`;
+      case "ratio":
+        return val === Infinity ? "∞" : val.toFixed(2);
+      default:
+        return val.toFixed(1);
+    }
+  };
+
+  return (
+    <div className="glass-card p-4">
+      <p className="text-xs text-muted-foreground mb-2">{label}</p>
+      <p className="text-lg font-mono font-semibold">{formatValue(value)}</p>
     </div>
   );
 }
@@ -377,14 +405,14 @@ function TradeRow({
     trade.side === "buy" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />;
 
   const pnlPill = status === "planned" ? (
-    <span className="font-mono text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground bg-secondary/30">—</span>
+    <span className="font-mono text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground bg-secondary/30">
+      —
+    </span>
   ) : (
     <span
       className={cn(
         "font-mono text-xs px-2.5 py-1 rounded-full border",
-        trade.pnl >= 0
-          ? "text-success border-success/20 bg-success/10"
-          : "text-destructive border-destructive/20 bg-destructive/10"
+        trade.pnl >= 0 ? "text-success border-success/20 bg-success/10" : "text-destructive border-destructive/20 bg-destructive/10"
       )}
     >
       {trade.pnl >= 0 ? "+" : ""}${trade.pnl}
@@ -418,18 +446,14 @@ function TradeRow({
               <span
                 className={cn(
                   "text-[11px] px-2 py-1 rounded-full border uppercase",
-                  status === "completed"
-                    ? "border-success/20 bg-success/10 text-success"
-                    : "border-border bg-secondary/30 text-muted-foreground"
+                  status === "completed" ? "border-success/20 bg-success/10 text-success" : "border-border bg-secondary/30 text-muted-foreground"
                 )}
               >
                 {status === "completed" ? "Completed" : "Planned"}
               </span>
 
               {!!trade.strategy && (
-                <span className="text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground">
-                  {trade.strategy}
-                </span>
+                <span className="text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground">{trade.strategy}</span>
               )}
 
               {journalCount > 0 && (
@@ -439,12 +463,25 @@ function TradeRow({
               )}
             </div>
 
+            {/* ✅ BACKTEST: no entry/exit line, show PnL + RR. LIVE: keep entry/exit */}
             <p className="text-sm text-muted-foreground mt-0.5">
-              {Number.isFinite(trade.entry) ? trade.entry.toFixed(4) : "-"} →{" "}
-              {Number.isFinite(trade.exit) ? trade.exit.toFixed(4) : "-"}{" "}
-              <span className="text-muted-foreground">•</span> {trade.duration || "-"}{" "}
-              <span className="text-muted-foreground">•</span>{" "}
-              <span className="font-mono">R:R {formatRR(trade.riskReward)}</span>
+              {trade.accountType === "backtest" ? (
+                <>
+                  <span className={cn("font-mono", trade.pnl >= 0 ? "text-success" : "text-destructive")}>
+                    {trade.pnl >= 0 ? "+" : ""}${trade.pnl}
+                  </span>{" "}
+                  <span className="text-muted-foreground">•</span>{" "}
+                  <span className="font-mono">RR {formatRR(trade.riskReward)}</span>
+                </>
+              ) : (
+                <>
+                  {Number.isFinite(trade.entry) ? trade.entry.toFixed(4) : "-"} →{" "}
+                  {Number.isFinite(trade.exit) ? trade.exit.toFixed(4) : "-"}{" "}
+                  <span className="text-muted-foreground">•</span> {trade.duration || "-"}{" "}
+                  <span className="text-muted-foreground">•</span>{" "}
+                  <span className="font-mono">RR {formatRR(trade.riskReward)}</span>
+                </>
+              )}
             </p>
 
             {(trade.chartUrl || (trade.notes && trade.notes.trim().length > 0)) && (
@@ -499,14 +536,7 @@ function TradeRow({
             <BookOpen className="w-4 h-4" />
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => onEdit(trade)}
-            className="rounded-xl"
-            title="Edit trade"
-          >
+          <Button type="button" variant="outline" size="icon" onClick={() => onEdit(trade)} className="rounded-xl" title="Edit trade">
             <Pencil className="w-4 h-4" />
           </Button>
         </div>
@@ -895,7 +925,9 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
               )}
             </div>
 
-            <div className="text-xs text-muted-foreground">{loading ? "Loading…" : `Showing ${totalVisible} of ${allTrades.length}`}</div>
+            <div className="text-xs text-muted-foreground">
+              {loading ? "Loading…" : `Showing ${totalVisible} of ${allTrades.length}`}
+            </div>
           </div>
         </div>
       </div>
@@ -908,6 +940,7 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
         </div>
       )}
 
+      {/* ✅ FILTER PANEL (restored) */}
       {filterOpen && (
         <div className="glass-card p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -974,6 +1007,7 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
         </div>
       )}
 
+      {/* ✅ DATE RANGE PANEL (restored) */}
       {dateRangeOpen && (
         <div className="glass-card p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
@@ -1017,6 +1051,7 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
         </div>
       )}
 
+      {/* dialogs */}
       <AddTradeDialog open={addOpen} onOpenChange={setAddOpen} onCreated={() => setRefreshKey((k) => k + 1)} />
 
       <AddJournalEntryDialog
@@ -1089,6 +1124,7 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
           </TabsTrigger>
         </TabsList>
 
+        {/* Compare tab */}
         <TabsContent value="compare" className="space-y-6 animate-fade-in">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <StatComparison label="Win Rate" live={liveStats.winRate} backtest={backtestStats.winRate} format="percent" />
@@ -1154,7 +1190,17 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
           </div>
         </TabsContent>
 
-        <TabsContent value="live" className="animate-fade-in">
+        {/* Live tab */}
+        <TabsContent value="live" className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard label="Win Rate" value={liveStats.winRate} format="percent" />
+            <StatCard label="Total P&L" value={liveStats.totalPnl} format="currency" />
+            <StatCard label="Avg P&L" value={liveStats.avgPnl} format="currency" />
+            <StatCard label="Avg R:R" value={liveStats.avgRR} format="ratio" />
+            <StatCard label="Total Trades" value={liveStats.totalTrades} />
+            <StatCard label="Profit Factor" value={liveStats.profitFactor} format="ratio" />
+          </div>
+
           <div className="glass-card overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h4 className="font-semibold">All Live Trades</h4>
@@ -1173,13 +1219,22 @@ export function TradesSection({ focusTradeId, onClearFocus, onOpenJournalEntry }
                   onOpenNotes={openNotes}
                   onViewLinkedJournals={openLinked}
                 />
-
               ))
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="backtest" className="animate-fade-in">
+        {/* Backtest tab */}
+        <TabsContent value="backtest" className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard label="Win Rate" value={backtestStats.winRate} format="percent" />
+            <StatCard label="Total P&L" value={backtestStats.totalPnl} format="currency" />
+            <StatCard label="Avg P&L" value={backtestStats.avgPnl} format="currency" />
+            <StatCard label="Avg R:R" value={backtestStats.avgRR} format="ratio" />
+            <StatCard label="Total Trades" value={backtestStats.totalTrades} />
+            <StatCard label="Profit Factor" value={backtestStats.profitFactor} format="ratio" />
+          </div>
+
           <div className="glass-card overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h4 className="font-semibold">All Backtest Trades</h4>

@@ -15,7 +15,6 @@ import { ExternalLink, LineChart } from "lucide-react";
 type Interval = "1" | "5" | "15" | "60" | "240" | "D";
 
 const INTERVALS: { label: string; value: Interval }[] = [
-  { label: "1m", value: "1" },
   { label: "5m", value: "5" },
   { label: "15m", value: "15" },
   { label: "1h", value: "60" },
@@ -73,7 +72,7 @@ export default function Charting() {
       symbol: tvSymbol,
       interval: interval, // "60", "240", "D", etc.
       timezone: "Etc/UTC",
-      theme: "dark",
+      theme: "light",
       style: "1",
       locale: "en",
       withdateranges: true,
@@ -173,19 +172,19 @@ export default function Charting() {
         {/* Advanced Chart */}
         <div className="glass-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
-            <div className="text-sm font-semibold">TradingView (Advanced)</div>
+            <div className="text-sm font-semibold">TradingView</div>
             <div className="text-xs text-muted-foreground">
               {tvSymbol} • {prettyInterval(interval)}
             </div>
           </div>
 
           {/* Height is controlled here */}
-          <div className="relative w-full" style={{ height: 740 }}>
+          <div className="relative w-full" style={{ height: 920 }}>
             <div id={containerId} ref={containerRef} className="absolute inset-0 w-full h-full" />
           </div>
 
           <div className="p-3 border-t border-border text-[11px] text-muted-foreground">
-            Drawings are inside TradingView’s embed. Korda can’t read/save them from this embed.
+            Drawings are inside TradingView’s embed. Korda can’t save them.
           </div>
         </div>
       </div>
