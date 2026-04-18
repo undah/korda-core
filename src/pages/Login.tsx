@@ -12,7 +12,7 @@ type LocationState = { from?: string };
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as LocationState | null)?.from || "/";
+  const from = (location.state as LocationState | null)?.from || "/dashboard";
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const title = useMemo(() => (mode === "signin" ? "Sign in" : "Create account"), [mode]);
@@ -53,8 +53,16 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader>
+  <Card className="w-full max-w-md">
+    <CardHeader>
+      <div className="mb-2">
+        <button
+          onClick={() => navigate("/trading")}
+          className="text-xs text-muted-foreground hover:text-foreground transition flex items-center gap-1"
+        >
+          ← Back to dashboard
+        </button>
+      </div>
           <CardTitle>{title}</CardTitle>
           <CardDescription>
             {mode === "signin"
