@@ -173,7 +173,7 @@ export default function SuiteHome() {
                   </svg>
                 </div>
                 <span className="suite-card-tag">Trading Journal</span>
-                <h2 className="suite-card-name">KordaCore</h2>
+                <h2 className="suite-card-name">KordaTrading</h2>
                 <p className="suite-card-tagline">Trade With Clarity</p>
                 <p className="suite-card-desc">A precision trading journal for discretionary traders. Log trades, review psychology, analyse patterns, and build the discipline that separates consistent traders from the rest.</p>
                 <ul className="suite-card-features">
@@ -182,7 +182,7 @@ export default function SuiteHome() {
                   ))}
                 </ul>
               </div>
-              <div className="suite-card-cta">Open KordaCore <span className="suite-cta-arrow">→</span></div>
+              <div className="suite-card-cta">Open KordaTrading <span className="suite-cta-arrow">→</span></div>
               <svg className="suite-card-deco" viewBox="0 0 220 140" fill="none">
                 <polyline points="0,110 40,80 80,90 120,45 160,60 200,20 220,30" stroke="rgba(0,184,148,1)" strokeWidth="2" fill="none"/>
               </svg>

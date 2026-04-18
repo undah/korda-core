@@ -92,7 +92,7 @@ export default function KordaCoreHomepage() {
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">KordaCore™</h1>
+                <h1 className="text-lg font-semibold text-foreground">KordaTrading™</h1>
                 
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function KordaCoreHomepage() {
                 <div className="max-w-4xl">
                   <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                     <CandlestickChart className="h-3.5 w-3.5" />
-                    KordaCore Trading Workspace
+                    KordaTrading Workspace
                   </div>
 
                   <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl xl:text-7xl">
@@ -163,7 +163,7 @@ export default function KordaCoreHomepage() {
                   </h1>
 
                   <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground lg:text-lg">
-                    KordaCore helps you track execution, measure performance, review
+                    KordaTrading helps you track execution, measure performance, review
                     psychology, and identify the behaviors behind your results. Built
                     for traders who want a cleaner process and sharper decision-making.
                   </p>
@@ -195,7 +195,7 @@ export default function KordaCoreHomepage() {
                   <div className="mb-4">
                     <p className="text-sm font-medium text-foreground">Workspace Mode</p>
                     <p className="text-xs text-muted-foreground">
-                      Preview the KordaCore workflow by account type
+                      Preview the KordaTrading workflow by account type
                     </p>
                   </div>
 
@@ -258,7 +258,7 @@ export default function KordaCoreHomepage() {
                     Built like a real trading operating system
                   </h2>
                   <p className="mt-2 max-w-2xl text-muted-foreground">
-                    KordaCore is designed around one goal: helping traders improve
+                    KordaTrading is designed around one goal: helping traders improve
                     through structure, review, and repeatable feedback loops.
                   </p>
                 </div>
@@ -300,7 +300,7 @@ export default function KordaCoreHomepage() {
               <div className="glass-card rounded-3xl p-6 lg:p-8">
                 <h3 className="text-xl font-semibold text-foreground">Core workflow</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  The daily loop KordaCore is built around.
+                  The daily loop KordaTrading is built around.
                 </p>
 
                 <div className="mt-6 space-y-4">
@@ -322,7 +322,7 @@ export default function KordaCoreHomepage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
-                      Why KordaCore works
+                      Why KordaTrading works
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       A system focused on measurable improvement
@@ -358,13 +358,13 @@ export default function KordaCoreHomepage() {
                     Start with the data. Improve the decisions.
                   </h4>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                    Most traders remember feelings. Very few record patterns. KordaCore
+                    Most traders remember feelings. Very few record patterns. KordaTrading
                     helps you turn scattered executions into measurable feedback so you
                     can build a cleaner process over time.
                   </p>
 
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <Button onClick={() => navigate("/login")}>Login to KordaCore</Button>
+                    <Button onClick={() => navigate("/login")}>Login to KordaTrading</Button>
                     
                   </div>
                 </div>
