@@ -1,18 +1,28 @@
 // src/features/tracker/components/TrackerLayout.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { path: "/tracker/dashboard", label: "Overview",   icon: "⬡" },
-  { path: "/tracker/progress",  label: "Progress",   icon: "↗" },
-  { path: "/tracker/journal",   label: "Journal",    icon: "◈" },
-  { path: "/tracker/calories",  label: "Calories",   icon: "◎" },
-  { path: "/tracker/photos",    label: "Photos",     icon: "▣" },
-  { path: "/tracker/analysis",  label: "Analysis",   icon: "∿" },
+  { path: "/tracker/dashboard", label: "Overview",  icon: "⬡" },
+  { path: "/tracker/progress",  label: "Progress",  icon: "↗" },
+  { path: "/tracker/journal",   label: "Journal",   icon: "◈" },
+  { path: "/tracker/calories",  label: "Calories",  icon: "◎" },
+  { path: "/tracker/photos",    label: "Photos",    icon: "▣" },
+  { path: "/tracker/analysis",  label: "Analysis",  icon: "∿" },
 ];
 
 export default function TrackerLayout() {
   const { pathname } = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // close drawer on route change
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+
+  // lock body scroll when drawer open
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [drawerOpen]);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -25,7 +35,9 @@ export default function TrackerLayout() {
     style.textContent = `
       .kt-app { display: flex; min-height: 100vh; background: #07090b; color: #dde8ed; font-family: 'DM Sans', sans-serif; font-weight: 300; }
       .kt-app *, .kt-app *::before, .kt-app *::after { box-sizing: border-box; }
-      .kt-sidebar { width: 220px; min-height: 100vh; background: #0a0e12; border-right: 1px solid rgba(90,180,212,0.08); display: flex; flex-direction: column; padding: 2rem 0; position: fixed; top: 0; left: 0; z-index: 50; }
+
+      /* ── SIDEBAR (desktop) ── */
+      .kt-sidebar { width: 220px; min-height: 100vh; background: #0a0e12; border-right: 1px solid rgba(90,180,212,0.08); display: flex; flex-direction: column; padding: 2rem 0; position: fixed; top: 0; left: 0; z-index: 50; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
       .kt-sidebar-logo { padding: 0 1.5rem 2rem; border-bottom: 1px solid rgba(90,180,212,0.06); margin-bottom: 1.5rem; }
       .kt-sidebar-logo a { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: #5ab4d4; text-decoration: none; }
       .kt-sidebar-logo span { font-size: 0.5rem; vertical-align: super; color: rgba(221,232,237,0.2); }
@@ -33,7 +45,27 @@ export default function TrackerLayout() {
       .kt-nav-item:hover { color: rgba(221,232,237,0.7); background: rgba(90,180,212,0.04); }
       .kt-nav-item.active { color: #5ab4d4; border-left-color: #5ab4d4; background: rgba(90,180,212,0.06); }
       .kt-nav-icon { font-size: 0.9rem; width: 16px; text-align: center; }
+      .kt-sidebar-bottom { margin-top: auto; padding: 1.5rem; border-top: 1px solid rgba(90,180,212,0.06); }
+      .kt-back-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: rgba(221,232,237,0.2); text-decoration: none; transition: color 0.2s; }
+      .kt-back-link:hover { color: rgba(221,232,237,0.5); }
+
+      /* ── MAIN ── */
       .kt-main { margin-left: 220px; flex: 1; padding: 2.5rem 3rem; max-width: 1100px; }
+
+      /* ── MOBILE TOPBAR ── */
+      .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 56px; background: #0a0e12; border-bottom: 1px solid rgba(90,180,212,0.08); align-items: center; justify-content: space-between; padding: 0 1.25rem; }
+      .kt-topbar-logo { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: #5ab4d4; text-decoration: none; }
+      .kt-hamburger { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
+      .kt-hamburger span { display: block; width: 22px; height: 1.5px; background: rgba(221,232,237,0.6); transition: all 0.2s; }
+      .kt-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+      .kt-hamburger.open span:nth-child(2) { opacity: 0; }
+      .kt-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+      /* ── DRAWER OVERLAY ── */
+      .kt-drawer-overlay { display: none; position: fixed; inset: 0; z-index: 55; background: rgba(7,9,11,0.7); backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+      .kt-drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+      /* ── PAGE COMPONENTS ── */
       .kt-page-header { margin-bottom: 2.5rem; }
       .kt-page-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(90,180,212,0.5); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
       .kt-page-eyebrow::before { content: '//'; color: rgba(221,232,237,0.2); }
@@ -60,15 +92,20 @@ export default function TrackerLayout() {
       .kt-badge-blue { color: #5ab4d4; border-color: rgba(90,180,212,0.3); background: rgba(90,180,212,0.06); }
       .kt-badge-green { color: #5ad4a0; border-color: rgba(90,212,160,0.3); background: rgba(90,212,160,0.06); }
       .kt-badge-red { color: #d4705a; border-color: rgba(212,112,90,0.3); background: rgba(212,112,90,0.06); }
-      .kt-sidebar-bottom { margin-top: auto; padding: 1.5rem; border-top: 1px solid rgba(90,180,212,0.06); }
-      .kt-back-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: rgba(221,232,237,0.2); text-decoration: none; transition: color 0.2s; }
-      .kt-back-link:hover { color: rgba(221,232,237,0.5); }
       textarea.kt-input { resize: vertical; min-height: 100px; }
       select.kt-input { appearance: none; cursor: pointer; }
-      @media (max-width: 900px) {
-        .kt-sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 1rem; }
-        .kt-main { margin-left: 0; padding: 1.5rem; }
-        .kt-grid-4, .kt-grid-3 { grid-template-columns: repeat(2,1fr); }
+
+      /* ── MOBILE ── */
+      @media (max-width: 768px) {
+        .kt-topbar { display: flex; }
+        .kt-drawer-overlay { display: block; }
+        .kt-sidebar { transform: translateX(-100%); width: 260px; z-index: 65; }
+        .kt-sidebar.open { transform: translateX(0); }
+        .kt-main { margin-left: 0; padding: 1.25rem; padding-top: calc(56px + 1.25rem); }
+        .kt-grid-4 { grid-template-columns: repeat(2,1fr); }
+        .kt-grid-3 { grid-template-columns: repeat(2,1fr); }
+        .kt-grid-2 { grid-template-columns: 1fr; gap: 1rem; }
+        .kt-page-title { font-size: 1.6rem; }
       }
     `;
     document.head.appendChild(style);
@@ -81,8 +118,27 @@ export default function TrackerLayout() {
 
   return (
     <div className="kt-app">
-      {/* sidebar */}
-      <aside className="kt-sidebar">
+
+      {/* ── MOBILE TOPBAR ── */}
+      <div className="kt-topbar">
+        <Link to="/tracker" className="kt-topbar-logo">KordaTracker™</Link>
+        <button
+          className={`kt-hamburger${drawerOpen ? " open" : ""}`}
+          onClick={() => setDrawerOpen(v => !v)}
+          aria-label="Toggle menu"
+        >
+          <span /><span /><span />
+        </button>
+      </div>
+
+      {/* ── DRAWER OVERLAY ── */}
+      <div
+        className={`kt-drawer-overlay${drawerOpen ? " open" : ""}`}
+        onClick={() => setDrawerOpen(false)}
+      />
+
+      {/* ── SIDEBAR / DRAWER ── */}
+      <aside className={`kt-sidebar${drawerOpen ? " open" : ""}`}>
         <div className="kt-sidebar-logo">
           <a href="/tracker">KordaTracker<span>™</span></a>
         </div>
@@ -105,10 +161,11 @@ export default function TrackerLayout() {
         </div>
       </aside>
 
-      {/* main content */}
+      {/* ── MAIN CONTENT ── */}
       <main className="kt-main">
         <Outlet />
       </main>
+
     </div>
   );
 }
