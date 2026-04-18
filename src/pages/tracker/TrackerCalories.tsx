@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 
 const today = () => new Date().toISOString().split("T")[0];
+const isMobile = () => window.innerWidth <= 768;
 
 export default function TrackerCalories() {
   const { data: entries = [], isLoading } = useTrackerCalories(30);
@@ -15,6 +16,7 @@ export default function TrackerCalories() {
     log_date: today(), calories_in: "", protein_g: "", carbs_g: "", fat_g: "", tdee: "2000",
   });
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [mobile] = useState(isMobile);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
@@ -62,8 +64,9 @@ export default function TrackerCalories() {
         <h1 className="kt-page-title">Calories <em>& deficit</em></h1>
       </div>
 
+      {/* 7d summary — 2x2 on all screens */}
       {last7.length > 0 && (
-        <div className="kt-grid-4" style={{ marginBottom: "1.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, marginBottom: "1.5rem" }}>
           <div className="kt-card">
             <p className="kt-card-label">7d avg intake</p>
             <p className="kt-card-value">{avgIntake ?? "—"}</p>
@@ -89,15 +92,18 @@ export default function TrackerCalories() {
         </div>
       )}
 
+      {/* LOG FORM */}
       <div className="kt-card" style={{ marginBottom: "2rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "1.5rem" }}>Log calories</p>
-        <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1rem" }}>
+
+        {/* date + tdee */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
           <div>
             <label className="kt-label">Date</label>
             <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} />
           </div>
           <div>
-            <label className="kt-label">TDEE (maintenance calories)</label>
+            <label className="kt-label">TDEE</label>
             <input className="kt-input" type="number" placeholder="2000" value={form.tdee} onChange={set("tdee")} />
           </div>
         </div>
@@ -115,36 +121,68 @@ export default function TrackerCalories() {
         )}
 
         <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(221,232,237,0.2)", marginBottom: "0.75rem" }}>Macros (optional)</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+
+        {/* macros — 1 col on mobile, 3 col on desktop */}
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
           <div><label className="kt-label">Protein (g)</label><input className="kt-input" type="number" step="1" placeholder="—" value={form.protein_g} onChange={set("protein_g")} /></div>
           <div><label className="kt-label">Carbs (g)</label><input className="kt-input" type="number" step="1" placeholder="—" value={form.carbs_g} onChange={set("carbs_g")} /></div>
-          <div><label className="kt-label">Fat (g)</label><input className="kt-input" type="number" step="1" placeholder="—" value={form.fat_g} onChange={set("fat_g")} /></div>
+          <div style={{ gridColumn: mobile ? "1 / -1" : "auto" }}><label className="kt-label">Fat (g)</label><input className="kt-input" type="number" step="1" placeholder="—" value={form.fat_g} onChange={set("fat_g")} /></div>
         </div>
 
-        <button className="kt-btn kt-btn-blue" onClick={handleSubmit} disabled={upsert.isPending}>
+        <button className="kt-btn kt-btn-blue" onClick={handleSubmit} disabled={upsert.isPending} style={{ width: "100%" }}>
           {upsert.isPending ? "Saving..." : "Log calories →"}
         </button>
       </div>
 
+      {/* HISTORY */}
       <div className="kt-card">
         <p className="kt-card-label" style={{ marginBottom: "1rem" }}>History</p>
         {isLoading ? (
           <p style={{ color: "rgba(221,232,237,0.2)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem" }}>Loading...</p>
         ) : sorted.length === 0 ? (
           <p style={{ color: "rgba(221,232,237,0.3)", fontSize: "0.85rem" }}>No calorie logs yet.</p>
+        ) : mobile ? (
+          /* MOBILE: card list */
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {sorted.map(e => (
+              <div key={e.id} style={{ padding: "0.75rem", background: "#0a0e12", borderLeft: "2px solid rgba(90,180,212,0.2)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.4)" }}>{e.log_date}</span>
+                  <button onClick={() => setConfirmId(e.id)}
+                    style={{ background: "none", border: "none", color: "rgba(212,112,90,0.4)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem" }}>
+                    delete
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "baseline" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.9rem", fontWeight: 500, color: "#dde8ed" }}>{e.calories_in} kcal</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: e.deficit > 0 ? "#5ad4a0" : "#d4705a" }}>
+                    {e.deficit > 0 ? "-" : "+"}{Math.abs(e.deficit)} deficit
+                  </span>
+                </div>
+                {(e.protein_g || e.carbs_g || e.fat_g) && (
+                  <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.3rem" }}>
+                    {e.protein_g && <span style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.35)" }}>P {e.protein_g}g</span>}
+                    {e.carbs_g   && <span style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.35)" }}>C {e.carbs_g}g</span>}
+                    {e.fat_g     && <span style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.35)" }}>F {e.fat_g}g</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
+          /* DESKTOP: table */
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
               <tr>
                 {["Date","Intake","TDEE","Deficit","Protein","Carbs","Fat",""].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", borderBottom: "1px solid rgba(90,180,212,0.07)" }}>{h}</th>
+                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", borderBottom: "1px solid rgba(90,180,212,0.07)", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {sorted.map(e => (
                 <tr key={e.id} style={{ borderBottom: "1px solid rgba(90,180,212,0.04)" }}>
-                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)" }}>{e.log_date}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)", whiteSpace: "nowrap" }}>{e.log_date}</td>
                   <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: "#dde8ed" }}>{e.calories_in}</td>
                   <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.4)" }}>{e.tdee}</td>
                   <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: e.deficit > 0 ? "#5ad4a0" : "#d4705a" }}>{e.deficit > 0 ? "-" : "+"}{Math.abs(e.deficit)}</td>

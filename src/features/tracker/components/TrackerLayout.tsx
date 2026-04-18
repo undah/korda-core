@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: "/tracker/calories",  label: "Calories",  icon: "◎" },
   { path: "/tracker/photos",    label: "Photos",    icon: "▣" },
   { path: "/tracker/analysis",  label: "Analysis",  icon: "∿" },
+  { path: "/tracker/settings", label: "Settings", icon: "⚙" },
 ];
 
 export default function TrackerLayout() {

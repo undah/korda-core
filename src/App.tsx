@@ -27,9 +27,11 @@ import TrackerJournal from "./pages/tracker/TrackerJournal";
 import TrackerCalories from "./pages/tracker/TrackerCalories";
 import TrackerPhotos from "./pages/tracker/TrackerPhotos";
 import TrackerAnalysis from "./pages/tracker/TrackerAnalysis";
+import TrackerSettings from "./pages/tracker/TrackerSettings";
 import SessionLog from "./pages/SessionLog";
 import Charting from "./pages/Charting";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +83,7 @@ function AnimatedRoutes() {
               <Route path="/tracker/calories"  element={<TrackerCalories />} />
               <Route path="/tracker/photos"    element={<TrackerPhotos />} />
               <Route path="/tracker/analysis"  element={<TrackerAnalysis />} />
+              <Route path="/tracker/settings" element={<TrackerSettings />} />
             </Route>
           </Route>
 
