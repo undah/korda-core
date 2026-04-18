@@ -1,67 +1,73 @@
+// src/hooks/useProfileSettings.ts
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
+import type { PnlFormat } from "@/lib/format";
+
 
 export type ProfileSettings = {
-  display_name: string | null;
-  currency: "USD" | "EUR";
-  pnl_format: "money" | "percent" | "both";
-  risk_unit: "R" | "money";
+  displayName: string;
+  currency: string; // keep flexible
+  pnlFormat: PnlFormat;
   timezone: string;
+  locale: string; // we'll default from currency if you want later
 };
 
 const DEFAULTS: ProfileSettings = {
-  display_name: null,
+  displayName: "Trader",
   currency: "USD",
-  pnl_format: "money",
-  risk_unit: "R",
+  pnlFormat: "money",
   timezone: "Europe/Amsterdam",
+  locale: "en-US",
 };
 
 export function useProfileSettings() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<ProfileSettings>(DEFAULTS);
-  const [loading, setLoading] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   useEffect(() => {
     if (!user) {
       setSettings(DEFAULTS);
-      setLoading(false);
+      setLoadingSettings(false);
       return;
     }
 
-    let cancelled = false;
-
     (async () => {
-      setLoading(true);
+      setLoadingSettings(true);
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name, currency, pnl_format, risk_unit, timezone")
+        .select("display_name, currency, pnl_format, timezone")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (!cancelled) {
-        if (error) {
-          console.error("useProfileSettings fetch error:", error);
-          setSettings(DEFAULTS);
-        } else {
-          setSettings({
-            display_name: data?.display_name ?? null,
-            currency: (data?.currency ?? "USD") as "USD" | "EUR",
-            pnl_format: (data?.pnl_format ?? "money") as "money" | "percent" | "both",
-            risk_unit: (data?.risk_unit ?? "R") as "R" | "money",
-            timezone: data?.timezone ?? "Europe/Amsterdam",
-          });
-        }
-        setLoading(false);
+      if (error) {
+        console.error("useProfileSettings fetch error:", error);
+        setSettings(DEFAULTS);
+        setLoadingSettings(false);
+        return;
       }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
+      // If no profile row exists, stick to defaults (your Settings page creates it anyway)
+      const currency = (data?.currency ?? DEFAULTS.currency) as string;
+      const pnlFormat = (data?.pnl_format ?? DEFAULTS.pnlFormat) as any;
+      const timezone = (data?.timezone ?? DEFAULTS.timezone) as string;
+
+      // Simple locale choice: EUR -> nl-NL, else en-US.
+      const locale = currency?.toUpperCase() === "EUR" ? "nl-NL" : "en-US";
+
+      setSettings({
+        displayName: (data?.display_name ?? DEFAULTS.displayName) as string,
+        currency,
+        pnlFormat,
+        timezone,
+        locale,
+      });
+
+      setLoadingSettings(false);
+    })();
   }, [user]);
 
-  return { settings, loading };
+  return { settings, loadingSettings };
 }
