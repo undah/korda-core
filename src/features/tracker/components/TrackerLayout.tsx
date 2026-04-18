@@ -1,15 +1,16 @@
 // src/features/tracker/components/TrackerLayout.tsx
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
+import { LayoutDashboard, TrendingUp, BookOpen, Flame, Camera, BarChart2, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { path: "/tracker/dashboard", label: "Overview",  icon: "⬡" },
-  { path: "/tracker/progress",  label: "Progress",  icon: "↗" },
-  { path: "/tracker/journal",   label: "Journal",   icon: "◈" },
-  { path: "/tracker/calories",  label: "Calories",  icon: "◎" },
-  { path: "/tracker/photos",    label: "Photos",    icon: "▣" },
-  { path: "/tracker/analysis",  label: "Analysis",  icon: "∿" },
-  { path: "/tracker/settings", label: "Settings", icon: "⚙" },
+  { path: "/tracker/dashboard", label: "Overview",  icon: LayoutDashboard },
+  { path: "/tracker/progress",  label: "Progress",  icon: TrendingUp },
+  { path: "/tracker/journal",   label: "Journal",   icon: BookOpen },
+  { path: "/tracker/calories",  label: "Calories",  icon: Flame },
+  { path: "/tracker/photos",    label: "Photos",    icon: Camera },
+  { path: "/tracker/analysis",  label: "Analysis",  icon: BarChart2 },
+  { path: "/tracker/settings",  label: "Settings",  icon: Settings },
 ];
 
 export default function TrackerLayout() {
@@ -151,7 +152,7 @@ export default function TrackerLayout() {
               to={item.path}
               className={`kt-nav-item${pathname === item.path ? " active" : ""}`}
             >
-              <span className="kt-nav-icon">{item.icon}</span>
+              <item.icon size={15} style={{ flexShrink: 0, opacity: 0.7 }} />
               {item.label}
             </Link>
           ))}
