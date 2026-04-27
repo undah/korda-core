@@ -2,12 +2,19 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
 import SuiteAbout from "./pages/SuiteAbout";
 import SuitePricing from "./pages/SuitePricing";
 import SuiteHome from "./pages/SuiteHome";
+
+import KordaCRM from "./pages/KordaCRM";
+import CRMLayout from "./features/crm/components/CRMLayout";
+import CRMDashboard from "./pages/crm/CRMDashboard";
+import CRMLog from "./pages/crm/CRMLog";
+import CRMLeads from "./pages/crm/CRMLeads";
+import CRMWeek from "./pages/crm/CRMWeek";
 
 import KordaTrading from "./pages/KordaTrading";
 import Index from "./pages/Index";
@@ -97,6 +104,17 @@ function AnimatedRoutes() {
             <Route path="/connections" element={<ComingSoon title="Platform Connections" subtitle="Connecting brokers (cTrader/MT5/TradingView) is coming soon." />} />
             <Route path="/coach"       element={<ComingSoon title="AI Coach" subtitle="AI coaching, insights, and chat are coming soon." />} />
             <Route path="/settings"    element={<Settings />} />
+          </Route>
+
+          {/* KordaCRM — public landing */}
+          <Route path="/crm" element={<KordaCRM />} />
+
+          {/* KordaCRM — protected app */}
+          <Route element={<CRMLayout />}>
+            <Route path="/crm/dashboard" element={<CRMDashboard />} />
+            <Route path="/crm/log"       element={<CRMLog />} />
+            <Route path="/crm/leads"     element={<CRMLeads />} />
+            <Route path="/crm/week"      element={<CRMWeek />} />
           </Route>
 
           {/* Fallback */}

@@ -37,7 +37,7 @@ export default function SuiteHome() {
       .suite-scroll-hint { margin-top: 3.5rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(232,230,225,0.15); display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
       .suite-scroll-hint::after { content: ''; display: block; width: 1px; height: 40px; background: linear-gradient(to bottom, rgba(232,230,225,0.15), transparent); }
       .suite-cards-section { position: relative; z-index: 1; padding: 2rem 4rem 8rem; max-width: 1300px; margin: 0 auto; }
-      .suite-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+      .suite-cards-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
       .suite-card { position: relative; padding: 3.5rem; min-height: 520px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; transition: transform 0.4s cubic-bezier(0.16,1,0.3,1); cursor: pointer; text-decoration: none; color: inherit; }
       .suite-card:hover { transform: translateY(-4px); }
       .suite-card-top-line { position: absolute; top: 0; left: 0; right: 0; height: 1px; }
@@ -63,6 +63,18 @@ export default function SuiteHome() {
       .suite-card-tracker .suite-feat-dot { background: rgba(90,180,212,0.5); }
       .suite-card-tracker .suite-card-cta { color: rgba(90,180,212,0.85); border-color: rgba(90,180,212,0.2); background: rgba(90,180,212,0.05); }
       .suite-card-tracker:hover .suite-card-cta { background: rgba(90,180,212,0.12); border-color: rgba(90,180,212,0.45); }
+
+      /* ── CRM — deep blue ── */
+      .suite-card-crm { background: #090b12; }
+      .suite-card-crm .suite-card-top-line { background: linear-gradient(to right, transparent, rgba(59,130,246,0.7), transparent); }
+      .suite-card-crm:hover { background: #0b0f1a; }
+      .suite-card-crm .suite-card-tag { color: rgba(59,130,246,0.8); border-color: rgba(59,130,246,0.2); background: rgba(59,130,246,0.05); }
+      .suite-card-crm .suite-card-tagline { color: rgba(59,130,246,0.45); }
+      .suite-card-crm .suite-card-desc { color: rgba(232,234,240,0.38); }
+      .suite-card-crm .suite-feat-dot { background: rgba(59,130,246,0.6); }
+      .suite-card-crm .suite-card-cta { color: rgba(59,130,246,0.9); border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.05); }
+      .suite-card-crm:hover .suite-card-cta { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.5); }
+      .suite-card-crm .suite-card-name { color: #d0d8f0; }
 
       .suite-card-tag { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.3rem 0.8rem; margin-bottom: 2rem; border: 1px solid; }
       .suite-card-icon { width: 48px; height: 48px; margin-bottom: 2rem; }
@@ -98,6 +110,7 @@ export default function SuiteHome() {
         .suite-nav-links { display: none; }
         .suite-cards-section { padding: 2rem 1.5rem 5rem; }
         .suite-cards-grid { grid-template-columns: 1fr; }
+        .suite-card { min-height: auto; }
         .suite-card { padding: 2.5rem; min-height: auto; }
         .suite-footer { flex-direction: column; gap: 1.5rem; text-align: center; padding: 2rem 1.5rem; }
         .suite-footer-links { justify-content: center; }
@@ -136,10 +149,10 @@ export default function SuiteHome() {
           <p className="suite-eyebrow suite-anim-1">The Korda™ Suite</p>
           <h1 className="suite-h1 suite-anim-2">
             One platform.<br />
-            Two <em>disciplines.</em>
+            Three <em>disciplines.</em>
           </h1>
           <p className="suite-sub suite-anim-3">
-            Korda is built for people who measure what matters — whether that's trades, capital, body composition, or progress. Choose your product below.
+            Korda is built for people who measure what matters — whether that's trades, body composition, or sales performance. Choose your product below.
           </p>
           <div className="suite-scroll-hint suite-anim-4">choose a product</div>
         </section>
@@ -218,6 +231,47 @@ export default function SuiteHome() {
               <div className="suite-card-cta">Open KordaTracker <span className="suite-cta-arrow">→</span></div>
               <svg className="suite-card-deco" viewBox="0 0 220 140" fill="none">
                 <polyline points="0,20 40,34 80,44 120,58 160,50 200,65 220,78" stroke="rgba(90,180,212,1)" strokeWidth="2" fill="none"/>
+              </svg>
+            </Link>
+
+            {/* KORDACRM */}
+            <Link to="/crm" className="suite-card suite-card-crm suite-anim-5">
+              <div className="suite-card-top-line" />
+              <div>
+                <div className="suite-card-icon">
+                  <svg viewBox="0 0 48 48" fill="none" style={{ width: 48, height: 48 }}>
+                    <rect x="6"  y="10" width="36" height="28" rx="2" stroke="rgba(59,130,246,0.4)" strokeWidth="1.2" />
+                    <line x1="6"  y1="18" x2="42" y2="18" stroke="rgba(59,130,246,0.2)" strokeWidth="1" />
+                    <line x1="6"  y1="26" x2="42" y2="26" stroke="rgba(59,130,246,0.12)" strokeWidth="1" />
+                    <line x1="18" y1="10" x2="18" y2="38" stroke="rgba(59,130,246,0.12)" strokeWidth="1" />
+                    <rect x="8"  y="12" width="7" height="4" rx="0.5" fill="rgba(59,130,246,0.6)" />
+                    <rect x="20" y="12" width="10" height="4" rx="0.5" fill="rgba(59,130,246,0.3)" />
+                    <rect x="34" y="12" width="6" height="4" rx="0.5" fill="rgba(59,130,246,0.5)" />
+                    <circle cx="11" cy="23" r="2.5" fill="rgba(59,130,246,0.5)" />
+                    <line x1="20" y1="22" x2="34" y2="22" stroke="rgba(59,130,246,0.35)" strokeWidth="1" />
+                    <line x1="20" y1="24" x2="30" y2="24" stroke="rgba(59,130,246,0.2)" strokeWidth="1" />
+                    <circle cx="11" cy="32" r="2.5" fill="rgba(59,130,246,0.3)" />
+                    <line x1="20" y1="31" x2="38" y2="31" stroke="rgba(59,130,246,0.25)" strokeWidth="1" />
+                    <line x1="20" y1="33" x2="28" y2="33" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+                  </svg>
+                </div>
+                <span className="suite-card-tag">Sales CRM</span>
+                <h2 className="suite-card-name">KordaCRM</h2>
+                <p className="suite-card-tagline">Close More. Track Better.</p>
+                <p className="suite-card-desc">A sales call tracker built for a team of closers. Log every call, hit your 25-call daily goal, and see the leaderboard update in real time.</p>
+                <ul className="suite-card-features">
+                  {["Daily 25-call goal with live progress bars","Leaderboard — ranked by calls today","Week grid: red / yellow / green per rep per day","Filterable leads table with CSV export","Admin mode to view and edit all data"].map(f => (
+                    <li key={f}><span className="suite-feat-dot" />{f}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="suite-card-cta">Open KordaCRM <span className="suite-cta-arrow">→</span></div>
+              <svg className="suite-card-deco" viewBox="0 0 220 140" fill="none">
+                <rect x="10" y="20" width="30" height="100" rx="1" fill="rgba(59,130,246,0.15)" />
+                <rect x="50" y="50" width="30" height="70" rx="1" fill="rgba(59,130,246,0.25)" />
+                <rect x="90" y="35" width="30" height="85" rx="1" fill="rgba(59,130,246,0.35)" />
+                <rect x="130" y="60" width="30" height="60" rx="1" fill="rgba(59,130,246,0.2)" />
+                <rect x="170" y="10" width="30" height="110" rx="1" fill="rgba(59,130,246,0.45)" />
               </svg>
             </Link>
 
