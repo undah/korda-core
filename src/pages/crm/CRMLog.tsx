@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useMyProfile } from '@/features/crm/hooks/useCRMProfiles';
 import { useInsertLead } from '@/features/crm/hooks/useLeads';
+import { useScripts } from '@/features/crm/hooks/useScripts';
 import { LEAD_STATUSES, STATUS_STYLE, getRepColor } from '@/features/crm/constants';
 import { StatusDot } from '@/features/crm/components/StatusBadge';
 import type { CRMOutletContext, LeadStatus } from '@/features/crm/types';
@@ -43,6 +44,7 @@ const EMPTY = {
   deal_waarde: '',
   follow_up_datum: '',
   website_type: '',
+  script_id: '',
 };
 
 export default function CRMLog() {
@@ -50,6 +52,7 @@ export default function CRMLog() {
   const { user } = useAuth();
   const { data: profile } = useMyProfile();
   const insert = useInsertLead();
+  const { data: scripts = [] } = useScripts();
 
   const [form, setForm] = useState({ ...EMPTY });
   const [success, setSuccess] = useState(false);
@@ -73,6 +76,7 @@ export default function CRMLog() {
         deal_waarde: form.deal_waarde ? Number(form.deal_waarde) : null,
         follow_up_datum: form.follow_up_datum || null,
         website_type: form.website_type.trim(),
+        script_id: form.script_id || null,
       });
       toast.success(`Call gelogd voor ${form.lead_naam}`);
       setSuccess(true);
@@ -249,6 +253,22 @@ export default function CRMLog() {
               onFocus={e => (e.target.style.borderColor = repColor)}
               onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
             />
+          </div>
+
+          <div>
+            <label style={LABEL}>Script gebruikt</label>
+            <select
+              style={{ ...INPUT, cursor: 'pointer', appearance: 'auto' }}
+              value={form.script_id}
+              onChange={e => set('script_id', e.target.value)}
+              onFocus={e => (e.target.style.borderColor = repColor)}
+              onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+            >
+              <option value="">— Geen script —</option>
+              {scripts.map(s => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
           </div>
 
           {/* Submit */}

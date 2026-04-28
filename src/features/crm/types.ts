@@ -19,7 +19,19 @@ export interface Lead {
   deal_waarde: number | null;
   follow_up_datum: string | null;
   website_type: string;
+  script_id: string | null;
 }
+
+export interface Script {
+  id: string;
+  created_at: string;
+  title: string;
+  content: string;
+  created_by: string;
+}
+
+export type ScriptInsert = Omit<Script, 'id' | 'created_at'>;
+export type ScriptUpdate = Partial<Omit<ScriptInsert, 'created_by'>> & { id: string };
 
 export interface CRMProfile {
   id: string;
