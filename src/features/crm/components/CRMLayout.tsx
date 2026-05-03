@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, PhoneCall, Users, CalendarDays, LogOut, Shield, Loader2 } from 'lucide-react';
+import { LayoutDashboard, PhoneCall, Users, CalendarDays, FileText, LogOut, Shield, Loader2 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useMyProfile, useUpsertProfile } from '../hooks/useCRMProfiles';
 import { getRepColor, REP_COLOR } from '../constants';
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: '/crm/log',       label: 'Log een Call',  icon: PhoneCall },
   { path: '/crm/leads',     label: 'Leads',         icon: Users },
   { path: '/crm/week',      label: 'Weekoverzicht', icon: CalendarDays },
+  { path: '/crm/scripts',   label: 'Scripts',       icon: FileText },
 ];
 
 const CRM_CSS = `

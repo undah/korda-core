@@ -19,6 +19,16 @@ export interface Lead {
   deal_waarde: number | null;
   follow_up_datum: string | null;
   website_type: string;
+  script_id: string | null;
+}
+
+export interface CallScript {
+  id: string;
+  created_at: string;
+  created_by: string | null;
+  title: string;
+  content: string;
+  is_active: boolean;
 }
 
 export interface CRMProfile {

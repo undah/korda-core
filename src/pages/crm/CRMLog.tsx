@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, FileText } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useMyProfile } from '@/features/crm/hooks/useCRMProfiles';
 import { useInsertLead } from '@/features/crm/hooks/useLeads';
+import { useScripts } from '@/features/crm/hooks/useScripts';
 import { LEAD_STATUSES, STATUS_STYLE, getRepColor } from '@/features/crm/constants';
 import { StatusDot } from '@/features/crm/components/StatusBadge';
 import type { CRMOutletContext, LeadStatus } from '@/features/crm/types';
@@ -43,6 +44,7 @@ const EMPTY = {
   deal_waarde: '',
   follow_up_datum: '',
   website_type: '',
+  script_id: '',
 };
 
 export default function CRMLog() {
@@ -50,6 +52,7 @@ export default function CRMLog() {
   const { user } = useAuth();
   const { data: profile } = useMyProfile();
   const insert = useInsertLead();
+  const { data: scripts = [] } = useScripts();
 
   const [form, setForm] = useState({ ...EMPTY });
   const [success, setSuccess] = useState(false);
@@ -73,6 +76,7 @@ export default function CRMLog() {
         deal_waarde: form.deal_waarde ? Number(form.deal_waarde) : null,
         follow_up_datum: form.follow_up_datum || null,
         website_type: form.website_type.trim(),
+        script_id: form.script_id || null,
       });
       toast.success(`Call gelogd voor ${form.lead_naam}`);
       setSuccess(true);
@@ -196,6 +200,54 @@ export default function CRMLog() {
               })}
             </div>
           </div>
+
+          {/* Script */}
+          {scripts.length > 0 && (
+            <div>
+              <label style={LABEL}>Script gebruikt</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => set('script_id', '')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: 9999,
+                    border: `1.5px solid ${!form.script_id ? '#3B82F6' : '#e8e4dc'}`,
+                    background: !form.script_id ? '#EFF6FF' : '#fff',
+                    color: !form.script_id ? '#3B82F6' : '#706d66',
+                    fontSize: '0.8rem', fontWeight: !form.script_id ? 600 : 400,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  Geen script
+                </button>
+                {scripts.map(s => {
+                  const active = form.script_id === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => set('script_id', s.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: 9999,
+                        border: `1.5px solid ${active ? repColor : '#e8e4dc'}`,
+                        background: active ? `${repColor}12` : '#fff',
+                        color: active ? repColor : '#706d66',
+                        fontSize: '0.8rem', fontWeight: active ? 600 : 400,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      <FileText size={12} />
+                      {s.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Resultaat */}
           <div>
