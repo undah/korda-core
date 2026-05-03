@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   const response = await fetch(
-    'https://jams883895.app.n8n.cloud/webhook/be68010d-296a-4922-ad7b-13789ee3db5b',
+    'https://jams883895.app.n8n.cloud/webhook/48694722-b68e-4b06-a263-f73f36ed16ca',
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }
   )
 
