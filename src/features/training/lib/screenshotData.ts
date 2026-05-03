@@ -2,7 +2,6 @@ import { supabase } from '@/lib/supabaseClient';
 import type { ScreenshotConfig, ScreenshotLog } from '../screenshotTypes';
 
 const RAILWAY_URL = 'https://trading-bot-production-4c10.up.railway.app';
-const N8N_URL = 'https://jams883895.app.n8n.cloud/webhook/be68010d-296a-4922-ad7b-13789ee3db5b';
 
 const DEFAULT_CONFIG: Omit<ScreenshotConfig, 'id' | 'updated_at'> = {
   enabled: false,
@@ -71,10 +70,6 @@ export async function checkServiceHealth(): Promise<boolean> {
 }
 
 export async function triggerRunNow(): Promise<void> {
-  const res = await fetch(N8N_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trigger: 'manual', timestamp: new Date().toISOString() }),
-  });
-  if (!res.ok) throw new Error(`Webhook returned ${res.status}`);
+  const { error } = await supabase.functions.invoke('screenshot-trigger');
+  if (error) throw new Error(error.message);
 }
