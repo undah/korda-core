@@ -33,3 +33,34 @@ alter table training_entries
 -- Add submitted_by column if it doesn't exist yet
 alter table training_entries
   add column if not exists submitted_by text;
+
+
+-- ============================================================
+-- Screenshot Scheduler tables
+-- ============================================================
+
+create table if not exists screenshot_config (
+  id                uuid default gen_random_uuid() primary key,
+  enabled           boolean not null default false,
+  schedule_mode     text not null default 'interval'
+                      check (schedule_mode in ('interval', 'fixed')),
+  interval_minutes  integer default 15,
+  fixed_time        text,
+  days              text[] default '{}',
+  sessions          text[] default '{always}',
+  max_runs_per_day  integer default 24,
+  updated_at        timestamp with time zone default now()
+);
+
+alter table screenshot_config disable row level security;
+
+create table if not exists screenshot_log (
+  id            uuid default gen_random_uuid() primary key,
+  status        text not null check (status in ('success', 'error', 'skipped')),
+  timestamp     timestamp with time zone default now(),
+  image_base64  text,
+  reason        text,
+  created_at    timestamp with time zone default now()
+);
+
+alter table screenshot_log disable row level security;
