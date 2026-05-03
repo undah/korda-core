@@ -341,8 +341,8 @@ export default function ScreenshotScheduler() {
                             style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'block' }}
                           />
                           {hoveredLog === log.id && (
-                            <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#0d1117', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.7)', pointerEvents: 'none' }}>
-                              <img src={`data:image/png;base64,${log.image_base64}`} alt="preview" style={{ width: 320, height: 200, objectFit: 'contain', borderRadius: 4, display: 'block' }} />
+                            <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, background: '#0d1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 6, boxShadow: '0 16px 64px rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
+                              <img src={`data:image/png;base64,${log.image_base64}`} alt="preview" style={{ width: 720, height: 450, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
                             </div>
                           )}
                         </div>

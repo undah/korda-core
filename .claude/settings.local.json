@@ -8,7 +8,9 @@
       "Bash(git commit -m 'Add KordaAI Training — AI bot training data dashboard *)",
       "Bash(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\giund\\\\OneDrive\\\\Desktop\\\\korda-core\\\\supabase\\\\functions\\\\screenshot-trigger\")",
       "Bash(Out-Null)",
-      "Bash(Write-Output \"done\")"
+      "Bash(Write-Output \"done\")",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
