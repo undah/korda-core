@@ -18,6 +18,10 @@ const SESSIONS: { value: SessionFilter; label: string; time: string }[] = [
   { value: 'london',   label: 'London',   time: '08:00–12:00 UTC' },
   { value: 'new_york', label: 'New York', time: '13:00–17:00 UTC' },
 ];
+const PAIRS = [
+  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
+  'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US30',   'NAS100',
+];
 
 export default function ScreenshotScheduler() {
   const [config, setConfig]             = useState<ScreenshotConfig | null>(null);
@@ -36,6 +40,7 @@ export default function ScreenshotScheduler() {
   const fixedTime   = merged.fixed_time ?? '09:00';
   const days        = merged.days ?? [];
   const sessions    = merged.sessions ?? ['always'];
+  const pairs       = merged.pairs ?? ['EURUSD'];
   const maxRuns     = merged.max_runs_per_day ?? 24;
 
   const load = useCallback(async () => {
@@ -108,6 +113,9 @@ export default function ScreenshotScheduler() {
 
   const toggleSession = (s: SessionFilter) =>
     setDraft(d => ({ ...d, sessions: sessions.includes(s) ? sessions.filter(x => x !== s) : [...sessions, s] }));
+
+  const togglePair = (p: string) =>
+    setDraft(d => ({ ...d, pairs: pairs.includes(p) ? pairs.filter(x => x !== p) : [...pairs, p] }));
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
@@ -237,6 +245,29 @@ export default function ScreenshotScheduler() {
                 >
                   <span style={{ fontSize: '0.82rem', fontWeight: 600, color: active ? '#00d4ff' : 'rgba(240,246,252,0.5)' }}>{s.label}</span>
                   <span style={{ fontSize: '0.68rem', color: 'rgba(240,246,252,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>{s.time}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Pairs */}
+        <Card label="Pairs" hint={`${pairs.length} selected`}>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {PAIRS.map(p => {
+              const active = pairs.includes(p);
+              return (
+                <button key={p} type="button" onClick={() => togglePair(p)}
+                  style={{
+                    padding: '0.4rem 0.85rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    background: active ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${active ? '#00d4ff' : 'rgba(255,255,255,0.08)'}`,
+                    color: active ? '#00d4ff' : 'rgba(240,246,252,0.4)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {p}
                 </button>
               );
             })}

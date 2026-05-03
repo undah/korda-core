@@ -10,6 +10,7 @@ const DEFAULT_CONFIG: Omit<ScreenshotConfig, 'id' | 'updated_at'> = {
   fixed_time: null,
   days: [],
   sessions: ['always'],
+  pairs: ['EURUSD'],
   max_runs_per_day: 24,
 };
 

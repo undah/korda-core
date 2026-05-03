@@ -10,6 +10,7 @@ export interface ScreenshotConfig {
   fixed_time: string | null;
   days: string[];
   sessions: SessionFilter[];
+  pairs: string[];
   max_runs_per_day: number;
   updated_at: string;
 }

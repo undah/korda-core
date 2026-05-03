@@ -64,3 +64,7 @@ create table if not exists screenshot_log (
 );
 
 alter table screenshot_log disable row level security;
+
+-- Add pairs column if it doesn't exist yet
+alter table screenshot_config
+  add column if not exists pairs text[] default '{}';
