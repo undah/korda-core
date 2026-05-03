@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PlusCircle, Clock, Brain, ArrowLeft, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
@@ -11,7 +11,7 @@ const NAV_ITEMS = [
 export default function TrainingLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user, signOut, loading } = useAuth();
+  const { signOut, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
@@ -30,7 +30,6 @@ export default function TrainingLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace state={{ from: pathname }} />;
 
   const handleSignOut = async () => {
     await signOut();

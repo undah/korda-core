@@ -9,6 +9,7 @@ create table if not exists training_entries (
   tradingview_url text not null,
   is_valid_setup  boolean not null,
   session         text check (session in ('london', 'new_york', 'asia')),
+  submitted_by    text,
   notes           text,
   created_at      timestamp with time zone default now()
 );
@@ -28,3 +29,7 @@ alter table training_entries drop column if exists screenshot_url;
 alter table training_entries
   add column if not exists session text
   check (session in ('london', 'new_york', 'asia'));
+
+-- Add submitted_by column if it doesn't exist yet
+alter table training_entries
+  add column if not exists submitted_by text;

@@ -315,7 +315,7 @@ export default function HistoryTable() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['#', 'TradingView URL', 'Session', 'Valid?', 'Notes', 'Date', ''].map((col, i) => (
+                  {['#', 'TradingView URL', 'Session', 'Valid?', 'By', 'Notes', 'Date', ''].map((col, i) => (
                     <th key={i} style={thStyle}>{col}</th>
                   ))}
                 </tr>
@@ -374,6 +374,17 @@ export default function HistoryTable() {
                         }}>
                           {entry.is_valid_setup ? 'Valid' : 'Invalid'}
                         </span>
+                      </td>
+
+                      {/* Submitted by */}
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                        {entry.submitted_by ? (
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {entry.submitted_by.split('@')[0]}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>
+                        )}
                       </td>
 
                       {/* Notes */}

@@ -5,6 +5,7 @@ export interface TrainingEntry {
   tradingview_url: string;
   is_valid_setup: boolean;
   session: TradingSession | null;
+  submitted_by: string | null;
   notes: string | null;
   created_at: string;
 }

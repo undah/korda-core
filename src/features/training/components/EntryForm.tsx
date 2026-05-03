@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link as LinkIcon, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '@/auth/AuthProvider';
 import { insertTrainingEntry } from '../lib/trainingData';
 import type { TradingSession } from '../types';
 
@@ -14,11 +16,14 @@ const SESSIONS: { value: TradingSession; label: string; time: string; color: str
 ];
 
 export default function EntryForm() {
-  const [tvUrl, setTvUrl]       = useState('');
-  const [isValid, setIsValid]   = useState<boolean | null>(null);
-  const [session, setSession]   = useState<TradingSession | null>(null);
-  const [notes, setNotes]       = useState('');
+  const { user } = useAuth();
+  const [tvUrl, setTvUrl]           = useState('');
+  const [isValid, setIsValid]       = useState<boolean | null>(null);
+  const [session, setSession]       = useState<TradingSession | null>(null);
+  const [notes, setNotes]           = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  if (!user) return <Navigate to="/login" replace state={{ from: '/training/new' }} />;
 
   const handleReset = () => {
     setTvUrl(''); setIsValid(null); setSession(null); setNotes('');
@@ -35,6 +40,7 @@ export default function EntryForm() {
         tradingview_url: tvUrl.trim(),
         is_valid_setup:  isValid,
         session:         session,
+        submitted_by:    user.email ?? user.id,
         notes:           notes.trim() || null,
       });
       toast.success('Entry saved to training dataset.');
