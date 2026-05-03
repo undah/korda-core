@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Trash2, Loader2 } from 'lucide-react';
 import { useUpdateLead, useDeleteLead } from '../hooks/useLeads';
+import { useScripts } from '../hooks/useScripts';
 import { StatusBadge } from './StatusBadge';
 import { LEAD_STATUSES, STATUS_STYLE, getRepColor } from '../constants';
 import type { Lead, LeadStatus, CRMProfile } from '../types';
@@ -40,6 +41,7 @@ const LABEL_STYLE: React.CSSProperties = {
 export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawerProps) {
   const update = useUpdateLead();
   const deleteLead = useDeleteLead();
+  const { data: scripts = [] } = useScripts();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -53,6 +55,7 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
     deal_waarde: '',
     follow_up_datum: '',
     website_type: '',
+    script_id: '',
   });
 
   useEffect(() => {
@@ -67,6 +70,7 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
         deal_waarde: lead.deal_waarde != null ? String(lead.deal_waarde) : '',
         follow_up_datum: lead.follow_up_datum ?? '',
         website_type: lead.website_type,
+        script_id: lead.script_id ?? '',
       });
     }
     setEditing(false);
@@ -95,6 +99,7 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
         deal_waarde: form.deal_waarde ? Number(form.deal_waarde) : null,
         follow_up_datum: form.follow_up_datum || null,
         website_type: form.website_type,
+        script_id: form.script_id || null,
       });
       toast.success('Lead bijgewerkt');
       setEditing(false);
@@ -239,7 +244,7 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
             </div>
           </div>
 
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ marginBottom: '1rem' }}>
             <label style={LABEL_STYLE}>Website type</label>
             <input
               style={inputStyle(!editing)}
@@ -248,6 +253,33 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
               onChange={e => set('website_type', e.target.value)}
               placeholder="bijv. webshop, portfolio, landing page..."
             />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={LABEL_STYLE}>Script gebruikt</label>
+            {editing ? (
+              <select
+                style={{ ...FIELD_STYLE, cursor: 'pointer', appearance: 'auto' }}
+                value={form.script_id}
+                onChange={e => set('script_id', e.target.value)}
+              >
+                <option value="">— Geen script —</option>
+                {scripts.map(s => (
+                  <option key={s.id} value={s.id}>{s.title}</option>
+                ))}
+              </select>
+            ) : (
+              <div style={{
+                ...FIELD_STYLE,
+                background: '#F9FAFB',
+                color: form.script_id ? '#1c1a17' : '#9CA3AF',
+                cursor: 'default',
+              }}>
+                {form.script_id
+                  ? (scripts.find(s => s.id === form.script_id)?.title ?? '—')
+                  : 'Geen script'}
+              </div>
+            )}
           </div>
 
           {canEdit && (

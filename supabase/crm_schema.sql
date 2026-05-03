@@ -28,7 +28,51 @@ create policy "crm_profiles: update own"
   using (auth.uid() = id);
 
 
--- 2. Leads (sales call records)
+-- 2. Scripts (sales call scripts)
+-- ============================================================
+create table if not exists public.scripts (
+  id           uuid        default gen_random_uuid() primary key,
+  created_at   timestamptz default now()             not null,
+  created_by   uuid        references auth.users(id) on delete cascade not null,
+  title        text        not null,
+  content      text        not null default ''
+);
+
+alter table public.scripts enable row level security;
+
+-- All authenticated users can read scripts
+create policy "scripts: read all"
+  on public.scripts for select
+  using (auth.role() = 'authenticated');
+
+-- Users can only insert their own scripts
+create policy "scripts: insert own"
+  on public.scripts for insert
+  with check (auth.uid() = created_by);
+
+-- Users can update/delete their own scripts; admins can update/delete any
+create policy "scripts: update own or admin"
+  on public.scripts for update
+  using (
+    auth.uid() = created_by
+    or exists (
+      select 1 from public.crm_profiles
+      where id = auth.uid() and is_admin = true
+    )
+  );
+
+create policy "scripts: delete own or admin"
+  on public.scripts for delete
+  using (
+    auth.uid() = created_by
+    or exists (
+      select 1 from public.crm_profiles
+      where id = auth.uid() and is_admin = true
+    )
+  );
+
+
+-- 3. Leads (sales call records)
 -- ============================================================
 create table if not exists public.leads (
   id               uuid        default gen_random_uuid() primary key,
@@ -49,7 +93,8 @@ create table if not exists public.leads (
   resultaat        text        not null default '',
   deal_waarde      numeric,
   follow_up_datum  date,
-  website_type     text        not null default ''
+  website_type     text        not null default '',
+  script_id        uuid        references public.scripts(id) on delete set null
 );
 
 create index if not exists leads_rep_id_datum_idx on public.leads (rep_id, datum);

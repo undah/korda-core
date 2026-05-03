@@ -303,6 +303,22 @@ export default function CRMLog() {
             />
           </div>
 
+          <div>
+            <label style={LABEL}>Script gebruikt</label>
+            <select
+              style={{ ...INPUT, cursor: 'pointer', appearance: 'auto' }}
+              value={form.script_id}
+              onChange={e => set('script_id', e.target.value)}
+              onFocus={e => (e.target.style.borderColor = repColor)}
+              onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+            >
+              <option value="">— Geen script —</option>
+              {scripts.map(s => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Submit */}
           <button
             type="submit"

@@ -15,6 +15,7 @@ import CRMDashboard from "./pages/crm/CRMDashboard";
 import CRMLog from "./pages/crm/CRMLog";
 import CRMLeads from "./pages/crm/CRMLeads";
 import CRMWeek from "./pages/crm/CRMWeek";
+import CRMScripts from "./pages/crm/CRMScripts";
 
 import TrainingLayout from "./features/training/components/TrainingLayout";
 import TrainingNew from "./pages/training/TrainingNew";
@@ -125,6 +126,7 @@ function AnimatedRoutes() {
             <Route path="/crm/log"       element={<CRMLog />} />
             <Route path="/crm/leads"     element={<CRMLeads />} />
             <Route path="/crm/week"      element={<CRMWeek />} />
+            <Route path="/crm/scripts"   element={<CRMScripts />} />
           </Route>
 
           {/* Fallback */}

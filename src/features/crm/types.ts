@@ -22,14 +22,16 @@ export interface Lead {
   script_id: string | null;
 }
 
-export interface CallScript {
+export interface Script {
   id: string;
   created_at: string;
-  created_by: string | null;
   title: string;
   content: string;
-  is_active: boolean;
+  created_by: string;
 }
+
+export type ScriptInsert = Omit<Script, 'id' | 'created_at'>;
+export type ScriptUpdate = Partial<Omit<ScriptInsert, 'created_by'>> & { id: string };
 
 export interface CRMProfile {
   id: string;
