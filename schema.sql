@@ -1,27 +1,30 @@
--- Training Entries table for AI trading bot training data
-create table training_entries (
-  id uuid default gen_random_uuid() primary key,
-  screenshot_url text,
+-- ============================================================
+-- KordaAI Training — full schema
+-- Run this in Supabase SQL Editor (fresh setup)
+-- ============================================================
+
+-- Training entries table
+create table if not exists training_entries (
+  id              uuid default gen_random_uuid() primary key,
   tradingview_url text not null,
-  is_valid_setup boolean not null,
-  notes text,
-  created_at timestamp with time zone default now()
+  is_valid_setup  boolean not null,
+  session         text check (session in ('london', 'new_york', 'asia')),
+  notes           text,
+  created_at      timestamp with time zone default now()
 );
 
--- Enable Row Level Security (optional: remove if not needed)
-alter table training_entries enable row level security;
+-- Disable RLS (internal tool — no per-user isolation needed)
+alter table training_entries disable row level security;
 
--- Allow all authenticated users to read and write (adjust as needed)
-create policy "Authenticated users can read training entries"
-  on training_entries for select
-  to authenticated
-  using (true);
 
-create policy "Authenticated users can insert training entries"
-  on training_entries for insert
-  to authenticated
-  with check (true);
+-- ============================================================
+-- Migration — run these if the table already exists
+-- ============================================================
 
--- Storage bucket: create a public bucket named 'screenshots'
--- Run this in the Supabase dashboard SQL editor or Storage UI:
--- insert into storage.buckets (id, name, public) values ('screenshots', 'screenshots', true);
+-- Drop screenshot_url if it exists from a previous version
+alter table training_entries drop column if exists screenshot_url;
+
+-- Add session column if it doesn't exist yet
+alter table training_entries
+  add column if not exists session text
+  check (session in ('london', 'new_york', 'asia'));

@@ -1,8 +1,10 @@
+export type TradingSession = 'london' | 'new_york' | 'asia';
+
 export interface TrainingEntry {
   id: string;
-  screenshot_url: string | null;
   tradingview_url: string;
   is_valid_setup: boolean;
+  session: TradingSession | null;
   notes: string | null;
   created_at: string;
 }

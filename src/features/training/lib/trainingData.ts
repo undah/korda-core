@@ -42,13 +42,13 @@ export async function deleteTrainingEntry(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function uploadScreenshot(file: File): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'png';
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage
-    .from('screenshots')
-    .upload(filename, file, { upsert: false });
+export async function bulkInsertTrainingEntries(
+  entries: TrainingEntryInsert[]
+): Promise<TrainingEntry[]> {
+  const { data, error } = await supabase
+    .from('training_entries')
+    .insert(entries)
+    .select();
   if (error) throw error;
-  const { data } = supabase.storage.from('screenshots').getPublicUrl(filename);
-  return data.publicUrl;
+  return data ?? [];
 }
