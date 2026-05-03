@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   ExternalLink, Filter, Loader2, RefreshCw, ChevronDown, ChevronUp,
   Pencil, Trash2, X, CheckCircle2, XCircle, Link as LinkIcon, FileUp,
+  ChevronsUpDown,
 } from 'lucide-react';
 import CSVImporter from './CSVImporter';
 import { toast } from 'sonner';
@@ -16,6 +17,8 @@ const SESSIONS: { value: TradingSession; label: string; color: string }[] = [
 ];
 
 type FilterState = 'all' | 'valid' | 'invalid';
+type SortCol = 'created_at' | 'submitted_by' | 'session';
+type SortDir = 'asc' | 'desc';
 
 const ACCENT       = '#00d4ff';
 const VALID_GREEN  = '#10b981';
@@ -206,6 +209,8 @@ export default function HistoryTable() {
   const [deletingId, setDeletingId]           = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showImporter, setShowImporter]       = useState(false);
+  const [sortCol, setSortCol]   = useState<SortCol>('created_at');
+  const [sortDir, setSortDir]   = useState<SortDir>('desc');
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -235,9 +240,21 @@ export default function HistoryTable() {
   const handleImported = (imported: TrainingEntry[]) =>
     setEntries(prev => [...imported, ...prev]);
 
-  const filtered = entries.filter(e =>
-    filter === 'all' ? true : filter === 'valid' ? e.is_valid_setup : !e.is_valid_setup
-  );
+  const toggleSort = (col: SortCol) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const filtered = entries
+    .filter(e => filter === 'all' ? true : filter === 'valid' ? e.is_valid_setup : !e.is_valid_setup)
+    .slice()
+    .sort((a, b) => {
+      let av = '', bv = '';
+      if (sortCol === 'created_at')   { av = a.created_at; bv = b.created_at; }
+      if (sortCol === 'submitted_by') { av = a.submitted_by ?? ''; bv = b.submitted_by ?? ''; }
+      if (sortCol === 'session')      { av = a.session ?? ''; bv = b.session ?? ''; }
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
 
   const counts = {
     all:     entries.length,
@@ -279,7 +296,8 @@ export default function HistoryTable() {
         <StatPill label="Total"   value={counts.all}     color={ACCENT} />
         <StatPill label="Valid"   value={counts.valid}   color={VALID_GREEN} />
         <StatPill label="Invalid" value={counts.invalid} color={INVALID_RED} />
-        {counts.all > 0 && <StatPill label="Valid rate" value={`${Math.round((counts.valid / counts.all) * 100)}%`} color={ACCENT} />}
+        {counts.all > 0 && <StatPill label="Valid rate"   value={`${Math.round((counts.valid   / counts.all) * 100)}%`} color={VALID_GREEN} />}
+        {counts.all > 0 && <StatPill label="Invalid rate" value={`${Math.round((counts.invalid / counts.all) * 100)}%`} color={INVALID_RED} />}
       </div>
 
       {/* Filter */}
@@ -315,8 +333,30 @@ export default function HistoryTable() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['#', 'TradingView URL', 'Session', 'Valid?', 'By', 'Notes', 'Date', ''].map((col, i) => (
-                    <th key={i} style={thStyle}>{col}</th>
+                  {[
+                    { label: '#',              sort: null },
+                    { label: 'TradingView URL',sort: null },
+                    { label: 'Session',        sort: 'session'      as SortCol },
+                    { label: 'Valid?',         sort: null },
+                    { label: 'By',             sort: 'submitted_by' as SortCol },
+                    { label: 'Notes',          sort: null },
+                    { label: 'Date',           sort: 'created_at'   as SortCol },
+                    { label: '',               sort: null },
+                  ].map((col, i) => (
+                    <th key={i} style={{ ...thStyle, cursor: col.sort ? 'pointer' : 'default', userSelect: 'none' }}
+                      onClick={() => col.sort && toggleSort(col.sort)}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        {col.label}
+                        {col.sort && (
+                          sortCol === col.sort
+                            ? sortDir === 'asc'
+                              ? <ChevronUp size={11} style={{ color: ACCENT }} />
+                              : <ChevronDown size={11} style={{ color: ACCENT }} />
+                            : <ChevronsUpDown size={11} style={{ color: 'rgba(240,246,252,0.2)' }} />
+                        )}
+                      </span>
+                    </th>
                   ))}
                 </tr>
               </thead>
