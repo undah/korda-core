@@ -16,6 +16,10 @@ import CRMLog from "./pages/crm/CRMLog";
 import CRMLeads from "./pages/crm/CRMLeads";
 import CRMWeek from "./pages/crm/CRMWeek";
 
+import TrainingLayout from "./features/training/components/TrainingLayout";
+import TrainingNew from "./pages/training/TrainingNew";
+import TrainingHistory from "./pages/training/TrainingHistory";
+
 import KordaTrading from "./pages/KordaTrading";
 import Index from "./pages/Index";
 import Journal from "./pages/Journal";
@@ -104,6 +108,12 @@ function AnimatedRoutes() {
             <Route path="/connections" element={<ComingSoon title="Platform Connections" subtitle="Connecting brokers (cTrader/MT5/TradingView) is coming soon." />} />
             <Route path="/coach"       element={<ComingSoon title="AI Coach" subtitle="AI coaching, insights, and chat are coming soon." />} />
             <Route path="/settings"    element={<Settings />} />
+          </Route>
+
+          {/* KordaAI Training */}
+          <Route element={<TrainingLayout />}>
+            <Route path="/training/new"     element={<TrainingNew />} />
+            <Route path="/training/history" element={<TrainingHistory />} />
           </Route>
 
           {/* KordaCRM — public landing */}

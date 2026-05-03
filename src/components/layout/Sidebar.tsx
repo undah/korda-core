@@ -9,7 +9,8 @@ import {
   TrendingUp,
   LogOut,
   User as UserIcon,
-  CandlestickChart, // ✅ NEW
+  CandlestickChart,
+  Brain,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthProvider";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: BookOpen, label: "Journal", path: "/journal" },
 
   { icon: CalendarDays, label: "Session Log", path: "/session-log" },
@@ -68,6 +69,17 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* AI Training shortcut */}
+      <div className="px-4 pb-2">
+        <NavLink
+          to="/training/new"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/40"
+        >
+          <Brain className="w-4 h-4" />
+          AI Training Data
+        </NavLink>
+      </div>
 
       {/* Account */}
       <div className="p-4 border-t border-sidebar-border">
