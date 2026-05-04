@@ -21,6 +21,7 @@ import TrainingLayout from "./features/training/components/TrainingLayout";
 import TrainingNew from "./pages/training/TrainingNew";
 import TrainingHistory from "./pages/training/TrainingHistory";
 import TrainingScheduler from "./pages/training/TrainingScheduler";
+import TrainingMistakes from "./pages/training/TrainingMistakes";
 
 import KordaTrading from "./pages/KordaTrading";
 import Index from "./pages/Index";
@@ -116,6 +117,7 @@ function AnimatedRoutes() {
           <Route element={<TrainingLayout />}>
             <Route path="/training/new"                  element={<TrainingNew />} />
             <Route path="/training/history"              element={<TrainingHistory />} />
+            <Route path="/training/mistakes"             element={<TrainingMistakes />} />
             <Route path="/training/screenshot-scheduler" element={<TrainingScheduler />} />
           </Route>
 

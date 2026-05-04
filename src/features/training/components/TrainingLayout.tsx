@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { PlusCircle, Clock, Brain, ArrowLeft, LogOut, Menu, X, Camera } from 'lucide-react';
+import { PlusCircle, Clock, Brain, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
   { path: '/training/new',                  label: 'New Entry',   icon: PlusCircle },
   { path: '/training/history',              label: 'History',     icon: Clock },
+  { path: '/training/mistakes',             label: 'Mistakes',    icon: AlertTriangle },
   { path: '/training/screenshot-scheduler', label: 'Screenshots', icon: Camera },
 ];
 

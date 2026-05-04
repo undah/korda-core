@@ -72,3 +72,20 @@ alter table screenshot_config
 -- Add pair column to screenshot_log if it doesn't exist yet
 alter table screenshot_log
   add column if not exists pair text;
+
+
+-- ============================================================
+-- Mistakes table
+-- ============================================================
+
+create table if not exists mistakes (
+  id             uuid default gen_random_uuid() primary key,
+  screenshot_url text not null,
+  mistake        text not null,
+  reason         text,
+  created_at     timestamp with time zone default now()
+);
+
+alter table mistakes disable row level security;
+grant all on mistakes to anon;
+grant all on mistakes to authenticated;

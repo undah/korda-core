@@ -11,3 +11,12 @@ export interface TrainingEntry {
 }
 
 export type TrainingEntryInsert = Omit<TrainingEntry, 'id' | 'created_at'>;
+
+export interface Mistake {
+  id: string;
+  screenshot_url: string;
+  mistake: string;
+  reason: string | null;
+  created_at: string;
+}
+export type MistakeInsert = Omit<Mistake, 'id' | 'created_at'>;
