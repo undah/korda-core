@@ -171,20 +171,7 @@ export default function TrainingLayout() {
       {/* Mobile topbar */}
       <div className="training-topbar">
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.95rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>
-          <svg width="18" height="18" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="10" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="38" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="66" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="94" width="22" height="22" rx="3" fill="white"/>
-            <rect x="38" y="10" width="22" height="22" rx="3" fill="#00C8FF"/>
-            <rect x="38" y="38" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
-            <rect x="38" y="66" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
-            <rect x="38" y="94" width="22" height="22" rx="3" fill="#00C8FF"/>
-            <rect x="66" y="10" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
-            <rect x="66" y="38" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
-            <rect x="66" y="66" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
-            <rect x="66" y="94" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
-          </svg>
+          <img src="/korda-icon.svg" width="20" height="20" style={{ flexShrink: 0 }} />
           Korda<span style={{ color: '#00C8FF' }}>AI</span>
         </span>
         <button
@@ -204,20 +191,7 @@ export default function TrainingLayout() {
       {/* Sidebar */}
       <aside className={`training-sidebar${mobileOpen ? ' open' : ''}`}>
         <div className="training-logo">
-          <svg width="20" height="20" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-            <rect x="10" y="10" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="38" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="66" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="94" width="22" height="22" rx="3" fill="white"/>
-            <rect x="38" y="10" width="22" height="22" rx="3" fill="#00C8FF"/>
-            <rect x="38" y="38" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
-            <rect x="38" y="66" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
-            <rect x="38" y="94" width="22" height="22" rx="3" fill="#00C8FF"/>
-            <rect x="66" y="10" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
-            <rect x="66" y="38" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
-            <rect x="66" y="66" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
-            <rect x="66" y="94" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
-          </svg>
+          <img src="/korda-icon.svg" width="22" height="22" style={{ flexShrink: 0 }} />
           Korda<span className="training-logo-accent">AI</span>
           <span className="training-logo-tag">Training</span>
         </div>

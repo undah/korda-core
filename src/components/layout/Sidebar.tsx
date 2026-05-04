@@ -1,4 +1,4 @@
-import {
+﻿import {
   LayoutDashboard,
   BookOpen,
   CalendarDays,
@@ -38,20 +38,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <svg width="36" height="36" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-            <rect x="10" y="10" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="38" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="66" width="22" height="22" rx="3" fill="white"/>
-            <rect x="10" y="94" width="22" height="22" rx="3" fill="white"/>
-            <rect x="38" y="10" width="22" height="22" rx="3" fill="#00C8FF"/>
-            <rect x="38" y="38" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
-            <rect x="38" y="66" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
-            <rect x="38" y="94" width="22" height="22" rx="3" fill="#00C8FF"/>
-            <rect x="66" y="10" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
-            <rect x="66" y="38" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
-            <rect x="66" y="66" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
-            <rect x="66" y="94" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
-          </svg>
+          <img src="/korda-icon.svg" width="36" height="36" style={{ flexShrink: 0, borderRadius: 6 }} />
           <div>
             <h1 className="font-semibold text-foreground">Korda™</h1>
             <p className="text-xs text-muted-foreground">Trading Journal</p>

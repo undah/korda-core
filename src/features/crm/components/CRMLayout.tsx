@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, PhoneCall, Users, CalendarDays, LogOut, Shield, Loader2, BookOpen } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
@@ -22,7 +22,7 @@ body.crm-active {
   --card-foreground: 224 15% 12%;
   --popover: 0 0% 100%;
   --popover-foreground: 224 15% 12%;
-  --primary: 221 83% 53%;
+  --primary: 193 100% 50%;
   --primary-foreground: 0 0% 100%;
   --secondary: 30 10% 93%;
   --secondary-foreground: 224 15% 12%;
@@ -34,7 +34,7 @@ body.crm-active {
   --destructive-foreground: 0 0% 100%;
   --border: 30 12% 88%;
   --input: 30 12% 88%;
-  --ring: 221 83% 53%;
+  --ring: 193 100% 50%;
   --radius: 0.5rem;
   background-color: hsl(42, 25%, 97%) !important;
   color: hsl(224, 15%, 12%) !important;
@@ -71,7 +71,7 @@ body.crm-active {
   color: #1c1a17;
   letter-spacing: -0.02em;
 }
-.crm-logo span { color: #3B82F6; }
+.crm-logo span { color: #00C8FF; }
 
 .crm-nav-item {
   display: flex;
@@ -86,7 +86,7 @@ body.crm-active {
   margin: 1px 0;
 }
 .crm-nav-item:hover { color: #1c1a17; background: #f8f7f4; }
-.crm-nav-item.active { color: #1c1a17; border-left-color: #3B82F6; background: #EFF6FF; font-weight: 500; }
+.crm-nav-item.active { color: #1c1a17; border-left-color: #00C8FF; background: rgba(0,200,255,0.07); font-weight: 500; }
 
 .crm-sidebar-bottom {
   margin-top: auto;
@@ -165,7 +165,7 @@ function ProfileSetup({ userId, onDone }: { userId: string; onDone: () => void }
         boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
       }}>
         <div style={{ marginBottom: '0.5rem', fontSize: '1.25rem', fontWeight: 700, color: '#1c1a17' }}>
-          Korda<span style={{ color: '#3B82F6' }}>CRM</span>
+          Korda<span style={{ color: '#00C8FF' }}>CRM</span>
         </div>
         <p style={{ fontSize: '0.875rem', color: '#706d66', marginBottom: '1.5rem' }}>
           Kies je naam om te beginnen.
@@ -203,7 +203,7 @@ function ProfileSetup({ userId, onDone }: { userId: string; onDone: () => void }
             disabled={!name || upsert.isPending}
             style={{
               width: '100%', padding: '0.75rem',
-              background: name ? '#3B82F6' : '#E5E7EB',
+              background: name ? '#00C8FF' : '#E5E7EB',
               color: name ? '#fff' : '#9CA3AF',
               border: 'none', borderRadius: 8,
               fontWeight: 600, fontSize: '0.9rem',
@@ -253,7 +253,7 @@ export default function CRMLayout() {
   if (authLoading || profileLoading) {
     return (
       <div className="crm-app" style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={24} style={{ color: '#3B82F6', animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={24} style={{ color: '#00C8FF', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
@@ -280,7 +280,7 @@ export default function CRMLayout() {
       {/* Mobile topbar */}
       <div className="crm-topbar">
         <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1c1a17', letterSpacing: '-0.02em' }}>
-          Korda<span style={{ color: '#3B82F6' }}>CRM</span>
+          Korda<span style={{ color: '#00C8FF' }}>CRM</span>
         </span>
         <button
           className={`crm-hamburger${drawerOpen ? ' open' : ''}`}
@@ -296,7 +296,7 @@ export default function CRMLayout() {
 
       {/* Sidebar */}
       <aside className={`crm-sidebar${drawerOpen ? ' open' : ''}`}>
-        <div className="crm-logo">Korda<span>CRM</span></div>
+        <div className="crm-logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}><img src="/korda-icon.svg" width="28" height="28" style={{ flexShrink: 0 }} />Korda<span>CRM</span></div>
 
         {profile?.is_admin && (
           <div style={{ padding: '0 1.25rem 0.75rem' }}>
@@ -349,7 +349,7 @@ export default function CRMLayout() {
             onMouseEnter={e => (e.currentTarget.style.color = '#706d66')}
             onMouseLeave={e => (e.currentTarget.style.color = '#B0A99A')}
           >
-            ← Terug naar Korda
+            â† Terug naar Korda
           </Link>
           <button
             onClick={handleSignOut}
