@@ -42,7 +42,6 @@ export default function ScreenshotScheduler() {
   const days        = merged.days ?? [];
   const sessions    = merged.sessions ?? ['always'];
   const pairs       = merged.pairs ?? ['EURUSD'];
-  const maxRuns     = merged.max_runs_per_day ?? 24;
 
   const load = useCallback(async () => {
     try {
@@ -272,20 +271,6 @@ export default function ScreenshotScheduler() {
                 </button>
               );
             })}
-          </div>
-        </Card>
-
-        {/* Max runs */}
-        <Card label="Max Runs Per Day" hint="Limit">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <input
-              type="number"
-              min={1} max={288}
-              value={maxRuns}
-              onChange={e => setDraft(d => ({ ...d, max_runs_per_day: Math.max(1, parseInt(e.target.value) || 1) }))}
-              style={{ ...inputStyle, width: 100 }}
-            />
-            <span style={{ fontSize: '0.8rem', color: 'rgba(240,246,252,0.35)' }}>screenshots / day</span>
           </div>
         </Card>
 

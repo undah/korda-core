@@ -10,7 +10,11 @@
       "Bash(Out-Null)",
       "Bash(Write-Output \"done\")",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\giund\\\\OneDrive\\\\Desktop\" -Recurse -Filter \"tv_session.json\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }
