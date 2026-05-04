@@ -5,39 +5,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const RAILWAY_URL = 'https://trading-bot-production-4c10.up.railway.app'
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  const n8nResponse = await fetch(
-    'https://jams883895.app.n8n.cloud/webhook/48694722-b68e-4b06-a263-f73f36ed16ca',
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }
-  )
-
-  const data = await n8nResponse.json()
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  await fetch(`${supabaseUrl}/rest/v1/screenshot_log`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
-      'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      status:       data.status      ?? 'success',
-      timestamp:    data.timestamp   ?? new Date().toISOString(),
-      image_base64: data.image_base64 ?? null,
-      reason:       data.reason      ?? null,
-      pair:         data.pair        ?? null,
-    }),
-  })
+  try {
+    const configRes = await fetch(
+      `${supabaseUrl}/rest/v1/screenshot_config?order=updated_at.desc&limit=1`,
+      { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }
+    )
+    const configs = await configRes.json()
+    const pairs: string[] = configs[0]?.pairs?.length > 0 ? configs[0].pairs : ['EURUSD']
 
-  return new Response(JSON.stringify(data), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  })
+    const results = await Promise.all(pairs.map(async (pair: string) => {
+      try {
+        const railwayRes = await fetch(`${RAILWAY_URL}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pair }),
+        })
+        const data = await railwayRes.json()
+
+        await fetch(`${supabaseUrl}/rest/v1/screenshot_log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            status: data.status ?? 'success',
+            timestamp: data.timestamp ?? new Date().toISOString(),
+            image_base64: data.image_base64 ?? null,
+            reason: data.reason ?? null,
+            pair: data.pair ?? pair,
+          }),
+        })
+
+        return { pair, status: 'success' }
+      } catch (err) {
+        return { pair, status: 'error', reason: String(err) }
+      }
+    }))
+
+    return new Response(JSON.stringify({ status: 'success', results }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  } catch (err) {
+    return new Response(JSON.stringify({ status: 'error', reason: String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
 })

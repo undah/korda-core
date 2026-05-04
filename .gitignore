@@ -47,3 +47,6 @@ Thumbs.db
 # editor
 .vscode/
 .idea/
+
+# Railway bot session (contains TradingView credentials)
+railway-bot/tv_session.json
