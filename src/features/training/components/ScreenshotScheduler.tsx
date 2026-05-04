@@ -32,6 +32,7 @@ export default function ScreenshotScheduler() {
   const [running, setRunning]           = useState(false);
   const [loading, setLoading]           = useState(true);
   const [hoveredLog, setHoveredLog]     = useState<string | null>(null);
+  const [refreshing, setRefreshing]     = useState(false);
 
   const merged: Partial<ScreenshotConfig> = { ...config, ...draft };
   const enabled     = !!merged.enabled;
@@ -328,10 +329,15 @@ export default function ScreenshotScheduler() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#f0f6fc', margin: 0, letterSpacing: '-0.02em' }}>Run Log</h2>
           <button
-            onClick={() => fetchScreenshotLogs().then(setLogs)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,246,252,0.35)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', padding: 0 }}
+            onClick={async () => {
+              setRefreshing(true);
+              try { await fetchScreenshotLogs().then(setLogs); } finally { setRefreshing(false); }
+            }}
+            disabled={refreshing}
+            style={{ background: 'none', border: 'none', cursor: refreshing ? 'default' : 'pointer', color: refreshing ? 'rgba(0,212,255,0.7)' : 'rgba(240,246,252,0.35)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', padding: 0, transition: 'color 0.15s' }}
           >
-            <RefreshCw size={12} /> Refresh
+            <RefreshCw size={12} style={refreshing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
