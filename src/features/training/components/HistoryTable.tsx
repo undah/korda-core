@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   ExternalLink, Filter, Loader2, RefreshCw, ChevronDown, ChevronUp,
   Pencil, Trash2, X, CheckCircle2, XCircle, Link as LinkIcon, FileUp,
-  ChevronsUpDown,
+  ChevronsUpDown, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import CSVImporter from './CSVImporter';
 import { toast } from 'sonner';
@@ -211,6 +211,8 @@ export default function HistoryTable() {
   const [showImporter, setShowImporter]       = useState(false);
   const [sortCol, setSortCol]   = useState<SortCol>('created_at');
   const [sortDir, setSortDir]   = useState<SortDir>('desc');
+  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage]         = useState(1);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -256,11 +258,16 @@ export default function HistoryTable() {
       return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     });
 
+  useEffect(() => { setPage(1); }, [filter, sortCol, sortDir]);
+
   const counts = {
     all:     entries.length,
     valid:   entries.filter(e => e.is_valid_setup).length,
     invalid: entries.filter(e => !e.is_valid_setup).length,
   };
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged      = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div>
@@ -329,6 +336,7 @@ export default function HistoryTable() {
             {filter === 'all' ? 'No entries yet. Add your first training entry.' : `No ${filter} setups found.`}
           </div>
         ) : (
+          <>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -361,7 +369,8 @@ export default function HistoryTable() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((entry, idx) => {
+                {paged.map((entry, idx) => {
+                  const globalIdx = (page - 1) * pageSize + idx;
                   const isExpanded   = expanded.has(entry.id);
                   const noteText     = entry.notes ?? '';
                   const truncated    = noteText.length > NOTE_TRUNCATE;
@@ -377,7 +386,7 @@ export default function HistoryTable() {
                     >
                       {/* # */}
                       <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 40 }}>
-                        {idx + 1}
+                        {globalIdx + 1}
                       </td>
 
                       {/* TradingView URL */}
@@ -478,6 +487,28 @@ export default function HistoryTable() {
               </tbody>
             </table>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1rem', borderTop: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.3)', marginRight: 'auto' }}>
+              {filtered.length} record{filtered.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={pageBtn(page === 1)}>
+              <ChevronLeft size={13} />
+            </button>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
+              Page {page} of {totalPages}
+            </span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={pageBtn(page === totalPages)}>
+              <ChevronRight size={13} />
+            </button>
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+              style={{ padding: '0.3rem 0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: 'rgba(240,246,252,0.55)', fontSize: '0.75rem', cursor: 'pointer', outline: 'none' }}
+            >
+              {[50, 100, 250].map(n => <option key={n} value={n}>{n} rows</option>)}
+            </select>
+          </div>
+          </>
         )}
       </div>
 
@@ -522,3 +553,11 @@ const thStyle: React.CSSProperties = {
 };
 
 const tdStyle: React.CSSProperties = { padding: '0.75rem 1rem', verticalAlign: 'middle' };
+
+const pageBtn = (disabled: boolean): React.CSSProperties => ({
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: 28, height: 28, padding: 0,
+  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 6, cursor: disabled ? 'not-allowed' : 'pointer',
+  color: disabled ? 'rgba(240,246,252,0.2)' : 'rgba(240,246,252,0.55)',
+});

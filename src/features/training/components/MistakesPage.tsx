@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchMistakes, insertMistake, updateMistake, deleteMistake } from '../lib/trainingData';
@@ -99,6 +99,8 @@ export default function MistakesPage() {
   const [deletingId, setDeletingId]       = useState<string | null>(null);
   const [expanded, setExpanded]           = useState<Set<string>>(new Set());
   const [showImporter, setShowImporter]   = useState(false);
+  const [pageSize, setPageSize]           = useState(50);
+  const [page, setPage]                   = useState(1);
 
   const [url, setUrl]         = useState('');
   const [mistake, setMistake] = useState('');
@@ -112,6 +114,7 @@ export default function MistakesPage() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => { setPage(1); }, [entries.length]);
 
   const handleSubmit = async () => {
     if (!url.trim() || !mistake.trim()) { toast.error('URL and mistake are required.'); return; }
@@ -139,6 +142,9 @@ export default function MistakesPage() {
 
   const toggleExpand = (id: string) =>
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
+  const paged      = entries.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div>
@@ -207,6 +213,7 @@ export default function MistakesPage() {
         ) : entries.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'rgba(240,246,252,0.25)', fontSize: '0.85rem' }}>No mistakes logged yet.</div>
         ) : (
+          <>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -217,7 +224,8 @@ export default function MistakesPage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry, idx) => {
+                {paged.map((entry, idx) => {
+                  const globalIdx    = (page - 1) * pageSize + idx;
                   const isExpanded   = expanded.has(entry.id);
                   const reasonText   = entry.reason ?? '';
                   const truncated    = reasonText.length > NOTE_TRUNCATE;
@@ -229,7 +237,7 @@ export default function MistakesPage() {
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 36 }}>{idx + 1}</td>
+                      <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 36 }}>{globalIdx + 1}</td>
 
                       <td style={tdStyle}>
                         <a href={entry.screenshot_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: ACCENT, fontSize: '0.75rem', fontFamily: "'JetBrains Mono', monospace", textDecoration: 'none', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -282,6 +290,28 @@ export default function MistakesPage() {
               </tbody>
             </table>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1rem', borderTop: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.3)', marginRight: 'auto' }}>
+              {entries.length} record{entries.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={pageBtn(page === 1)}>
+              <ChevronLeft size={13} />
+            </button>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
+              Page {page} of {totalPages}
+            </span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={pageBtn(page === totalPages)}>
+              <ChevronRight size={13} />
+            </button>
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+              style={{ padding: '0.3rem 0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: 'rgba(240,246,252,0.55)', fontSize: '0.75rem', cursor: 'pointer', outline: 'none' }}
+            >
+              {[50, 100, 250].map(n => <option key={n} value={n}>{n} rows</option>)}
+            </select>
+          </div>
+          </>
         )}
       </div>
     </div>
@@ -318,3 +348,11 @@ const thStyle: React.CSSProperties = {
 };
 
 const tdStyle: React.CSSProperties = { padding: '0.75rem 1rem', verticalAlign: 'top' };
+
+const pageBtn = (disabled: boolean): React.CSSProperties => ({
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: 28, height: 28, padding: 0,
+  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 6, cursor: disabled ? 'not-allowed' : 'pointer',
+  color: disabled ? 'rgba(240,246,252,0.2)' : 'rgba(240,246,252,0.55)',
+});
