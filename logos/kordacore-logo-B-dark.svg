@@ -1,0 +1,15 @@
+<svg width="600" height="80" viewBox="0 0 600 80" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="80" fill="#0A0A0F"/>
+  <rect x="16" y="10" width="14" height="14" rx="2" fill="white"/>
+  <rect x="16" y="28" width="14" height="14" rx="2" fill="white"/>
+  <rect x="16" y="46" width="14" height="14" rx="2" fill="white"/>
+  <rect x="16" y="64" width="14" height="14" rx="2" fill="white"/>
+  <rect x="34" y="10" width="14" height="14" rx="2" fill="#00C8FF"/>
+  <rect x="34" y="28" width="14" height="14" rx="2" fill="white" opacity="0.15"/>
+  <rect x="34" y="46" width="14" height="14" rx="2" fill="white" opacity="0.15"/>
+  <rect x="34" y="64" width="14" height="14" rx="2" fill="#00C8FF"/>
+  <rect x="52" y="10" width="14" height="14" rx="2" fill="white" opacity="0.06"/>
+  <rect x="52" y="64" width="14" height="14" rx="2" fill="white" opacity="0.06"/>
+  <text x="86" y="48" font-family="Arial, sans-serif" font-weight="500" font-size="36" fill="white">Korda<tspan fill="#00C8FF">Core</tspan></text>
+  <text x="87" y="68" font-family="monospace" font-size="11" fill="rgba(255,255,255,0.4)" letter-spacing="2.5">DATA · MODELS · ALPHA</text>
+</svg>
