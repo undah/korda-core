@@ -35,11 +35,13 @@ export async function updateTrainingEntry(
 }
 
 export async function deleteTrainingEntry(id: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('training_entries')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select();
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Delete blocked — run: ALTER TABLE training_entries DISABLE ROW LEVEL SECURITY');
 }
 
 export async function bulkInsertTrainingEntries(
