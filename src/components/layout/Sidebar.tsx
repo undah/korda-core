@@ -6,13 +6,13 @@ import {
   Bot,
   BarChart3,
   Settings,
-  TrendingUp,
   LogOut,
   User as UserIcon,
   CandlestickChart,
   Brain,
+  ArrowLeft,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthProvider";
@@ -38,9 +38,20 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center glow-effect">
-            <TrendingUp className="w-5 h-5 text-primary" />
-          </div>
+          <svg width="36" height="36" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+            <rect x="10" y="10" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="38" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="66" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="94" width="22" height="22" rx="3" fill="white"/>
+            <rect x="38" y="10" width="22" height="22" rx="3" fill="#00C8FF"/>
+            <rect x="38" y="38" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
+            <rect x="38" y="66" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
+            <rect x="38" y="94" width="22" height="22" rx="3" fill="#00C8FF"/>
+            <rect x="66" y="10" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
+            <rect x="66" y="38" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
+            <rect x="66" y="66" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
+            <rect x="66" y="94" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
+          </svg>
           <div>
             <h1 className="font-semibold text-foreground">Korda™</h1>
             <p className="text-xs text-muted-foreground">Trading Journal</p>
@@ -69,6 +80,17 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Back to Suite */}
+      <div className="px-4 pb-1">
+        <Link
+          to="/"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Suite
+        </Link>
+      </div>
 
       {/* AI Training shortcut */}
       <div className="px-4 pb-2">
