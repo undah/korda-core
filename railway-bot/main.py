@@ -3,12 +3,20 @@ import base64
 import urllib.parse
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from playwright.sync_api import sync_playwright
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 BASE_CHART_URL = os.getenv("BASE_CHART_URL", "https://www.tradingview.com/chart/GoEcqSyG/")
 SESSION_FILE = "tv_session.json"

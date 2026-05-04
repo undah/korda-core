@@ -71,6 +71,7 @@ export async function checkServiceHealth(): Promise<boolean> {
 }
 
 export async function triggerRunNow(): Promise<void> {
-  const { error } = await supabase.functions.invoke('screenshot-trigger');
+  const { data, error } = await supabase.functions.invoke('screenshot-trigger');
   if (error) throw new Error(error.message);
+  if (data?.status === 'error') throw new Error(data.reason ?? 'Unknown error');
 }
