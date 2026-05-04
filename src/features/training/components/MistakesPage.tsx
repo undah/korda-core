@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -6,10 +6,10 @@ import { fetchMistakes, insertMistake, updateMistake, deleteMistake } from '../l
 import type { Mistake } from '../types';
 import MistakesImporter from './MistakesImporter';
 
-const ACCENT = '#00d4ff';
+const ACCENT = '#00C8FF';
 const NOTE_TRUNCATE = 100;
 
-// ── Edit Modal ────────────────────────────────────────────────────────────────
+// â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EditModal({ entry, onClose, onSaved }: {
   entry: Mistake;
@@ -74,7 +74,7 @@ function EditModal({ entry, onClose, onSaved }: {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
-          <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: '0.65rem', background: saving ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)', color: saving ? 'rgba(0,212,255,0.5)' : '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: '0.65rem', background: saving ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)', color: saving ? 'rgba(0,212,255,0.5)' : '#0A0A0F', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
             {saving && <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />}
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -88,7 +88,7 @@ function EditModal({ entry, onClose, onSaved }: {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function MistakesPage() {
   const [entries, setEntries]             = useState<Mistake[]>([]);
@@ -157,7 +157,7 @@ export default function MistakesPage() {
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.03em', margin: 0 }}>Bot Mistakes</h1>
           <p style={{ fontSize: '0.825rem', color: 'rgba(240,246,252,0.4)', marginTop: '0.35rem' }}>
-            {entries.length} logged mistake{entries.length !== 1 ? 's' : ''} — used to improve future evaluations.
+            {entries.length} logged mistake{entries.length !== 1 ? 's' : ''} â€” used to improve future evaluations.
           </p>
         </div>
         <button onClick={() => setShowImporter(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 8, color: ACCENT, fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
@@ -189,7 +189,7 @@ export default function MistakesPage() {
         </div>
 
         <div>
-          <button onClick={handleSubmit} disabled={submitting} style={{ padding: '0.6rem 1.5rem', background: submitting ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)', color: submitting ? 'rgba(0,212,255,0.5)' : '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button onClick={handleSubmit} disabled={submitting} style={{ padding: '0.6rem 1.5rem', background: submitting ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)', color: submitting ? 'rgba(0,212,255,0.5)' : '#0A0A0F', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             {submitting && <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />}
             {submitting ? 'Saving...' : 'Log Mistake'}
           </button>
@@ -254,7 +254,7 @@ export default function MistakesPage() {
                         {reasonText ? (
                           <div>
                             <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(240,246,252,0.55)', lineHeight: 1.5 }}>
-                              {isExpanded || !truncated ? reasonText : `${reasonText.slice(0, NOTE_TRUNCATE)}…`}
+                              {isExpanded || !truncated ? reasonText : `${reasonText.slice(0, NOTE_TRUNCATE)}â€¦`}
                             </p>
                             {truncated && (
                               <button onClick={() => toggleExpand(entry.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontSize: '0.72rem', padding: '0.2rem 0', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
@@ -262,7 +262,7 @@ export default function MistakesPage() {
                               </button>
                             )}
                           </div>
-                        ) : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                        ) : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                       </td>
 
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.72rem', color: 'rgba(240,246,252,0.35)' }}>
@@ -359,7 +359,7 @@ function RowsSelect({ value, onChange }: { value: number; onChange: (n: number) 
       {open && (
         <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', right: 0, background: '#131920', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, overflow: 'hidden', zIndex: 100, minWidth: 110, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
           {[50, 100, 250].map(n => (
-            <button key={n} onClick={() => { onChange(n); setOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.9rem', background: n === value ? 'rgba(0,212,255,0.08)' : 'transparent', color: n === value ? '#00d4ff' : 'rgba(240,246,252,0.7)', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button key={n} onClick={() => { onChange(n); setOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.9rem', background: n === value ? 'rgba(0,212,255,0.08)' : 'transparent', color: n === value ? '#00C8FF' : 'rgba(240,246,252,0.7)', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
               {n} rows
             </button>
           ))}

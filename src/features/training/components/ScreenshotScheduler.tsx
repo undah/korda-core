@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Play, Save, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -15,8 +15,8 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const INTERVALS = [5, 10, 15, 30, 60];
 const SESSIONS: { value: SessionFilter; label: string; time: string }[] = [
   { value: 'always',   label: 'Always',   time: 'No filter' },
-  { value: 'london',   label: 'London',   time: '08:00–12:00 UTC' },
-  { value: 'new_york', label: 'New York', time: '13:00–17:00 UTC' },
+  { value: 'london',   label: 'London',   time: '08:00â€“12:00 UTC' },
+  { value: 'new_york', label: 'New York', time: '13:00â€“17:00 UTC' },
 ];
 const PAIRS = [
   'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
@@ -119,7 +119,7 @@ export default function ScreenshotScheduler() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-      <div style={{ width: 24, height: 24, border: '2px solid #00d4ff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 24, height: 24, border: '2px solid #00C8FF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -160,12 +160,12 @@ export default function ScreenshotScheduler() {
                 style={{
                   flex: 1, padding: '0.75rem 1rem', borderRadius: 10, cursor: 'pointer',
                   background: mode === m ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.02)',
-                  border: `1.5px solid ${mode === m ? '#00d4ff' : 'rgba(255,255,255,0.08)'}`,
-                  color: mode === m ? '#00d4ff' : 'rgba(240,246,252,0.45)',
+                  border: `1.5px solid ${mode === m ? '#00C8FF' : 'rgba(255,255,255,0.08)'}`,
+                  color: mode === m ? '#00C8FF' : 'rgba(240,246,252,0.45)',
                   fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.15s',
                 }}
               >
-                {m === 'interval' ? '⏱ Interval' : '🕐 Fixed Time'}
+                {m === 'interval' ? 'â± Interval' : 'ðŸ• Fixed Time'}
               </button>
             ))}
           </div>
@@ -180,8 +180,8 @@ export default function ScreenshotScheduler() {
                     style={{
                       padding: '0.45rem 1rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
                       background: intervalMin === min ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${intervalMin === min ? '#00d4ff' : 'rgba(255,255,255,0.08)'}`,
-                      color: intervalMin === min ? '#00d4ff' : 'rgba(240,246,252,0.45)',
+                      border: `1px solid ${intervalMin === min ? '#00C8FF' : 'rgba(255,255,255,0.08)'}`,
+                      color: intervalMin === min ? '#00C8FF' : 'rgba(240,246,252,0.45)',
                       transition: 'all 0.15s',
                     }}
                   >
@@ -213,8 +213,8 @@ export default function ScreenshotScheduler() {
                         style={{
                           width: 42, height: 36, borderRadius: 8, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
                           background: active ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${active ? '#00d4ff' : 'rgba(255,255,255,0.08)'}`,
-                          color: active ? '#00d4ff' : 'rgba(240,246,252,0.4)',
+                          border: `1px solid ${active ? '#00C8FF' : 'rgba(255,255,255,0.08)'}`,
+                          color: active ? '#00C8FF' : 'rgba(240,246,252,0.4)',
                           transition: 'all 0.15s',
                         }}
                       >
@@ -243,7 +243,7 @@ export default function ScreenshotScheduler() {
                     transition: 'all 0.15s', textAlign: 'left',
                   }}
                 >
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: active ? '#00d4ff' : 'rgba(240,246,252,0.5)' }}>{s.label}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: active ? '#00C8FF' : 'rgba(240,246,252,0.5)' }}>{s.label}</span>
                   <span style={{ fontSize: '0.68rem', color: 'rgba(240,246,252,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>{s.time}</span>
                 </button>
               );
@@ -262,8 +262,8 @@ export default function ScreenshotScheduler() {
                     padding: '0.4rem 0.85rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
                     fontFamily: "'JetBrains Mono', monospace",
                     background: active ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${active ? '#00d4ff' : 'rgba(255,255,255,0.08)'}`,
-                    color: active ? '#00d4ff' : 'rgba(240,246,252,0.4)',
+                    border: `1px solid ${active ? '#00C8FF' : 'rgba(255,255,255,0.08)'}`,
+                    color: active ? '#00C8FF' : 'rgba(240,246,252,0.4)',
                     transition: 'all 0.15s',
                   }}
                 >
@@ -279,8 +279,8 @@ export default function ScreenshotScheduler() {
           <button onClick={handleSave} disabled={saving}
             style={{
               padding: '0.65rem 1.75rem',
-              background: saving ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)',
-              color: saving ? 'rgba(0,212,255,0.5)' : '#0d1117',
+              background: saving ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)',
+              color: saving ? 'rgba(0,212,255,0.5)' : '#0A0A0F',
               border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem',
               cursor: saving ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.15s',
@@ -348,7 +348,7 @@ export default function ScreenshotScheduler() {
                       {format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}
                     </td>
                     <td style={{ padding: '0.65rem 1rem', color: 'rgba(240,246,252,0.45)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {log.reason ?? '—'}
+                      {log.reason ?? 'â€”'}
                     </td>
                     <td style={{ padding: '0.65rem 1rem', position: 'relative' }}>
                       {log.image_base64 ? (
@@ -363,13 +363,13 @@ export default function ScreenshotScheduler() {
                             style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'block' }}
                           />
                           {hoveredLog === log.id && (
-                            <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, background: '#0d1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 6, boxShadow: '0 16px 64px rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
+                            <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, background: '#0A0A0F', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 6, boxShadow: '0 16px 64px rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
                               <img src={`data:image/png;base64,${log.image_base64}`} alt="preview" style={{ width: 720, height: 450, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
                             </div>
                           )}
                         </div>
                       ) : (
-                        <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>—</span>
+                        <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>â€”</span>
                       )}
                     </td>
                   </tr>
@@ -401,7 +401,7 @@ function Toggle({ enabled, onChange, disabled }: { enabled: boolean; onChange: (
       onClick={() => !disabled && onChange(!enabled)}
       style={{
         width: 44, height: 24, borderRadius: 12, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-        background: enabled ? '#00d4ff' : 'rgba(255,255,255,0.1)',
+        background: enabled ? '#00C8FF' : 'rgba(255,255,255,0.1)',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
         opacity: disabled ? 0.6 : 1,
       }}

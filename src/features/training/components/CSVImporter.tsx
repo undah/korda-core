@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+﻿import { useState, useRef, useCallback } from 'react';
 import { X, Upload, Download, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { bulkInsertTrainingEntries } from '../lib/trainingData';
@@ -14,12 +14,12 @@ function parseSession(val: string): TradingSession | null {
   return SESSION_ALIASES[val.toLowerCase().trim().replace(/[\s-]/g, '_')] ?? null;
 }
 
-const ACCENT      = '#00d4ff';
+const ACCENT      = '#00C8FF';
 const VALID_GREEN = '#10b981';
 const INVALID_RED = '#ef4444';
 const WARN_YELLOW = '#f59e0b';
 
-// ── CSV parser ────────────────────────────────────────────────────────────────
+// â”€â”€ CSV parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -58,7 +58,7 @@ interface ParsedRow {
 
 function parseCSV(text: string): ParsedRow[] {
   // Strip BOM and normalise line endings
-  const clean  = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const clean  = text.replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines  = clean.split('\n').filter(l => l.trim() !== '');
   if (lines.length < 2) return [];
 
@@ -95,7 +95,7 @@ function parseCSV(text: string): ParsedRow[] {
   });
 }
 
-// ── Template download ─────────────────────────────────────────────────────────
+// â”€â”€ Template download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function downloadTemplate() {
   const csv = [
@@ -110,7 +110,7 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Props {
   onClose:    () => void;
@@ -232,7 +232,7 @@ export default function CSVImporter({ onClose, onImported }: Props) {
             <Upload size={22} style={{ color: dragging ? ACCENT : rows.length > 0 ? VALID_GREEN : 'rgba(240,246,252,0.2)' }} />
             {fileName ? (
               <span style={{ fontSize: '0.82rem', color: VALID_GREEN, fontFamily: "'JetBrains Mono', monospace" }}>
-                ✓ {fileName}
+                âœ“ {fileName}
               </span>
             ) : (
               <span style={{ fontSize: '0.82rem', color: 'rgba(240,246,252,0.35)' }}>
@@ -240,7 +240,7 @@ export default function CSVImporter({ onClose, onImported }: Props) {
               </span>
             )}
             <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>
-              Columns: tradingview_url · is_valid_setup · session · notes
+              Columns: tradingview_url Â· is_valid_setup Â· session Â· notes
             </span>
           </div>
           <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }}
@@ -295,7 +295,7 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                             }
                           </td>
                           <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.72rem', color: 'rgba(240,246,252,0.55)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {tvUrl || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                            {tvUrl || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                           </td>
                           <td style={tdStyle}>
                             {row.entry ? (
@@ -307,11 +307,11 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                                 {row.entry.is_valid_setup ? 'Valid' : 'Invalid'}
                               </span>
                             ) : (
-                              <span style={{ fontSize: '0.72rem', color: WARN_YELLOW }}>{validRaw || '—'}</span>
+                              <span style={{ fontSize: '0.72rem', color: WARN_YELLOW }}>{validRaw || 'â€”'}</span>
                             )}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'rgba(240,246,252,0.45)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {notes || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                            {notes || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                           </td>
                           <td style={tdStyle}>
                             {row.errors.length > 0 && (
@@ -341,8 +341,8 @@ export default function CSVImporter({ onClose, onImported }: Props) {
             disabled={validRows.length === 0 || importing}
             style={{
               padding: '0.65rem 1.5rem',
-              background: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.1)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)',
-              color: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.4)' : '#0d1117',
+              background: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.1)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)',
+              color: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.4)' : '#0A0A0F',
               border: 'none', borderRadius: 8,
               fontWeight: 700, fontSize: '0.875rem',
               cursor: (validRows.length === 0 || importing) ? 'not-allowed' : 'pointer',

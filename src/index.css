@@ -7,17 +7,17 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
+    --background: 240 20% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 8%;
+    --card: 240 15% 7%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 10%;
+    --popover: 240 15% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 173 80% 40%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 193 100% 50%;
+    --primary-foreground: 240 20% 5%;
 
     --secondary: 222 30% 14%;
     --secondary-foreground: 210 40% 98%;
@@ -39,33 +39,33 @@
 
     --border: 222 30% 18%;
     --input: 222 30% 14%;
-    --ring: 173 80% 40%;
+    --ring: 193 100% 50%;
 
     --radius: 0.75rem;
 
     --chart-profit: 160 84% 39%;
     --chart-loss: 0 84% 60%;
-    --chart-neutral: 222 30% 40%;
+    --chart-neutral: 240 15% 40%;
 
-    --sidebar-background: 222 47% 7%;
+    --sidebar-background: 240 20% 5%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 173 80% 40%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 30% 12%;
+    --sidebar-primary: 193 100% 50%;
+    --sidebar-primary-foreground: 240 20% 5%;
+    --sidebar-accent: 240 15% 10%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 30% 15%;
-    --sidebar-ring: 173 80% 40%;
+    --sidebar-border: 240 15% 13%;
+    --sidebar-ring: 193 100% 50%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(173, 80%, 40%) 0%, hsl(190, 80%, 45%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(222, 47%, 10%) 0%, hsl(222, 47%, 8%) 100%);
-    --gradient-glow: radial-gradient(ellipse at center, hsl(173 80% 40% / 0.15) 0%, transparent 70%);
+    --gradient-primary: linear-gradient(135deg, hsl(193, 100%, 50%) 0%, hsl(205, 100%, 40%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(240, 15%, 8%) 0%, hsl(240, 15%, 6%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(193 100% 50% / 0.15) 0%, transparent 70%);
 
-    --shadow-glow: 0 0 40px hsl(173 80% 40% / 0.2);
-    --shadow-card: 0 4px 24px hsl(222 47% 4% / 0.5);
+    --shadow-glow: 0 0 40px hsl(193 100% 50% / 0.2);
+    --shadow-card: 0 4px 24px hsl(240 20% 3% / 0.5);
   }
 
   .dark {
-    --background: 222 47% 6%;
+    --background: 240 20% 5%;
     --foreground: 210 40% 98%;
   }
 }

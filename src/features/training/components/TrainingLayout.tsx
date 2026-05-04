@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { PlusCircle, Clock, Brain, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Clock, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
@@ -25,8 +25,8 @@ export default function TrainingLayout() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0d1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 24, height: 24, border: '2px solid #00d4ff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ minHeight: '100vh', background: '#0A0A0F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 24, height: 24, border: '2px solid #00C8FF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -39,14 +39,14 @@ export default function TrainingLayout() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0d1117', display: 'flex', fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#0A0A0F', display: 'flex', fontFamily: "'Inter', -apple-system, sans-serif" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .training-sidebar {
           width: 220px;
           min-height: 100vh;
-          background: #0d1117;
+          background: #0A0A0F;
           border-right: 1px solid rgba(255,255,255,0.06);
           display: flex;
           flex-direction: column;
@@ -69,14 +69,14 @@ export default function TrainingLayout() {
           align-items: center;
           gap: 0.5rem;
         }
-        .training-logo-accent { color: #00d4ff; }
+        .training-logo-accent { color: #00C8FF; }
         .training-logo-tag {
           font-size: 0.6rem;
           font-weight: 600;
           letter-spacing: 0.08em;
-          color: #00d4ff;
-          background: rgba(0,212,255,0.08);
-          border: 1px solid rgba(0,212,255,0.2);
+          color: #00C8FF;
+          background: rgba(0,200,255,0.08);
+          border: 1px solid rgba(0,200,255,0.2);
           padding: 0.1rem 0.4rem;
           border-radius: 4px;
           text-transform: uppercase;
@@ -96,9 +96,9 @@ export default function TrainingLayout() {
         }
         .training-nav-item:hover { color: rgba(240,246,252,0.85); background: rgba(255,255,255,0.03); }
         .training-nav-item.active {
-          color: #00d4ff;
-          border-left-color: #00d4ff;
-          background: rgba(0,212,255,0.06);
+          color: #00C8FF;
+          border-left-color: #00C8FF;
+          background: rgba(0,200,255,0.06);
           font-weight: 500;
         }
 
@@ -123,7 +123,7 @@ export default function TrainingLayout() {
           position: fixed;
           top: 0; left: 0; right: 0;
           height: 52px;
-          background: #0d1117;
+          background: #0A0A0F;
           border-bottom: 1px solid rgba(255,255,255,0.06);
           align-items: center;
           justify-content: space-between;
@@ -170,8 +170,22 @@ export default function TrainingLayout() {
 
       {/* Mobile topbar */}
       <div className="training-topbar">
-        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>
-          Korda<span style={{ color: '#00d4ff' }}>AI</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.95rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>
+          <svg width="18" height="18" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="10" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="38" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="66" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="94" width="22" height="22" rx="3" fill="white"/>
+            <rect x="38" y="10" width="22" height="22" rx="3" fill="#00C8FF"/>
+            <rect x="38" y="38" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
+            <rect x="38" y="66" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
+            <rect x="38" y="94" width="22" height="22" rx="3" fill="#00C8FF"/>
+            <rect x="66" y="10" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
+            <rect x="66" y="38" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
+            <rect x="66" y="66" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
+            <rect x="66" y="94" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
+          </svg>
+          Korda<span style={{ color: '#00C8FF' }}>AI</span>
         </span>
         <button
           onClick={() => setMobileOpen(v => !v)}
@@ -190,7 +204,20 @@ export default function TrainingLayout() {
       {/* Sidebar */}
       <aside className={`training-sidebar${mobileOpen ? ' open' : ''}`}>
         <div className="training-logo">
-          <Brain size={16} style={{ color: '#00d4ff' }} />
+          <svg width="20" height="20" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+            <rect x="10" y="10" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="38" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="66" width="22" height="22" rx="3" fill="white"/>
+            <rect x="10" y="94" width="22" height="22" rx="3" fill="white"/>
+            <rect x="38" y="10" width="22" height="22" rx="3" fill="#00C8FF"/>
+            <rect x="38" y="38" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
+            <rect x="38" y="66" width="22" height="22" rx="3" fill="white" opacity="0.15"/>
+            <rect x="38" y="94" width="22" height="22" rx="3" fill="#00C8FF"/>
+            <rect x="66" y="10" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
+            <rect x="66" y="38" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
+            <rect x="66" y="66" width="22" height="22" rx="3" fill="white" opacity="0.03"/>
+            <rect x="66" y="94" width="22" height="22" rx="3" fill="white" opacity="0.06"/>
+          </svg>
           Korda<span className="training-logo-accent">AI</span>
           <span className="training-logo-tag">Training</span>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link as LinkIcon, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -10,9 +10,9 @@ const VALID_GREEN = '#10b981';
 const INVALID_RED = '#ef4444';
 
 const SESSIONS: { value: TradingSession; label: string; time: string; color: string }[] = [
-  { value: 'london',   label: 'London',   time: '08:00–17:00 UTC', color: '#3b82f6' },
-  { value: 'new_york', label: 'New York', time: '13:00–22:00 UTC', color: '#8b5cf6' },
-  { value: 'asia',     label: 'Asia',     time: '00:00–09:00 UTC', color: '#f59e0b' },
+  { value: 'london',   label: 'London',   time: '08:00â€“17:00 UTC', color: '#3b82f6' },
+  { value: 'new_york', label: 'New York', time: '13:00â€“22:00 UTC', color: '#8b5cf6' },
+  { value: 'asia',     label: 'Asia',     time: '00:00â€“09:00 UTC', color: '#f59e0b' },
 ];
 
 export default function EntryForm() {
@@ -133,8 +133,8 @@ export default function EntryForm() {
               type="submit" disabled={submitting}
               style={{
                 padding: '0.65rem 1.75rem',
-                background: submitting ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)',
-                color: submitting ? 'rgba(0,212,255,0.5)' : '#0d1117',
+                background: submitting ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)',
+                color: submitting ? 'rgba(0,212,255,0.5)' : '#0A0A0F',
                 border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem',
                 cursor: submitting ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: '0.5rem',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import {
   ExternalLink, Filter, Loader2, RefreshCw, ChevronDown, ChevronUp,
   Pencil, Trash2, X, CheckCircle2, XCircle, Link as LinkIcon, FileUp,
@@ -20,12 +20,12 @@ type FilterState = 'all' | 'valid' | 'invalid';
 type SortCol = 'created_at' | 'submitted_by' | 'session';
 type SortDir = 'asc' | 'desc';
 
-const ACCENT       = '#00d4ff';
+const ACCENT       = '#00C8FF';
 const VALID_GREEN  = '#10b981';
 const INVALID_RED  = '#ef4444';
 const NOTE_TRUNCATE = 80;
 
-// ── Edit Modal ────────────────────────────────────────────────────────────────
+// â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EditModal({
   entry, onClose, onSaved,
@@ -160,8 +160,8 @@ function EditModal({
             disabled={saving}
             style={{
               flex: 1, padding: '0.65rem',
-              background: saving ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)',
-              color: saving ? 'rgba(0,212,255,0.5)' : '#0d1117',
+              background: saving ? 'rgba(0,212,255,0.15)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)',
+              color: saving ? 'rgba(0,212,255,0.5)' : '#0A0A0F',
               border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem',
               cursor: saving ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
@@ -197,7 +197,7 @@ const modalInput: React.CSSProperties = {
   outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
 };
 
-// ── Main table ────────────────────────────────────────────────────────────────
+// â”€â”€ Main table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function HistoryTable() {
   const [entries, setEntries]   = useState<TrainingEntry[]>([]);
@@ -409,7 +409,7 @@ export default function HistoryTable() {
                               {s.label}
                             </span>
                           ) : null;
-                        })() : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                        })() : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                       </td>
 
                       {/* Valid? */}
@@ -432,7 +432,7 @@ export default function HistoryTable() {
                             {entry.submitted_by.split('@')[0]}
                           </span>
                         ) : (
-                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>
                         )}
                       </td>
 
@@ -441,7 +441,7 @@ export default function HistoryTable() {
                         {noteText ? (
                           <div>
                             <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(240,246,252,0.55)', lineHeight: 1.5 }}>
-                              {isExpanded || !truncated ? noteText : `${noteText.slice(0, NOTE_TRUNCATE)}…`}
+                              {isExpanded || !truncated ? noteText : `${noteText.slice(0, NOTE_TRUNCATE)}â€¦`}
                             </p>
                             {truncated && (
                               <button onClick={() => toggleExpand(entry.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontSize: '0.72rem', padding: '0.2rem 0', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
@@ -450,7 +450,7 @@ export default function HistoryTable() {
                             )}
                           </div>
                         ) : (
-                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>
                         )}
                       </td>
 
@@ -564,7 +564,7 @@ function RowsSelect({ value, onChange }: { value: number; onChange: (n: number) 
       {open && (
         <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', right: 0, background: '#131920', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, overflow: 'hidden', zIndex: 100, minWidth: 110, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
           {[50, 100, 250].map(n => (
-            <button key={n} onClick={() => { onChange(n); setOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.9rem', background: n === value ? 'rgba(0,212,255,0.08)' : 'transparent', color: n === value ? '#00d4ff' : 'rgba(240,246,252,0.7)', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button key={n} onClick={() => { onChange(n); setOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.9rem', background: n === value ? 'rgba(0,212,255,0.08)' : 'transparent', color: n === value ? '#00C8FF' : 'rgba(240,246,252,0.7)', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
               {n} rows
             </button>
           ))}

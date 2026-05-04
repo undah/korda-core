@@ -1,15 +1,15 @@
-import { useState, useRef, useCallback } from 'react';
+﻿import { useState, useRef, useCallback } from 'react';
 import { X, Upload, Download, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { bulkInsertMistakes } from '../lib/trainingData';
 import type { Mistake, MistakeInsert } from '../types';
 
-const ACCENT      = '#00d4ff';
+const ACCENT      = '#00C8FF';
 const VALID_GREEN = '#10b981';
 const INVALID_RED = '#ef4444';
 const WARN_YELLOW = '#f59e0b';
 
-// ── CSV parser ────────────────────────────────────────────────────────────────
+// â”€â”€ CSV parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -39,7 +39,7 @@ interface ParsedRow {
 }
 
 function parseCSV(text: string): ParsedRow[] {
-  const clean   = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const clean   = text.replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines   = clean.split('\n').filter(l => l.trim() !== '');
   if (lines.length < 2) return [];
   const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
@@ -65,13 +65,13 @@ function parseCSV(text: string): ParsedRow[] {
   });
 }
 
-// ── Template download ─────────────────────────────────────────────────────────
+// â”€â”€ Template download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function downloadTemplate() {
   const csv = [
     'screenshot_url,mistake,reason',
-    'https://www.tradingview.com/x/abc123/,"Said invalid, was actually valid","The structural high was never broken — aggressive pullback is not a reversal."',
-    'https://www.tradingview.com/x/xyz456/,"Said valid, was invalid","Failed to check conviction quality at the cutoff — momentum was weak."',
+    'https://www.tradingview.com/x/abc123/,"Said invalid, was actually valid","The structural high was never broken â€” aggressive pullback is not a reversal."',
+    'https://www.tradingview.com/x/xyz456/,"Said valid, was invalid","Failed to check conviction quality at the cutoff â€” momentum was weak."',
   ].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
@@ -80,7 +80,7 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Props {
   onClose:    () => void;
@@ -160,11 +160,11 @@ export default function MistakesImporter({ onClose, onImported }: Props) {
           >
             <Upload size={22} style={{ color: dragging ? ACCENT : rows.length > 0 ? VALID_GREEN : 'rgba(240,246,252,0.2)' }} />
             {fileName
-              ? <span style={{ fontSize: '0.82rem', color: VALID_GREEN, fontFamily: "'JetBrains Mono', monospace" }}>✓ {fileName}</span>
+              ? <span style={{ fontSize: '0.82rem', color: VALID_GREEN, fontFamily: "'JetBrains Mono', monospace" }}>âœ“ {fileName}</span>
               : <span style={{ fontSize: '0.82rem', color: 'rgba(240,246,252,0.35)' }}>{dragging ? 'Drop CSV here' : 'Drag & drop a .csv file, or click to browse'}</span>
             }
             <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>
-              Columns: screenshot_url · mistake · reason
+              Columns: screenshot_url Â· mistake Â· reason
             </span>
           </div>
           <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }}
@@ -204,13 +204,13 @@ export default function MistakesImporter({ onClose, onImported }: Props) {
                             {ok ? <CheckCircle2 size={14} style={{ color: VALID_GREEN }} /> : <XCircle size={14} style={{ color: INVALID_RED }} />}
                           </td>
                           <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.72rem', color: 'rgba(240,246,252,0.55)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {url || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                            {url || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: '#f0f6fc', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {mistake || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                            {mistake || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'rgba(240,246,252,0.45)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {reason || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
+                            {reason || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
                           </td>
                           <td style={tdStyle}>
                             {row.errors.length > 0 && (
@@ -238,7 +238,7 @@ export default function MistakesImporter({ onClose, onImported }: Props) {
           <button
             onClick={handleImport}
             disabled={validRows.length === 0 || importing}
-            style={{ padding: '0.65rem 1.5rem', background: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.1)' : 'linear-gradient(135deg, #00d4ff 0%, #0090b3 100%)', color: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.4)' : '#0d1117', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: (validRows.length === 0 || importing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.15s' }}
+            style={{ padding: '0.65rem 1.5rem', background: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.1)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)', color: (validRows.length === 0 || importing) ? 'rgba(0,212,255,0.4)' : '#0A0A0F', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: (validRows.length === 0 || importing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.15s' }}
           >
             {importing && <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />}
             {importing ? 'Importing...' : `Import ${validRows.length} row${validRows.length !== 1 ? 's' : ''}`}
