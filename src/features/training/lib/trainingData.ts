@@ -84,6 +84,15 @@ export async function deleteMistake(id: string): Promise<void> {
   if (!data || data.length === 0) throw new Error('Delete blocked — check table permissions.');
 }
 
+export async function bulkInsertMistakes(entries: MistakeInsert[]): Promise<Mistake[]> {
+  const { data, error } = await supabase
+    .from('mistakes')
+    .insert(entries)
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function bulkInsertTrainingEntries(
   entries: TrainingEntryInsert[]
 ): Promise<TrainingEntry[]> {

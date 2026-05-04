@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ExternalLink, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchMistakes, insertMistake, updateMistake, deleteMistake } from '../lib/trainingData';
 import type { Mistake } from '../types';
+import MistakesImporter from './MistakesImporter';
 
 const ACCENT = '#00d4ff';
 const NOTE_TRUNCATE = 100;
@@ -97,6 +98,7 @@ export default function MistakesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
   const [expanded, setExpanded]           = useState<Set<string>>(new Set());
+  const [showImporter, setShowImporter]   = useState(false);
 
   const [url, setUrl]         = useState('');
   const [mistake, setMistake] = useState('');
@@ -142,13 +144,19 @@ export default function MistakesPage() {
     <div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={updated => setEntries(prev => prev.map(e => e.id === updated.id ? updated : e))} />}
+      {showImporter && <MistakesImporter onClose={() => setShowImporter(false)} onImported={imported => setEntries(prev => [...imported, ...prev])} />}
 
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.03em', margin: 0 }}>Bot Mistakes</h1>
-        <p style={{ fontSize: '0.825rem', color: 'rgba(240,246,252,0.4)', marginTop: '0.35rem' }}>
-          {entries.length} logged mistake{entries.length !== 1 ? 's' : ''} — used to improve future evaluations.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.03em', margin: 0 }}>Bot Mistakes</h1>
+          <p style={{ fontSize: '0.825rem', color: 'rgba(240,246,252,0.4)', marginTop: '0.35rem' }}>
+            {entries.length} logged mistake{entries.length !== 1 ? 's' : ''} — used to improve future evaluations.
+          </p>
+        </div>
+        <button onClick={() => setShowImporter(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 8, color: ACCENT, fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
+          <FileUp size={13} /> Import CSV
+        </button>
       </div>
 
       {/* Add form */}
