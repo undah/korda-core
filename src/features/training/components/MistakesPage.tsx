@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -303,13 +303,7 @@ export default function MistakesPage() {
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={pageBtn(page === totalPages)}>
               <ChevronRight size={13} />
             </button>
-            <select
-              value={pageSize}
-              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-              style={{ padding: '0.3rem 0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: 'rgba(240,246,252,0.55)', fontSize: '0.75rem', cursor: 'pointer', outline: 'none' }}
-            >
-              {[50, 100, 250].map(n => <option key={n} value={n}>{n} rows</option>)}
-            </select>
+            <RowsSelect value={pageSize} onChange={n => { setPageSize(n); setPage(1); }} />
           </div>
           </>
         )}
@@ -348,6 +342,32 @@ const thStyle: React.CSSProperties = {
 };
 
 const tdStyle: React.CSSProperties = { padding: '0.75rem 1rem', verticalAlign: 'top' };
+
+function RowsSelect({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.65rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: 'rgba(240,246,252,0.55)', fontSize: '0.75rem', cursor: 'pointer' }}>
+        {value} rows <ChevronDown size={11} />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', right: 0, background: '#131920', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, overflow: 'hidden', zIndex: 100, minWidth: 110, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+          {[50, 100, 250].map(n => (
+            <button key={n} onClick={() => { onChange(n); setOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.9rem', background: n === value ? 'rgba(0,212,255,0.08)' : 'transparent', color: n === value ? '#00d4ff' : 'rgba(240,246,252,0.7)', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              {n} rows
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const pageBtn = (disabled: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', justifyContent: 'center',
