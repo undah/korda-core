@@ -19,6 +19,9 @@ const SESSIONS: { value: TradingSession; label: string; color: string }[] = [
 type FilterState = 'all' | 'valid' | 'invalid';
 type SortCol = 'created_at' | 'submitted_by' | 'session';
 type SortDir = 'asc' | 'desc';
+type PendingBulkAction =
+  | { kind: 'update'; label: string; updates: Partial<import('../types').TrainingEntryInsert> }
+  | { kind: 'delete' };
 
 const ACCENT       = '#00C8FF';
 const VALID_GREEN  = '#10b981';
@@ -207,6 +210,85 @@ function EditModal({
   );
 }
 
+// ── Bulk Confirm Modal ────────────────────────────────────────────────────────
+
+function BulkConfirmModal({ count, action, onConfirm, onCancel, working }: {
+  count: number;
+  action: PendingBulkAction;
+  onConfirm: () => void;
+  onCancel: () => void;
+  working: boolean;
+}) {
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !working) onCancel(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onCancel, working]);
+
+  const isDelete = action.kind === 'delete';
+  const label = isDelete
+    ? `Permanently delete ${count} entr${count !== 1 ? 'ies' : 'y'}`
+    : (action as Extract<PendingBulkAction, { kind: 'update' }>).label;
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+      onClick={e => { if (!working && e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{ background: '#131920', border: `1px solid ${isDelete ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.09)'}`, borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.975rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>Confirm bulk action</span>
+          {!working && (
+            <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,246,252,0.4)', display: 'flex', padding: 4 }}>
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        <div style={{ background: isDelete ? 'rgba(239,68,68,0.07)' : 'rgba(0,200,255,0.06)', border: `1px solid ${isDelete ? 'rgba(239,68,68,0.2)' : 'rgba(0,200,255,0.15)'}`, borderRadius: 8, padding: '0.85rem 1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: isDelete ? INVALID_RED : ACCENT, fontWeight: 600 }}>{label}</p>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'rgba(240,246,252,0.45)' }}>
+            {count} entr{count !== 1 ? 'ies' : 'y'} will be affected.
+          </p>
+          {isDelete && (
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: INVALID_RED, opacity: 0.8 }}>
+              This cannot be undone.
+            </p>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            onClick={onConfirm}
+            disabled={working}
+            style={{
+              flex: 1, padding: '0.65rem',
+              background: working ? 'rgba(255,255,255,0.06)' : isDelete ? INVALID_RED : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)',
+              color: working ? 'rgba(240,246,252,0.3)' : isDelete ? '#fff' : '#0A0A0F',
+              border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem',
+              cursor: working ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+              transition: 'all 0.15s',
+            }}
+          >
+            {working && <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />}
+            {working ? 'Working...' : isDelete ? 'Delete' : 'Confirm'}
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={working}
+            style={{ padding: '0.65rem 1.25rem', background: 'transparent', color: 'rgba(240,246,252,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: '0.875rem', cursor: working ? 'not-allowed' : 'pointer' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 const modalLabel: React.CSSProperties = {
   display: 'block', fontSize: '0.72rem', fontWeight: 600,
   color: 'rgba(240,246,252,0.4)', letterSpacing: '0.05em',
@@ -238,6 +320,7 @@ export default function HistoryTable() {
   const [page, setPage]         = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [pendingBulk, setPendingBulk] = useState<PendingBulkAction | null>(null);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -299,11 +382,10 @@ export default function HistoryTable() {
       toast.success(`${updated.length} entr${updated.length !== 1 ? 'ies' : 'y'} updated.`);
       setSelected(new Set());
     } catch (err: any) { toast.error(err?.message ?? 'Bulk update failed.'); }
-    finally { setBulkWorking(false); }
+    finally { setBulkWorking(false); setPendingBulk(null); }
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'}? This cannot be undone.`)) return;
     setBulkWorking(true);
     try {
       await bulkDeleteTrainingEntries([...selected]);
@@ -311,7 +393,7 @@ export default function HistoryTable() {
       toast.success(`${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'} deleted.`);
       setSelected(new Set());
     } catch (err: any) { toast.error(err?.message ?? 'Bulk delete failed.'); }
-    finally { setBulkWorking(false); }
+    finally { setBulkWorking(false); setPendingBulk(null); }
   };
 
   const counts = {
@@ -334,6 +416,15 @@ export default function HistoryTable() {
     <div>
       {showImporter && <CSVImporter onClose={() => setShowImporter(false)} onImported={handleImported} />}
       {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={handleSaved} submitters={submitters} />}
+      {pendingBulk && (
+        <BulkConfirmModal
+          count={selected.size}
+          action={pendingBulk}
+          working={bulkWorking}
+          onConfirm={() => { pendingBulk.kind === 'delete' ? handleBulkDelete() : handleBulkUpdate(pendingBulk.updates); }}
+          onCancel={() => setPendingBulk(null)}
+        />
+      )}
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -390,25 +481,28 @@ export default function HistoryTable() {
           {bulkWorking && <Loader2 size={13} style={{ color: ACCENT, animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />}
           <span style={{ fontSize: '0.8rem', color: ACCENT, fontWeight: 600, marginRight: '0.25rem' }}>{selected.size} selected</span>
           <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
-          <button onClick={() => handleBulkUpdate({ is_valid_setup: true })} disabled={bulkWorking} style={bulkBtn(VALID_GREEN)}>✓ Set Valid</button>
-          <button onClick={() => handleBulkUpdate({ is_valid_setup: false })} disabled={bulkWorking} style={bulkBtn(INVALID_RED)}>✗ Set Invalid</button>
+          <button onClick={() => setPendingBulk({ kind: 'update', label: `Set ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'} to Valid`, updates: { is_valid_setup: true } })} disabled={bulkWorking} style={bulkBtn(VALID_GREEN)}>✓ Set Valid</button>
+          <button onClick={() => setPendingBulk({ kind: 'update', label: `Set ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'} to Invalid`, updates: { is_valid_setup: false } })} disabled={bulkWorking} style={bulkBtn(INVALID_RED)}>✗ Set Invalid</button>
           <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
           {SESSIONS.map(s => (
-            <button key={s.value} onClick={() => handleBulkUpdate({ session: s.value })} disabled={bulkWorking} style={bulkBtn(s.color)}>{s.label}</button>
+            <button key={s.value} onClick={() => setPendingBulk({ kind: 'update', label: `Set ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'} to ${s.label} session`, updates: { session: s.value } })} disabled={bulkWorking} style={bulkBtn(s.color)}>{s.label}</button>
           ))}
-          <button onClick={() => handleBulkUpdate({ session: null })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.4)')}>No session</button>
-          {submitters.length > 1 && (
+          <button onClick={() => setPendingBulk({ kind: 'update', label: `Clear session on ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'}`, updates: { session: null } })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.4)')}>No session</button>
+          {submitters.length >= 1 && (
             <>
               <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
               {submitters.map(s => (
-                <button key={s} onClick={() => handleBulkUpdate({ submitted_by: s })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.55)')}>
+                <button key={s} onClick={() => setPendingBulk({ kind: 'update', label: `Reassign ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'} to ${s.includes('@') ? s.split('@')[0] : s}`, updates: { submitted_by: s } })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.55)')}>
                   <User size={10} style={{ marginRight: 3 }} />{s.includes('@') ? s.split('@')[0] : s}
                 </button>
               ))}
+              <button onClick={() => setPendingBulk({ kind: 'update', label: `Unassign ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'}`, updates: { submitted_by: null } })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.35)')}>
+                <User size={10} style={{ marginRight: 3 }} />Unassign
+              </button>
             </>
           )}
           <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
-          <button onClick={handleBulkDelete} disabled={bulkWorking} style={bulkBtn(INVALID_RED)}>
+          <button onClick={() => setPendingBulk({ kind: 'delete' })} disabled={bulkWorking} style={bulkBtn(INVALID_RED)}>
             <Trash2 size={11} style={{ marginRight: 3 }} />Delete
           </button>
           <button onClick={() => setSelected(new Set())} disabled={bulkWorking} style={{ ...bulkBtn('rgba(240,246,252,0.3)'), marginLeft: 'auto' }}>
