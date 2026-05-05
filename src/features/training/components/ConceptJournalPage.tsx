@@ -289,15 +289,9 @@ export default function ConceptJournalPage() {
           <label style={labelStyle}>Explanation *</label>
           <textarea value={form.explanation} onChange={e => setForm(f => ({ ...f, explanation: e.target.value }))} rows={3} style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Describe the concept in detail…" />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem', marginBottom: '1rem' }}>
-          <div>
-            <label style={labelStyle}>Notes</label>
-            <textarea value={form.notes ?? ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Additional context…" />
-          </div>
-          <div>
-            <label style={labelStyle}>Submitted by</label>
-            <input value={form.submitted_by ?? ''} onChange={e => setForm(f => ({ ...f, submitted_by: e.target.value }))} style={fieldStyle} placeholder="Username" />
-          </div>
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={labelStyle}>Notes</label>
+          <textarea value={form.notes ?? ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Additional context…" />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button type="submit" disabled={submitting || !form.concept.trim() || !form.explanation.trim()} style={{ padding: '0.6rem 1.4rem', background: submitting || !form.concept.trim() || !form.explanation.trim() ? 'rgba(0,200,255,0.1)' : 'linear-gradient(135deg, #00C8FF 0%, #0090b3 100%)', color: submitting || !form.concept.trim() || !form.explanation.trim() ? 'rgba(0,200,255,0.4)' : '#0A0A0F', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: submitting || !form.concept.trim() || !form.explanation.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', transition: 'all 0.15s' }}>

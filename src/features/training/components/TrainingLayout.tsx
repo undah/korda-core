@@ -6,9 +6,9 @@ import { useAuth } from '@/auth/AuthProvider';
 const NAV_ITEMS = [
   { path: '/training/new',                  label: 'New Entry',   icon: PlusCircle },
   { path: '/training/history',              label: 'History',     icon: Clock },
-  { path: '/training/mistakes',             label: 'Mistakes',    icon: AlertTriangle },
-  { path: '/training/screenshot-scheduler', label: 'Screenshots', icon: Camera },
+  { path: '/training/mistakes',             label: 'Mistakes',       icon: AlertTriangle },
   { path: '/training/concepts',             label: 'Concept Journal', icon: BookOpen },
+  { path: '/training/screenshot-scheduler', label: 'Screenshots',     icon: Camera },
 ];
 
 export default function TrainingLayout() {
