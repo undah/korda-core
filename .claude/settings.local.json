@@ -19,7 +19,10 @@
       "Bash(node -e ' *)",
       "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('build:', p.scripts.build\\); console.log\\('vite:', p.devDependencies?.vite || p.dependencies?.vite\\)\")",
       "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('@vitejs/plugin-react-swc:', p.devDependencies?.['@vitejs/plugin-react-swc']\\)\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node -e \"const fs=require\\('fs'\\);let c=fs.readFileSync\\('c:/Users/giund/OneDrive/Desktop/korda-core/src/features/training/components/ScreenshotScheduler.tsx','utf8'\\);c=c.replace\\(/â± Interval/g,'Interval'\\).replace\\(/ð Fixed Time/g,'Fixed Time'\\).replace\\(/â/g,'—'\\);fs.writeFileSync\\('c:/Users/giund/OneDrive/Desktop/korda-core/src/features/training/components/ScreenshotScheduler.tsx',c,'utf8'\\);console.log\\('done'\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const c=fs.readFileSync\\('c:/Users/giund/OneDrive/Desktop/korda-core/src/features/training/components/ScreenshotScheduler.tsx','utf8'\\);const lines=c.split\\('\\\\n'\\);console.log\\('168:',lines[167]\\);console.log\\('18:',lines[17]\\);console.log\\('351:',lines[350]\\);console.log\\('352:',lines[351]\\);\")",
+      "Bash(node)"
     ]
   }
 }

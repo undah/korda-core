@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿﻿import { useState, useEffect, useCallback } from 'react';
 import { Play, Save, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -15,8 +15,8 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const INTERVALS = [5, 10, 15, 30, 60];
 const SESSIONS: { value: SessionFilter; label: string; time: string }[] = [
   { value: 'always',   label: 'Always',   time: 'No filter' },
-  { value: 'london',   label: 'London',   time: '08:00â€“12:00 UTC' },
-  { value: 'new_york', label: 'New York', time: '13:00â€“17:00 UTC' },
+  { value: 'london',   label: 'London',   time: '08:00—12:00 UTC' },
+  { value: 'new_york', label: 'New York', time: '13:00—17:00 UTC' },
 ];
 const PAIRS = [
   'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
@@ -165,7 +165,7 @@ export default function ScreenshotScheduler() {
                   fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.15s',
                 }}
               >
-                {m === 'interval' ? 'â± Interval' : 'ðŸ• Fixed Time'}
+                {m === 'interval' ? 'Interval' : 'Fixed Time'}
               </button>
             ))}
           </div>
@@ -348,7 +348,7 @@ export default function ScreenshotScheduler() {
                       {format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}
                     </td>
                     <td style={{ padding: '0.65rem 1rem', color: 'rgba(240,246,252,0.45)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {log.reason ?? 'â€”'}
+                      {log.reason ?? '—'}
                     </td>
                     <td style={{ padding: '0.65rem 1rem', position: 'relative' }}>
                       {log.image_base64 ? (
@@ -369,7 +369,7 @@ export default function ScreenshotScheduler() {
                           )}
                         </div>
                       ) : (
-                        <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>â€”</span>
+                        <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>—</span>
                       )}
                     </td>
                   </tr>
