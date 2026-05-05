@@ -2,12 +2,12 @@
 import {
   ExternalLink, Filter, Loader2, RefreshCw, ChevronDown, ChevronUp,
   Pencil, Trash2, X, CheckCircle2, XCircle, Link as LinkIcon, FileUp,
-  ChevronsUpDown, ChevronLeft, ChevronRight,
+  ChevronsUpDown, ChevronLeft, ChevronRight, User,
 } from 'lucide-react';
 import CSVImporter from './CSVImporter';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { fetchTrainingEntries, updateTrainingEntry, deleteTrainingEntry } from '../lib/trainingData';
+import { fetchTrainingEntries, updateTrainingEntry, deleteTrainingEntry, bulkUpdateTrainingEntries, bulkDeleteTrainingEntries } from '../lib/trainingData';
 import type { TrainingEntry, TradingSession } from '../types';
 
 const SESSIONS: { value: TradingSession; label: string; color: string }[] = [
@@ -28,17 +28,19 @@ const NOTE_TRUNCATE = 80;
 // â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EditModal({
-  entry, onClose, onSaved,
+  entry, onClose, onSaved, submitters,
 }: {
   entry: TrainingEntry;
   onClose: () => void;
   onSaved: (updated: TrainingEntry) => void;
+  submitters: string[];
 }) {
-  const [tvUrl, setTvUrl]     = useState(entry.tradingview_url);
-  const [isValid, setIsValid] = useState<boolean>(entry.is_valid_setup);
-  const [session, setSession] = useState<TradingSession | null>(entry.session);
-  const [notes, setNotes]     = useState(entry.notes ?? '');
-  const [saving, setSaving]   = useState(false);
+  const [tvUrl, setTvUrl]           = useState(entry.tradingview_url);
+  const [isValid, setIsValid]       = useState<boolean>(entry.is_valid_setup);
+  const [session, setSession]       = useState<TradingSession | null>(entry.session);
+  const [notes, setNotes]           = useState(entry.notes ?? '');
+  const [submittedBy, setSubmittedBy] = useState(entry.submitted_by ?? '');
+  const [saving, setSaving]         = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -55,6 +57,7 @@ function EditModal({
         is_valid_setup:  isValid,
         session:         session,
         notes:           notes.trim() || null,
+        submitted_by:    submittedBy || null,
       });
       toast.success('Entry updated.');
       onSaved(updated);
@@ -153,6 +156,26 @@ function EditModal({
           />
         </div>
 
+        {/* Submitted by */}
+        {submitters.length > 0 && (
+          <div>
+            <span style={modalLabel}>Submitted by</span>
+            <div style={{ position: 'relative' }}>
+              <User size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(240,246,252,0.3)', pointerEvents: 'none' }} />
+              <select
+                value={submittedBy}
+                onChange={e => setSubmittedBy(e.target.value)}
+                style={{ ...modalInput, paddingLeft: '2rem', appearance: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: submittedBy ? '#f0f6fc' : 'rgba(240,246,252,0.3)' }}
+              >
+                <option value="">— unassigned —</option>
+                {submitters.map(s => (
+                  <option key={s} value={s}>{s.includes('@') ? s.split('@')[0] : s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
           <button
@@ -213,6 +236,8 @@ export default function HistoryTable() {
   const [sortDir, setSortDir]   = useState<SortDir>('desc');
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage]         = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -259,6 +284,42 @@ export default function HistoryTable() {
     });
 
   useEffect(() => { setPage(1); }, [filter, sortCol, sortDir]);
+  useEffect(() => { setSelected(new Set()); }, [filter, page]);
+
+  const submitters = [...new Set(entries.map(e => e.submitted_by).filter(Boolean))] as string[];
+
+  const toggleSelect = (id: string) =>
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const allPageSelected = paged.length > 0 && paged.every(e => selected.has(e.id));
+  const somePageSelected = paged.some(e => selected.has(e.id));
+  const toggleSelectAll = () => {
+    if (allPageSelected) setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.delete(e.id)); return n; });
+    else setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.add(e.id)); return n; });
+  };
+
+  const handleBulkUpdate = async (updates: Partial<import('../types').TrainingEntryInsert>) => {
+    setBulkWorking(true);
+    try {
+      const updated = await bulkUpdateTrainingEntries([...selected], updates);
+      setEntries(prev => prev.map(e => updated.find(u => u.id === e.id) ?? e));
+      toast.success(`${updated.length} entr${updated.length !== 1 ? 'ies' : 'y'} updated.`);
+      setSelected(new Set());
+    } catch (err: any) { toast.error(err?.message ?? 'Bulk update failed.'); }
+    finally { setBulkWorking(false); }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'}? This cannot be undone.`)) return;
+    setBulkWorking(true);
+    try {
+      await bulkDeleteTrainingEntries([...selected]);
+      setEntries(prev => prev.filter(e => !selected.has(e.id)));
+      toast.success(`${selected.size} entr${selected.size !== 1 ? 'ies' : 'y'} deleted.`);
+      setSelected(new Set());
+    } catch (err: any) { toast.error(err?.message ?? 'Bulk delete failed.'); }
+    finally { setBulkWorking(false); }
+  };
 
   const counts = {
     all:     entries.length,
@@ -272,7 +333,7 @@ export default function HistoryTable() {
   return (
     <div>
       {showImporter && <CSVImporter onClose={() => setShowImporter(false)} onImported={handleImported} />}
-      {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={handleSaved} />}
+      {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={handleSaved} submitters={submitters} />}
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -323,6 +384,39 @@ export default function HistoryTable() {
         ))}
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1rem', background: 'rgba(0,200,255,0.06)', border: '1px solid rgba(0,200,255,0.18)', borderRadius: 10, marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+          {bulkWorking && <Loader2 size={13} style={{ color: ACCENT, animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />}
+          <span style={{ fontSize: '0.8rem', color: ACCENT, fontWeight: 600, marginRight: '0.25rem' }}>{selected.size} selected</span>
+          <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
+          <button onClick={() => handleBulkUpdate({ is_valid_setup: true })} disabled={bulkWorking} style={bulkBtn(VALID_GREEN)}>✓ Set Valid</button>
+          <button onClick={() => handleBulkUpdate({ is_valid_setup: false })} disabled={bulkWorking} style={bulkBtn(INVALID_RED)}>✗ Set Invalid</button>
+          <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
+          {SESSIONS.map(s => (
+            <button key={s.value} onClick={() => handleBulkUpdate({ session: s.value })} disabled={bulkWorking} style={bulkBtn(s.color)}>{s.label}</button>
+          ))}
+          <button onClick={() => handleBulkUpdate({ session: null })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.4)')}>No session</button>
+          {submitters.length > 1 && (
+            <>
+              <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
+              {submitters.map(s => (
+                <button key={s} onClick={() => handleBulkUpdate({ submitted_by: s })} disabled={bulkWorking} style={bulkBtn('rgba(240,246,252,0.55)')}>
+                  <User size={10} style={{ marginRight: 3 }} />{s.includes('@') ? s.split('@')[0] : s}
+                </button>
+              ))}
+            </>
+          )}
+          <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
+          <button onClick={handleBulkDelete} disabled={bulkWorking} style={bulkBtn(INVALID_RED)}>
+            <Trash2 size={11} style={{ marginRight: 3 }} />Delete
+          </button>
+          <button onClick={() => setSelected(new Set())} disabled={bulkWorking} style={{ ...bulkBtn('rgba(240,246,252,0.3)'), marginLeft: 'auto' }}>
+            <X size={11} style={{ marginRight: 3 }} />Clear
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }}>
         {loading ? (
@@ -342,6 +436,7 @@ export default function HistoryTable() {
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   {[
+                    { label: 'cb',             sort: null },
                     { label: '#',              sort: null },
                     { label: 'TradingView URL',sort: null },
                     { label: 'Session',        sort: 'session'      as SortCol },
@@ -351,9 +446,12 @@ export default function HistoryTable() {
                     { label: 'Date',           sort: 'created_at'   as SortCol },
                     { label: '',               sort: null },
                   ].map((col, i) => (
-                    <th key={i} style={{ ...thStyle, cursor: col.sort ? 'pointer' : 'default', userSelect: 'none' }}
+                    <th key={i} style={{ ...thStyle, cursor: col.sort ? 'pointer' : 'default', userSelect: 'none', width: col.label === 'cb' ? 36 : undefined }}
                       onClick={() => col.sort && toggleSort(col.sort)}
                     >
+                      {col.label === 'cb' ? (
+                        <input type="checkbox" checked={allPageSelected} ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleSelectAll} style={{ cursor: 'pointer', accentColor: ACCENT }} />
+                      ) : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                         {col.label}
                         {col.sort && (
@@ -364,6 +462,7 @@ export default function HistoryTable() {
                             : <ChevronsUpDown size={11} style={{ color: 'rgba(240,246,252,0.2)' }} />
                         )}
                       </span>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -384,6 +483,11 @@ export default function HistoryTable() {
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
+                      {/* Checkbox */}
+                      <td style={{ ...tdStyle, width: 36 }}>
+                        <input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer', accentColor: ACCENT }} />
+                      </td>
+
                       {/* # */}
                       <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 40 }}>
                         {globalIdx + 1}
@@ -573,6 +677,14 @@ function RowsSelect({ value, onChange }: { value: number; onChange: (n: number) 
     </div>
   );
 }
+
+const bulkBtn = (color: string): React.CSSProperties => ({
+  display: 'inline-flex', alignItems: 'center',
+  padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 500,
+  background: `${color}12`, border: `1px solid ${color}35`,
+  borderRadius: 6, cursor: 'pointer', color,
+  transition: 'all 0.12s', whiteSpace: 'nowrap',
+});
 
 const pageBtn = (disabled: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', justifyContent: 'center',

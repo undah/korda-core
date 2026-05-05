@@ -103,3 +103,26 @@ export async function bulkInsertTrainingEntries(
   if (error) throw error;
   return data ?? [];
 }
+
+export async function bulkUpdateTrainingEntries(
+  ids: string[],
+  updates: Partial<TrainingEntryInsert>
+): Promise<TrainingEntry[]> {
+  const { data, error } = await supabase
+    .from('training_entries')
+    .update(updates)
+    .in('id', ids)
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function bulkDeleteTrainingEntries(ids: string[]): Promise<void> {
+  const { data, error } = await supabase
+    .from('training_entries')
+    .delete()
+    .in('id', ids)
+    .select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Bulk delete blocked — check table permissions.');
+}
