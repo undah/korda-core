@@ -34,6 +34,7 @@ export default function ScreenshotScheduler() {
   const [running, setRunning]           = useState(false);
   const [loading, setLoading]           = useState(true);
   const [hoveredLog, setHoveredLog]     = useState<string | null>(null);
+  const [lightboxLog, setLightboxLog]   = useState<ScreenshotLog | null>(null);
   const [refreshing, setRefreshing]     = useState(false);
 
   const merged: Partial<ScreenshotConfig> = { ...config, ...draft };
@@ -68,6 +69,13 @@ export default function ScreenshotScheduler() {
     const id = setInterval(check, 30_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!lightboxLog) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxLog(null); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lightboxLog]);
 
   const persist = async (patch: Partial<ScreenshotConfig>) => {
     setSaving(true);
@@ -130,9 +138,46 @@ export default function ScreenshotScheduler() {
     </div>
   );
 
+  const imgSrc = (b64: string) =>
+    `data:image/${b64.startsWith('/9j/') ? 'jpeg' : 'png'};base64,${b64}`;
+
   return (
     <div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Lightbox */}
+      {lightboxLog && (
+        <div
+          onClick={() => setLightboxLog(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.88)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 20, right: 24, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {lightboxLog.reason ?? ''}
+            </span>
+            <span style={{ fontSize: '0.7rem', color: 'rgba(240,246,252,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {format(new Date(lightboxLog.timestamp), 'MMM d, HH:mm:ss')} UTC
+            </span>
+            <span style={{ fontSize: '0.65rem', color: 'rgba(240,246,252,0.2)', marginTop: 4 }}>ESC or click to close</span>
+          </div>
+          <img
+            src={imgSrc(lightboxLog.image_base64!)}
+            alt="chart"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '92vw', maxHeight: '88vh',
+              borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.9)',
+              cursor: 'default',
+            }}
+          />
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -361,16 +406,17 @@ export default function ScreenshotScheduler() {
                         <div
                           onMouseEnter={() => setHoveredLog(log.id)}
                           onMouseLeave={() => setHoveredLog(null)}
+                          onClick={() => setLightboxLog(log)}
                           style={{ position: 'relative', display: 'inline-block' }}
                         >
                           <img
-                            src={`data:image/png;base64,${log.image_base64}`}
+                            src={imgSrc(log.image_base64)}
                             alt="thumb"
-                            style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'block' }}
+                            style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', cursor: 'zoom-in', display: 'block' }}
                           />
                           {hoveredLog === log.id && (
                             <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, background: '#0A0A0F', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 6, boxShadow: '0 16px 64px rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
-                              <img src={`data:image/png;base64,${log.image_base64}`} alt="preview" style={{ width: 720, height: 450, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
+                              <img src={imgSrc(log.image_base64)} alt="preview" style={{ width: 720, height: 450, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
                             </div>
                           )}
                         </div>
