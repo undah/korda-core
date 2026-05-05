@@ -163,19 +163,7 @@ function EditModal({
         {submitters.length > 0 && (
           <div>
             <span style={modalLabel}>Submitted by</span>
-            <div style={{ position: 'relative' }}>
-              <User size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(240,246,252,0.3)', pointerEvents: 'none' }} />
-              <select
-                value={submittedBy}
-                onChange={e => setSubmittedBy(e.target.value)}
-                style={{ ...modalInput, paddingLeft: '2rem', appearance: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: submittedBy ? '#f0f6fc' : 'rgba(240,246,252,0.3)' }}
-              >
-                <option value="">— unassigned —</option>
-                {submitters.map(s => (
-                  <option key={s} value={s}>{s.includes('@') ? s.split('@')[0] : s}</option>
-                ))}
-              </select>
-            </div>
+            <SubmitterSelect value={submittedBy} onChange={setSubmittedBy} submitters={submitters} />
           </div>
         )}
 
@@ -285,6 +273,73 @@ function BulkConfirmModal({ count, action, onConfirm, onCancel, working }: {
         </div>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+// ── Submitter custom dropdown ─────────────────────────────────────────────────
+
+function SubmitterSelect({ value, onChange, submitters }: {
+  value: string;
+  onChange: (v: string) => void;
+  submitters: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const options = [{ key: '', label: '— unassigned —' }, ...submitters.map(s => ({ key: s, label: s.includes('@') ? s.split('@')[0] : s }))];
+  const selected = options.find(o => o.key === value) ?? options[0];
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8, padding: '0.6rem 0.9rem', cursor: 'pointer',
+          color: value ? '#f0f6fc' : 'rgba(240,246,252,0.3)', fontSize: '0.85rem',
+          transition: 'border-color 0.15s', textAlign: 'left',
+          ...(open ? { borderColor: 'rgba(0,200,255,0.4)' } : {}),
+        }}
+      >
+        <User size={13} style={{ color: 'rgba(240,246,252,0.3)', flexShrink: 0 }} />
+        <span style={{ flex: 1 }}>{selected.label}</span>
+        <ChevronDown size={13} style={{ color: 'rgba(240,246,252,0.3)', flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
+          background: '#131920', border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 8, overflow: 'hidden', zIndex: 100,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+        }}>
+          {options.map(o => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => { onChange(o.key); setOpen(false); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                width: '100%', textAlign: 'left', padding: '0.55rem 0.9rem',
+                background: o.key === value ? 'rgba(0,200,255,0.08)' : 'transparent',
+                color: o.key === value ? '#00C8FF' : o.key ? '#f0f6fc' : 'rgba(240,246,252,0.35)',
+                fontSize: '0.85rem', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {o.key && <User size={11} style={{ flexShrink: 0, opacity: 0.5 }} />}
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
