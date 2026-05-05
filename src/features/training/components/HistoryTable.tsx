@@ -277,6 +277,36 @@ function BulkConfirmModal({ count, action, onConfirm, onCancel, working }: {
   );
 }
 
+// ── Custom checkbox ───────────────────────────────────────────────────────────
+
+function CustomCheckbox({ checked, indeterminate, onChange }: { checked: boolean; indeterminate?: boolean; onChange: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  const active = checked || indeterminate;
+  return (
+    <div
+      onClick={onChange}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+        border: `1.5px solid ${active ? ACCENT : hovered ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)'}`,
+        background: active ? `${ACCENT}18` : hovered ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.12s',
+      }}
+    >
+      {checked && (
+        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+          <path d="M1 3.5L3.2 5.8L8 1" stroke={ACCENT} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {!checked && indeterminate && (
+        <div style={{ width: 7, height: 1.5, background: ACCENT, borderRadius: 1 }} />
+      )}
+    </div>
+  );
+}
+
 // ── Submitter custom dropdown ─────────────────────────────────────────────────
 
 function SubmitterSelect({ value, onChange, submitters }: {
@@ -599,7 +629,7 @@ export default function HistoryTable() {
                       onClick={() => col.sort && toggleSort(col.sort)}
                     >
                       {col.label === 'cb' ? (
-                        <input type="checkbox" checked={allPageSelected} ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleSelectAll} style={{ cursor: 'pointer', accentColor: ACCENT }} />
+                        <CustomCheckbox checked={allPageSelected} indeterminate={somePageSelected && !allPageSelected} onChange={toggleSelectAll} />
                       ) : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                         {col.label}
@@ -625,16 +655,17 @@ export default function HistoryTable() {
                   const isConfirming = confirmDeleteId === entry.id;
                   const isDeleting   = deletingId === entry.id;
 
+                  const isSelected = selected.has(entry.id);
                   return (
                     <tr
                       key={entry.id}
-                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.12s' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.12s', background: isSelected ? 'rgba(0,200,255,0.04)' : 'transparent' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = isSelected ? 'rgba(0,200,255,0.07)' : 'rgba(255,255,255,0.025)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = isSelected ? 'rgba(0,200,255,0.04)' : 'transparent')}
                     >
                       {/* Checkbox */}
                       <td style={{ ...tdStyle, width: 36 }}>
-                        <input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer', accentColor: ACCENT }} />
+                        <CustomCheckbox checked={isSelected} onChange={() => toggleSelect(entry.id)} />
                       </td>
 
                       {/* # */}
