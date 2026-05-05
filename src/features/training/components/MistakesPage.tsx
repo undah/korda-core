@@ -2,14 +2,91 @@
 import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { fetchMistakes, insertMistake, updateMistake, deleteMistake } from '../lib/trainingData';
+import { fetchMistakes, insertMistake, updateMistake, deleteMistake, bulkDeleteMistakes } from '../lib/trainingData';
 import type { Mistake } from '../types';
 import MistakesImporter from './MistakesImporter';
 
-const ACCENT = '#00C8FF';
+const ACCENT      = '#00C8FF';
+const DELETE_RED  = '#ef4444';
 const NOTE_TRUNCATE = 100;
 
-// â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+type PendingBulkAction = { kind: 'delete' };
+
+// ── Custom checkbox ───────────────────────────────────────────────────────────
+
+function CustomCheckbox({ checked, indeterminate, onChange }: { checked: boolean; indeterminate?: boolean; onChange: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  const active = checked || indeterminate;
+  return (
+    <div
+      onClick={onChange}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+        border: `1.5px solid ${active ? ACCENT : hovered ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)'}`,
+        background: active ? `${ACCENT}18` : hovered ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.12s',
+      }}
+    >
+      {checked && (
+        <svg width=”9” height=”7” viewBox=”0 0 9 7” fill=”none”>
+          <path d=”M1 3.5L3.2 5.8L8 1” stroke={ACCENT} strokeWidth=”1.6” strokeLinecap=”round” strokeLinejoin=”round” />
+        </svg>
+      )}
+      {!checked && indeterminate && (
+        <div style={{ width: 7, height: 1.5, background: ACCENT, borderRadius: 1 }} />
+      )}
+    </div>
+  );
+}
+
+// ── Bulk confirm modal ────────────────────────────────────────────────────────
+
+function BulkConfirmModal({ count, onConfirm, onCancel, working }: {
+  count: number; onConfirm: () => void; onCancel: () => void; working: boolean;
+}) {
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !working) onCancel(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onCancel, working]);
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+      onClick={e => { if (!working && e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{ background: '#131920', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.975rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>Confirm bulk action</span>
+          {!working && (
+            <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,246,252,0.4)', display: 'flex', padding: 4 }}><X size={18} /></button>
+          )}
+        </div>
+        <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.85rem 1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: DELETE_RED, fontWeight: 600 }}>
+            Permanently delete {count} mistake{count !== 1 ? 's' : ''}
+          </p>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'rgba(240,246,252,0.45)' }}>{count} entr{count !== 1 ? 'ies' : 'y'} will be affected.</p>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: DELETE_RED, opacity: 0.8 }}>This cannot be undone.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={onConfirm} disabled={working} style={{ flex: 1, padding: '0.65rem', background: working ? 'rgba(255,255,255,0.06)' : DELETE_RED, color: working ? 'rgba(240,246,252,0.3)' : '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: working ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            {working && <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />}
+            {working ? 'Deleting...' : 'Delete'}
+          </button>
+          <button onClick={onCancel} disabled={working} style={{ padding: '0.65rem 1.25rem', background: 'transparent', color: 'rgba(240,246,252,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: '0.875rem', cursor: working ? 'not-allowed' : 'pointer' }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit Modal ────────────────────────────────────────────────────────────────
 
 function EditModal({ entry, onClose, onSaved }: {
   entry: Mistake;
@@ -101,6 +178,9 @@ export default function MistakesPage() {
   const [showImporter, setShowImporter]   = useState(false);
   const [pageSize, setPageSize]           = useState(50);
   const [page, setPage]                   = useState(1);
+  const [selected, setSelected]           = useState<Set<string>>(new Set());
+  const [bulkWorking, setBulkWorking]     = useState(false);
+  const [pendingBulk, setPendingBulk]     = useState<PendingBulkAction | null>(null);
 
   const [url, setUrl]         = useState('');
   const [mistake, setMistake] = useState('');
@@ -143,14 +223,36 @@ export default function MistakesPage() {
   const toggleExpand = (id: string) =>
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  const toggleSelect = (id: string) =>
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const handleBulkDelete = async () => {
+    setBulkWorking(true);
+    try {
+      await bulkDeleteMistakes([...selected]);
+      setEntries(prev => prev.filter(e => !selected.has(e.id)));
+      toast.success(`${selected.size} mistake${selected.size !== 1 ? 's' : ''} deleted.`);
+      setSelected(new Set());
+    } catch (err: any) { toast.error(err?.message ?? 'Bulk delete failed.'); }
+    finally { setBulkWorking(false); setPendingBulk(null); }
+  };
+
   const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
   const paged      = entries.slice((page - 1) * pageSize, page * pageSize);
+
+  const allPageSelected  = paged.length > 0 && paged.every(e => selected.has(e.id));
+  const somePageSelected = paged.some(e => selected.has(e.id));
+  const toggleSelectAll  = () => {
+    if (allPageSelected) setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.delete(e.id)); return n; });
+    else setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.add(e.id)); return n; });
+  };
 
   return (
     <div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={updated => setEntries(prev => prev.map(e => e.id === updated.id ? updated : e))} />}
       {showImporter && <MistakesImporter onClose={() => setShowImporter(false)} onImported={imported => setEntries(prev => [...imported, ...prev])} />}
+      {pendingBulk && <BulkConfirmModal count={selected.size} onConfirm={handleBulkDelete} onCancel={() => setPendingBulk(null)} working={bulkWorking} />}
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -205,6 +307,21 @@ export default function MistakesPage() {
         </button>
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1rem', background: 'rgba(0,200,255,0.06)', border: '1px solid rgba(0,200,255,0.18)', borderRadius: 10, marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+          {bulkWorking && <Loader2 size={13} style={{ color: ACCENT, animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />}
+          <span style={{ fontSize: '0.8rem', color: ACCENT, fontWeight: 600, marginRight: '0.25rem' }}>{selected.size} selected</span>
+          <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.12)', margin: '0 0.1rem' }} />
+          <button onClick={() => setPendingBulk({ kind: 'delete' })} disabled={bulkWorking} style={bulkBtn(DELETE_RED)}>
+            <Trash2 size={11} style={{ marginRight: 3 }} />Delete
+          </button>
+          <button onClick={() => setSelected(new Set())} disabled={bulkWorking} style={{ ...bulkBtn('rgba(240,246,252,0.3)'), marginLeft: 'auto' }}>
+            <X size={11} style={{ marginRight: 3 }} />Clear
+          </button>
+        </div>
+      )}
+
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '3rem', color: 'rgba(240,246,252,0.4)', fontSize: '0.875rem' }}>
@@ -218,6 +335,9 @@ export default function MistakesPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <th style={{ ...thStyle, width: 36 }}>
+                    <CustomCheckbox checked={allPageSelected} indeterminate={somePageSelected && !allPageSelected} onChange={toggleSelectAll} />
+                  </th>
                   {['#', 'Screenshot', 'Mistake', 'Reason', 'Date', ''].map((h, i) => (
                     <th key={i} style={thStyle}>{h}</th>
                   ))}
@@ -232,11 +352,16 @@ export default function MistakesPage() {
                   const isConfirming = confirmDeleteId === entry.id;
                   const isDeleting   = deletingId === entry.id;
 
+                  const isSelected = selected.has(entry.id);
                   return (
-                    <tr key={entry.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.12s' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    <tr key={entry.id}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.12s', background: isSelected ? 'rgba(0,200,255,0.04)' : 'transparent' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = isSelected ? 'rgba(0,200,255,0.07)' : 'rgba(255,255,255,0.025)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = isSelected ? 'rgba(0,200,255,0.04)' : 'transparent')}
                     >
+                      <td style={{ ...tdStyle, width: 36, verticalAlign: 'middle' }}>
+                        <CustomCheckbox checked={isSelected} onChange={() => toggleSelect(entry.id)} />
+                      </td>
                       <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 36 }}>{globalIdx + 1}</td>
 
                       <td style={tdStyle}>
@@ -368,6 +493,14 @@ function RowsSelect({ value, onChange }: { value: number; onChange: (n: number) 
     </div>
   );
 }
+
+const bulkBtn = (color: string): React.CSSProperties => ({
+  display: 'inline-flex', alignItems: 'center',
+  padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 500,
+  background: `${color}12`, border: `1px solid ${color}35`,
+  borderRadius: 6, cursor: 'pointer', color,
+  transition: 'all 0.12s', whiteSpace: 'nowrap',
+});
 
 const pageBtn = (disabled: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', justifyContent: 'center',
