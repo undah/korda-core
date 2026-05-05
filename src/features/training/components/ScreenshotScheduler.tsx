@@ -246,13 +246,18 @@ export default function ScreenshotScheduler() {
           {mode === 'fixed' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <FieldLabel>Time (UTC)</FieldLabel>
-                <input
-                  type="time"
-                  value={fixedTime}
-                  onChange={e => setDraft(d => ({ ...d, fixed_time: e.target.value }))}
-                  style={{ ...inputStyle, width: 140 }}
-                />
+                <FieldLabel>Time ({tzAbbr})</FieldLabel>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input
+                    type="time"
+                    value={utcToLocal(fixedTime)}
+                    onChange={e => setDraft(d => ({ ...d, fixed_time: localToUtc(e.target.value) }))}
+                    style={{ ...inputStyle, width: 140 }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    = {fixedTime} UTC
+                  </span>
+                </div>
               </div>
               <div>
                 <FieldLabel>Days</FieldLabel>
@@ -504,6 +509,22 @@ function Card({ label, hint, hintColor, children }: { label: string; hint?: stri
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.35)', fontWeight: 500, marginBottom: '0.5rem' }}>{children}</div>;
 }
+
+function utcToLocal(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date();
+  d.setUTCHours(h, m, 0, 0);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function localToUtc(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+const tzAbbr = new Date().toLocaleTimeString('en', { timeZoneName: 'short' }).split(' ').pop() ?? 'Local';
 
 const inputStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
