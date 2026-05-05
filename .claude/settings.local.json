@@ -14,7 +14,9 @@
       "Bash(git pull *)",
       "Bash(git stash *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\giund\\\\OneDrive\\\\Desktop\" -Recurse -Filter \"tv_session.json\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(git fetch *)",
+      "Bash(node -e ' *)"
     ]
   }
 }
