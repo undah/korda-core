@@ -280,20 +280,50 @@ export default function Analytics() {
   }, [trades]);
 
   const winLossData = useMemo(() => {
-    const wins = trades.filter((t) => safeNum(t.pnl, 0) > 0).length;
-    const losses = trades.filter((t) => safeNum(t.pnl, 0) < 0).length;
+    const wins = trades.filter((t) => safeNum(t.pnl, 0) > 0.009).length;
+    const losses = trades.filter((t) => safeNum(t.pnl, 0) < -0.009).length;
+    const breakevens = trades.length - wins - losses;
 
     return [
-      { name: "Wins", value: wins, color: "hsl(160 84% 39%)" },
-      { name: "Losses", value: losses, color: "hsl(0 84% 60%)" },
+      { name: "Wins",      value: wins,      color: "hsl(160 84% 39%)" },
+      { name: "Breakeven", value: breakevens, color: "hsl(45 90% 55%)"  },
+      { name: "Losses",    value: losses,     color: "hsl(0 84% 60%)"   },
     ];
   }, [trades]);
 
   const winRate = useMemo(() => {
     const total = trades.length;
     if (!total) return 0;
-    const wins = trades.filter((t) => safeNum(t.pnl, 0) > 0).length;
+    const wins = trades.filter((t) => safeNum(t.pnl, 0) > 0.009).length;
     return wins / total;
+  }, [trades]);
+
+  const avgTradesPerDay = useMemo(() => {
+    const days = new Set(trades.map((t) => sameDayKey(new Date(t._iso))));
+    return days.size > 0 ? trades.length / days.size : 0;
+  }, [trades]);
+
+  const sessionMetrics = useMemo(() => {
+    type SK = "asian" | "london" | "new_york" | "off";
+    const b: Record<SK, { label: string; wins: number; losses: number; be: number; pnl: number }> = {
+      asian:    { label: "Asian",    wins: 0, losses: 0, be: 0, pnl: 0 },
+      london:   { label: "London",   wins: 0, losses: 0, be: 0, pnl: 0 },
+      new_york: { label: "New York", wins: 0, losses: 0, be: 0, pnl: 0 },
+      off:      { label: "Other",    wins: 0, losses: 0, be: 0, pnl: 0 },
+    };
+    for (const t of trades) {
+      const h = new Date(t._iso).getUTCHours();
+      const pnl = safeNum(t.pnl, 0);
+      const key: SK = h < 8 ? "asian" : h < 12 ? "london" : h < 17 ? "new_york" : "off";
+      b[key].pnl += pnl;
+      if (Math.abs(pnl) < 0.01) b[key].be++;
+      else if (pnl > 0) b[key].wins++;
+      else b[key].losses++;
+    }
+    return (Object.entries(b) as [SK, typeof b.asian][]).map(([key, s]) => {
+      const total = s.wins + s.losses + s.be;
+      return { key, label: s.label, total, wins: s.wins, losses: s.losses, pnl: s.pnl, winRate: total ? (s.wins / total) * 100 : 0, avgPnl: total ? s.pnl / total : 0 };
+    }).filter((s) => s.total > 0);
   }, [trades]);
 
   const pairPerformance = useMemo<PairPoint[]>(() => {
@@ -415,6 +445,44 @@ export default function Analytics() {
         </div>
       )}
 
+      {/* Performance Summary */}
+      {trades.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              label: "Win Rate",
+              value: `${(winRate * 100).toFixed(1)}%`,
+              sub: `${winLossData[0].value} wins of ${trades.length}`,
+              color: "text-success",
+            },
+            {
+              label: "Loss Rate",
+              value: `${((winLossData[2].value / trades.length) * 100).toFixed(1)}%`,
+              sub: `${winLossData[2].value} losses`,
+              color: "text-destructive",
+            },
+            {
+              label: "Breakeven Rate",
+              value: `${((winLossData[1].value / trades.length) * 100).toFixed(1)}%`,
+              sub: `${winLossData[1].value} breakeven`,
+              color: "text-yellow-400",
+            },
+            {
+              label: "Avg Trades / Day",
+              value: avgTradesPerDay.toFixed(1),
+              sub: `${trades.length} total across ${new Set(trades.map(t => sameDayKey(new Date(t._iso)))).size} days`,
+              color: "text-foreground",
+            },
+          ].map((s) => (
+            <div key={s.label} className="glass-card p-5 animate-fade-in">
+              <p className="text-sm text-muted-foreground mb-1">{s.label}</p>
+              <p className={cn("text-2xl font-mono font-bold", s.color)}>{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Daily P&L Chart */}
       <div className="glass-card p-6 animate-fade-in mb-6">
         <h3 className="font-semibold mb-1">Daily P&L</h3>
@@ -481,13 +549,13 @@ export default function Analytics() {
               </PieChart>
             </ResponsiveContainer>
 
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-3">
               {winLossData.map((item) => (
                 <div key={item.name} className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }} />
+                  <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
                   <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-2xl font-mono font-semibold">{item.value}</p>
+                    <p className="text-sm text-muted-foreground">{item.name}</p>
+                    <p className="text-xl font-mono font-semibold">{item.value}</p>
                   </div>
                 </div>
               ))}
@@ -558,6 +626,45 @@ export default function Analytics() {
           </div>
         </div>
       </div>
+
+      {/* Session Performance */}
+      {sessionMetrics.length > 0 && (
+        <div className="glass-card p-6 animate-fade-in mt-6">
+          <h3 className="font-semibold mb-1">Session Performance</h3>
+          <p className="text-sm text-muted-foreground mb-4">Win rate and P&L by trading session (UTC)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {sessionMetrics.map((s) => (
+              <div key={s.key} className="rounded-xl border border-border bg-background/60 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold">{s.label}</span>
+                  <span className="text-xs text-muted-foreground">{s.total} trades</span>
+                </div>
+                <p className={cn("text-xl font-mono font-bold", s.winRate >= 50 ? "text-success" : "text-destructive")}>
+                  {s.winRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">win rate</p>
+                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Avg P&L</span>
+                  <span className={cn("font-mono font-semibold", s.avgPnl >= 0 ? "text-success" : "text-destructive")}>
+                    {s.avgPnl >= 0 ? "+" : ""}{money(s.avgPnl)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Total P&L</span>
+                  <span className={cn("font-mono font-semibold", s.pnl >= 0 ? "text-success" : "text-destructive")}>
+                    {s.pnl >= 0 ? "+" : ""}{money(Math.round(s.pnl))}
+                  </span>
+                </div>
+                <div className="mt-2 flex gap-1 text-xs text-muted-foreground">
+                  <span className="text-success">{s.wins}W</span>
+                  <span>·</span>
+                  <span className="text-destructive">{s.losses}L</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Risk Metrics Section */}
       <div className="mt-6">
