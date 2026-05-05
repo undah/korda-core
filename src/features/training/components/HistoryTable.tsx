@@ -291,13 +291,6 @@ export default function HistoryTable() {
   const toggleSelect = (id: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const allPageSelected = paged.length > 0 && paged.every(e => selected.has(e.id));
-  const somePageSelected = paged.some(e => selected.has(e.id));
-  const toggleSelectAll = () => {
-    if (allPageSelected) setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.delete(e.id)); return n; });
-    else setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.add(e.id)); return n; });
-  };
-
   const handleBulkUpdate = async (updates: Partial<import('../types').TrainingEntryInsert>) => {
     setBulkWorking(true);
     try {
@@ -329,6 +322,13 @@ export default function HistoryTable() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged      = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const allPageSelected  = paged.length > 0 && paged.every(e => selected.has(e.id));
+  const somePageSelected = paged.some(e => selected.has(e.id));
+  const toggleSelectAll  = () => {
+    if (allPageSelected) setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.delete(e.id)); return n; });
+    else setSelected(prev => { const n = new Set(prev); paged.forEach(e => n.add(e.id)); return n; });
+  };
 
   return (
     <div>
