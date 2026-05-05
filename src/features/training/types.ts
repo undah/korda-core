@@ -20,3 +20,14 @@ export interface Mistake {
   created_at: string;
 }
 export type MistakeInsert = Omit<Mistake, 'id' | 'created_at'>;
+
+export interface ConceptEntry {
+  id: string;
+  concept: string;
+  explanation: string;
+  example_url: string | null;
+  notes: string | null;
+  submitted_by: string | null;
+  created_at: string;
+}
+export type ConceptEntryInsert = Omit<ConceptEntry, 'id' | 'created_at'>;

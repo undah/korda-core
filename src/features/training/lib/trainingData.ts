@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import type { TrainingEntry, TrainingEntryInsert, Mistake, MistakeInsert } from '../types';
+import type { TrainingEntry, TrainingEntryInsert, Mistake, MistakeInsert, ConceptEntry, ConceptEntryInsert } from '../types';
 
 export async function fetchTrainingEntries(): Promise<TrainingEntry[]> {
   const { data, error } = await supabase
@@ -97,6 +97,67 @@ export async function bulkDeleteMistakes(ids: string[]): Promise<void> {
 export async function bulkInsertMistakes(entries: MistakeInsert[]): Promise<Mistake[]> {
   const { data, error } = await supabase
     .from('mistakes')
+    .insert(entries)
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ── Concept Journal ────────────────────────────────────────────────────────────
+
+export async function fetchConceptEntries(): Promise<ConceptEntry[]> {
+  const { data, error } = await supabase
+    .from('concept_journal')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function insertConceptEntry(entry: ConceptEntryInsert): Promise<ConceptEntry> {
+  const { data, error } = await supabase
+    .from('concept_journal')
+    .insert(entry)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateConceptEntry(id: string, updates: Partial<ConceptEntryInsert>): Promise<ConceptEntry> {
+  const { data, error } = await supabase
+    .from('concept_journal')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteConceptEntry(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('concept_journal')
+    .delete()
+    .eq('id', id)
+    .select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Delete blocked — check table permissions.');
+}
+
+export async function bulkDeleteConceptEntries(ids: string[]): Promise<void> {
+  const { data, error } = await supabase
+    .from('concept_journal')
+    .delete()
+    .in('id', ids)
+    .select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Bulk delete blocked — check table permissions.');
+}
+
+export async function bulkInsertConceptEntries(entries: ConceptEntryInsert[]): Promise<ConceptEntry[]> {
+  const { data, error } = await supabase
+    .from('concept_journal')
     .insert(entries)
     .select();
   if (error) throw error;
