@@ -186,7 +186,7 @@ function RiskStatCard({
   );
 }
 
-export default function Analytics() {
+export function AnalyticsDashboard() {
   const { user } = useAuth();
 
   // ✅ default to live (no combined)
@@ -414,14 +414,12 @@ export default function Analytics() {
 
   if (loading || loadingSettings) {
     return (
-      <MainLayout>
-        <div className="glass-card p-6 text-sm text-muted-foreground mb-6">Loading analytics…</div>
-      </MainLayout>
+      <div className="glass-card p-6 text-sm text-muted-foreground mb-6">Loading analytics…</div>
     );
   }
 
   return (
-    <MainLayout>
+    <div>
       <div className="mb-8 flex items-start justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">Analytics</h1>
@@ -711,6 +709,14 @@ export default function Analytics() {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function Analytics() {
+  return (
+    <MainLayout>
+      <AnalyticsDashboard />
     </MainLayout>
   );
 }

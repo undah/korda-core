@@ -10,9 +10,9 @@ const VALID_GREEN = '#10b981';
 const INVALID_RED = '#ef4444';
 
 const SESSIONS: { value: TradingSession; label: string; time: string; color: string }[] = [
-  { value: 'london',   label: 'London',   time: '08:00â€“17:00 UTC', color: '#3b82f6' },
-  { value: 'new_york', label: 'New York', time: '13:00â€“22:00 UTC', color: '#8b5cf6' },
-  { value: 'asia',     label: 'Asia',     time: '00:00â€“09:00 UTC', color: '#f59e0b' },
+  { value: 'london',   label: 'London',   time: '08:00–17:00 UTC', color: '#3b82f6' },
+  { value: 'new_york', label: 'New York', time: '13:00–22:00 UTC', color: '#8b5cf6' },
+  { value: 'asia',     label: 'Asia',     time: '00:00–09:00 UTC', color: '#f59e0b' },
 ];
 
 export default function EntryForm() {
