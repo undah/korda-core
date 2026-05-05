@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -25,19 +25,19 @@ function getPace(count: number): {
   const hour  = now.getHours() + now.getMinutes() / 60;
 
   if (count >= DAILY_GOAL)
-    return { label: 'Doel gehaald!', color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0', icon: 'done' };
+    return { label: 'Doel gehaald!', color: '#4ade80', bg: 'rgba(21,128,61,0.15)', border: 'rgba(21,128,61,0.3)', icon: 'done' };
   if (hour < WORK_START)
-    return { label: 'Dag nog niet begonnen', color: '#9CA3AF', bg: '#F9FAFB', border: '#E5E7EB', icon: 'idle' };
+    return { label: 'Dag nog niet begonnen', color: 'rgba(240,246,252,0.45)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', icon: 'idle' };
   if (hour > WORK_END)
-    return { label: 'Dag voorbij', color: '#9CA3AF', bg: '#F9FAFB', border: '#E5E7EB', icon: 'idle' };
+    return { label: 'Dag voorbij', color: 'rgba(240,246,252,0.45)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', icon: 'idle' };
 
   const elapsed  = (hour - WORK_START) / (WORK_END - WORK_START);
   const expected = Math.ceil(elapsed * DAILY_GOAL);
   const diff     = count - expected;
 
-  if (diff >= 2)  return { label: `${diff} voor schema`, color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0', icon: 'up' };
-  if (diff >= -2) return { label: 'Op schema',           color: '#B45309', bg: '#FFFBEB', border: '#FDE68A', icon: 'ok' };
-  return               { label: `${Math.abs(diff)} achter`, color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', icon: 'down' };
+  if (diff >= 2)  return { label: `${diff} voor schema`, color: '#4ade80', bg: 'rgba(21,128,61,0.15)', border: 'rgba(21,128,61,0.3)', icon: 'up' };
+  if (diff >= -2) return { label: 'Op schema',           color: '#FCD34D', bg: 'rgba(180,83,9,0.15)',  border: 'rgba(180,83,9,0.3)', icon: 'ok' };
+  return               { label: `${Math.abs(diff)} achter`, color: '#f87171', bg: 'rgba(220,38,38,0.12)', border: 'rgba(220,38,38,0.25)', icon: 'down' };
 }
 
 function getLastCall(calls: Lead[]): { time: string | null; minsAgo: number | null } {
@@ -69,7 +69,7 @@ function fmtMins(mins: number): string {
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = Math.min(100, (value / max) * 100);
   return (
-    <div style={{ height: 7, background: '#F0ECE4', borderRadius: 9999, overflow: 'hidden' }}>
+    <div style={{ height: 7, background: 'rgba(255,255,255,0.08)', borderRadius: 9999, overflow: 'hidden' }}>
       <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 9999, transition: 'width 0.5s ease' }} />
     </div>
   );
@@ -134,7 +134,7 @@ export default function CRMDashboard() {
   if (leadsLoading || profilesLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <div style={{ color: '#B0A99A', fontSize: '0.875rem' }}>Laden…</div>
+        <div style={{ color: 'rgba(240,246,252,0.35)', fontSize: '0.875rem' }}>Laden…</div>
       </div>
     );
   }
@@ -143,13 +143,13 @@ export default function CRMDashboard() {
     <div>
       {/* ── Page header ── */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B0A99A', marginBottom: '0.3rem' }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.35)', marginBottom: '0.3rem' }}>
           {format(new Date(), 'EEEE d MMMM yyyy', { locale: nl })}
         </div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1c1a17', letterSpacing: '-0.02em', margin: 0 }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.02em', margin: 0 }}>
           Dashboard
         </h1>
-        <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.25rem' }}>
+        <p style={{ fontSize: '0.875rem', color: 'rgba(240,246,252,0.45)', marginTop: '0.25rem' }}>
           {todayLeads.length} gesprekken vandaag · doel: {profiles.length * DAILY_GOAL}
         </p>
       </div>
@@ -160,8 +160,8 @@ export default function CRMDashboard() {
           display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center',
           marginBottom: '1.75rem',
           padding: '0.85rem 1.1rem',
-          background: inactiveReps.length > 0 ? '#FEF2F2' : behindCount > 0 ? '#FFFBEB' : '#F0FDF4',
-          border: `1px solid ${inactiveReps.length > 0 ? '#FECACA' : behindCount > 0 ? '#FDE68A' : '#BBF7D0'}`,
+          background: inactiveReps.length > 0 ? 'rgba(220,38,38,0.12)' : behindCount > 0 ? 'rgba(180,83,9,0.15)' : 'rgba(21,128,61,0.15)',
+          border: `1px solid ${inactiveReps.length > 0 ? 'rgba(220,38,38,0.3)' : behindCount > 0 ? 'rgba(180,83,9,0.3)' : 'rgba(21,128,61,0.3)'}`,
           borderRadius: 8,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.5rem' }}>
@@ -203,11 +203,11 @@ export default function CRMDashboard() {
       {/* ── Daily progress cards ── */}
       <section style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <Phone size={15} style={{ color: '#9CA3AF' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+          <Phone size={15} style={{ color: 'rgba(240,246,252,0.45)' }} />
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.45)' }}>
             Dagelijks Doel
           </span>
-          <span style={{ fontSize: '0.7rem', color: '#B0A99A', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '0.7rem', color: 'rgba(240,246,252,0.35)', marginLeft: 'auto' }}>
             Vernieuwt elke 60 sec
           </span>
         </div>
@@ -217,8 +217,8 @@ export default function CRMDashboard() {
             <div
               key={profile.id}
               style={{
-                background: '#fff',
-                border: `1px solid ${inactive ? '#FECACA' : '#e8e4dc'}`,
+                background: '#0D0D14',
+                border: `1px solid ${inactive ? 'rgba(220,38,38,0.3)' : 'rgba(255,255,255,0.08)'}`,
                 borderRadius: 10,
                 padding: '1.25rem',
                 borderTop: `3px solid ${inactive ? '#DC2626' : color}`,
@@ -230,12 +230,12 @@ export default function CRMDashboard() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: inactive ? '#DC2626' : color }} />
-                    <span style={{ fontWeight: 700, color: '#1c1a17', fontSize: '0.95rem' }}>{profile.rep_name}</span>
+                    <span style={{ fontWeight: 700, color: '#f0f6fc', fontSize: '0.95rem' }}>{profile.rep_name}</span>
                     {inactive && (
                       <span style={{
                         fontSize: '0.65rem', fontWeight: 600,
                         padding: '0.1rem 0.4rem', borderRadius: 9999,
-                        background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA',
+                        background: 'rgba(220,38,38,0.12)', color: '#f87171', border: '1px solid rgba(220,38,38,0.3)',
                       }}>
                         INACTIEF
                       </span>
@@ -251,7 +251,7 @@ export default function CRMDashboard() {
                         {lastCall.minsAgo !== null && ` · ${fmtMins(lastCall.minsAgo)}`}
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.72rem', color: '#D1D5DB' }}>Nog geen call vandaag</span>
+                      <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.25)' }}>Nog geen call vandaag</span>
                     )}
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export default function CRMDashboard() {
                   <span style={{ fontSize: '1.75rem', fontWeight: 700, color: inactive ? '#DC2626' : color, lineHeight: 1 }}>
                     {todayCount}
                   </span>
-                  <span style={{ fontSize: '0.8rem', color: '#B0A99A' }}>/{DAILY_GOAL}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'rgba(240,246,252,0.35)' }}>/{DAILY_GOAL}</span>
                 </div>
               </div>
 
@@ -303,23 +303,23 @@ export default function CRMDashboard() {
 
       {/* ── Leaderboard + Week totals ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <div style={{ background: '#fff', border: '1px solid #e8e4dc', borderRadius: 10, padding: '1.25rem' }}>
+        <div style={{ background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <Trophy size={15} style={{ color: '#9CA3AF' }} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+            <Trophy size={15} style={{ color: 'rgba(240,246,252,0.45)' }} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.45)' }}>
               Ranglijst vandaag
             </span>
           </div>
           {repStats.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: '#B0A99A' }}>Geen data</p>
+            <p style={{ fontSize: '0.85rem', color: 'rgba(240,246,252,0.35)' }}>Geen data</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {repStats.map(({ profile, todayCount, color, pace }, idx) => (
                 <div key={profile.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{
                     width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                    background: idx === 0 ? '#FEF3C7' : idx === 1 ? '#F3F4F6' : '#FFF7ED',
-                    color: idx === 0 ? '#B45309' : idx === 1 ? '#6B7280' : '#9A3412',
+                    background: idx === 0 ? 'rgba(180,83,9,0.2)' : idx === 1 ? 'rgba(255,255,255,0.08)' : 'rgba(154,52,18,0.15)',
+                    color: idx === 0 ? '#FCD34D' : idx === 1 ? 'rgba(240,246,252,0.5)' : '#fb923c',
                     fontSize: '0.72rem', fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
@@ -327,7 +327,7 @@ export default function CRMDashboard() {
                   </span>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1c1a17' }}>{profile.rep_name}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f6fc' }}>{profile.rep_name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{
                           fontSize: '0.65rem', fontWeight: 600,
@@ -347,15 +347,15 @@ export default function CRMDashboard() {
           )}
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e8e4dc', borderRadius: 10, padding: '1.25rem' }}>
+        <div style={{ background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <TrendingUp size={15} style={{ color: '#9CA3AF' }} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+            <TrendingUp size={15} style={{ color: 'rgba(240,246,252,0.45)' }} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.45)' }}>
               Week totaal
             </span>
           </div>
           {repStats.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: '#B0A99A' }}>Geen data</p>
+            <p style={{ fontSize: '0.85rem', color: 'rgba(240,246,252,0.35)' }}>Geen data</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {[...repStats].sort((a, b) => b.weekCount - a.weekCount).map(({ profile, weekCount, color }) => {
@@ -366,11 +366,11 @@ export default function CRMDashboard() {
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1c1a17' }}>{profile.rep_name}</span>
-                        <span style={{ fontSize: '0.82rem', color: '#706d66' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f6fc' }}>{profile.rep_name}</span>
+                        <span style={{ fontSize: '0.82rem', color: 'rgba(240,246,252,0.45)' }}>
                           <span style={{ fontWeight: 700, color }}>{weekCount}</span>
-                          <span style={{ color: '#B0A99A' }}>/{weekGoal}</span>
-                          <span style={{ color: '#D1D5DB', marginLeft: '0.35rem', fontSize: '0.72rem' }}>{pct}%</span>
+                          <span style={{ color: 'rgba(240,246,252,0.35)' }}>/{weekGoal}</span>
+                          <span style={{ color: 'rgba(240,246,252,0.25)', marginLeft: '0.35rem', fontSize: '0.72rem' }}>{pct}%</span>
                         </span>
                       </div>
                       <ProgressBar value={weekCount} max={weekGoal} color={color} />
@@ -385,7 +385,7 @@ export default function CRMDashboard() {
 
       {/* ── Status breakdown ── */}
       <section>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.45)', marginBottom: '1rem' }}>
           Status verdeling vandaag
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
@@ -404,3 +404,4 @@ export default function CRMDashboard() {
     </div>
   );
 }
+

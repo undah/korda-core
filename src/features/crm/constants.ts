@@ -12,12 +12,12 @@ export const LEAD_STATUSES: LeadStatus[] = [
 ];
 
 export const STATUS_STYLE: Record<LeadStatus, { color: string; bg: string; border: string }> = {
-  'Niet bereikt':          { color: '#6B7280', bg: '#F3F4F6', border: '#D1D5DB' },
-  'Geen Gehoor':           { color: '#9CA3AF', bg: '#F9FAFB', border: '#E5E7EB' },
-  'Niet Geïnteresseerd':   { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
-  'Terugbellen':           { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
-  'Geïnteresseerd':        { color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-  'Gesloten':              { color: '#15803D', bg: '#DCFCE7', border: '#86EFAC' },
+  'Niet bereikt':          { color: '#9CA3AF', bg: 'rgba(107,114,128,0.12)', border: 'rgba(107,114,128,0.25)' },
+  'Geen Gehoor':           { color: '#9CA3AF', bg: 'rgba(156,163,175,0.08)', border: 'rgba(156,163,175,0.2)' },
+  'Niet Geïnteresseerd':   { color: '#f87171', bg: 'rgba(220,38,38,0.12)',   border: 'rgba(220,38,38,0.25)' },
+  'Terugbellen':           { color: '#FCD34D', bg: 'rgba(180,83,9,0.15)',    border: 'rgba(180,83,9,0.3)' },
+  'Geïnteresseerd':        { color: '#4ade80', bg: 'rgba(22,163,74,0.12)',   border: 'rgba(22,163,74,0.25)' },
+  'Gesloten':              { color: '#22c55e', bg: 'rgba(21,128,61,0.15)',   border: 'rgba(21,128,61,0.3)' },
 };
 
 export const REP_COLOR: Record<string, string> = {
@@ -33,8 +33,8 @@ export function getRepColor(name: string): string {
 }
 
 export const WEEK_CELL_COLOR = (count: number): { bg: string; text: string } => {
-  if (count === 0)   return { bg: '#F9FAFB', text: '#9CA3AF' };
-  if (count < 15)    return { bg: '#FEF2F2', text: '#DC2626' };
-  if (count < 25)    return { bg: '#FFFBEB', text: '#B45309' };
-  return               { bg: '#F0FDF4', text: '#15803D' };
+  if (count === 0)   return { bg: 'rgba(255,255,255,0.03)', text: 'rgba(240,246,252,0.25)' };
+  if (count < 15)    return { bg: 'rgba(220,38,38,0.12)',   text: '#f87171' };
+  if (count < 25)    return { bg: 'rgba(180,83,9,0.15)',    text: '#FCD34D' };
+  return               { bg: 'rgba(21,128,61,0.15)',   text: '#4ade80' };
 };

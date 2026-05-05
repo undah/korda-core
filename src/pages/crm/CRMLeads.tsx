@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Download, ChevronUp, ChevronDown, ChevronsUpDown, Search } from 'lucide-react';
@@ -36,14 +36,14 @@ const TH: React.CSSProperties = {
   padding: '0.6rem 0.85rem',
   fontSize: '0.7rem', fontWeight: 600,
   letterSpacing: '0.08em', textTransform: 'uppercase',
-  color: '#9CA3AF', textAlign: 'left',
-  background: '#F8F7F4', borderBottom: '1px solid #e8e4dc',
+  color: 'rgba(240,246,252,0.45)', textAlign: 'left',
+  background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)',
   userSelect: 'none',
 };
 
 const TD: React.CSSProperties = {
   padding: '0.65rem 0.85rem',
-  fontSize: '0.85rem', color: '#1c1a17',
+  fontSize: '0.85rem', color: '#f0f6fc',
   borderBottom: '1px solid #F0ECE4',
   verticalAlign: 'middle',
 };
@@ -119,11 +119,11 @@ export default function CRMLeads() {
 
   const selectStyle: React.CSSProperties = {
     padding: '0.45rem 0.75rem',
-    border: '1px solid #e8e4dc',
+    border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 6,
     fontSize: '0.82rem',
-    color: '#1c1a17',
-    background: '#fff',
+    color: '#f0f6fc',
+    background: '#0D0D14',
     cursor: 'pointer',
     outline: 'none',
     fontFamily: 'inherit',
@@ -133,13 +133,13 @@ export default function CRMLeads() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B0A99A', marginBottom: '0.3rem' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.35)', marginBottom: '0.3rem' }}>
             Overzicht
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1c1a17', letterSpacing: '-0.02em', margin: 0 }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.02em', margin: 0 }}>
             Leads
           </h1>
-          <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.25rem' }}>
+          <p style={{ fontSize: '0.875rem', color: 'rgba(240,246,252,0.45)', marginTop: '0.25rem' }}>
             {filtered.length} van {allLeads.length} leads
           </p>
         </div>
@@ -148,12 +148,12 @@ export default function CRMLeads() {
           style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             padding: '0.6rem 1.1rem',
-            background: '#fff', border: '1px solid #e8e4dc', borderRadius: 7,
-            fontSize: '0.82rem', fontWeight: 500, color: '#1c1a17',
+            background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7,
+            fontSize: '0.82rem', fontWeight: 500, color: '#f0f6fc',
             cursor: 'pointer', transition: 'all 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#F8F7F4'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#0D0D14'; }}
         >
           <Download size={14} />
           Export CSV
@@ -162,12 +162,12 @@ export default function CRMLeads() {
 
       {/* Filters */}
       <div style={{
-        background: '#fff', border: '1px solid #e8e4dc', borderRadius: 8,
+        background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8,
         padding: '1rem 1.25rem', marginBottom: '1rem',
         display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 180px', minWidth: 160 }}>
-          <Search size={14} style={{ color: '#B0A99A', flexShrink: 0 }} />
+          <Search size={14} style={{ color: 'rgba(240,246,252,0.35)', flexShrink: 0 }} />
           <input
             style={{ ...selectStyle, border: 'none', flex: 1, padding: '0.35rem 0' }}
             placeholder="Zoek naam, telefoon..."
@@ -196,7 +196,7 @@ export default function CRMLeads() {
             onChange={e => setFilterFrom(e.target.value)}
             title="Van datum"
           />
-          <span style={{ color: '#B0A99A', fontSize: '0.8rem' }}>–</span>
+          <span style={{ color: 'rgba(240,246,252,0.35)', fontSize: '0.8rem' }}>–</span>
           <input
             type="date"
             style={selectStyle}
@@ -209,7 +209,7 @@ export default function CRMLeads() {
         {(search || filterRep || filterStatus || filterFrom || filterTo) && (
           <button
             onClick={() => { setSearch(''); setFilterRep(''); setFilterStatus(''); setFilterFrom(''); setFilterTo(''); }}
-            style={{ fontSize: '0.78rem', color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: '0.35rem 0' }}
+            style={{ fontSize: '0.78rem', color: 'rgba(240,246,252,0.45)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.35rem 0' }}
           >
             Wis filters
           </button>
@@ -217,11 +217,11 @@ export default function CRMLeads() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', border: '1px solid #e8e4dc', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
         {isLoading ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: '#B0A99A', fontSize: '0.875rem' }}>Laden…</div>
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'rgba(240,246,252,0.35)', fontSize: '0.875rem' }}>Laden…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: '#B0A99A', fontSize: '0.875rem' }}>
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'rgba(240,246,252,0.35)', fontSize: '0.875rem' }}>
             {allLeads.length === 0 ? 'Nog geen leads. Log je eerste call!' : 'Geen leads gevonden met deze filters.'}
           </div>
         ) : (
@@ -266,7 +266,7 @@ export default function CRMLeads() {
                       <td style={TD}>
                         <span style={{ fontWeight: 500 }}>{lead.lead_naam}</span>
                       </td>
-                      <td style={{ ...TD, color: '#706d66' }}>{lead.tel_nummer}</td>
+                      <td style={{ ...TD, color: 'rgba(240,246,252,0.45)' }}>{lead.tel_nummer}</td>
                       <td style={TD}>
                         <StatusBadge status={lead.status as LeadStatus} size="sm" />
                       </td>
@@ -276,13 +276,13 @@ export default function CRMLeads() {
                           <span style={{ fontSize: '0.82rem' }}>{repName}</span>
                         </div>
                       </td>
-                      <td style={{ ...TD, color: '#706d66', whiteSpace: 'nowrap' }}>
+                      <td style={{ ...TD, color: 'rgba(240,246,252,0.45)', whiteSpace: 'nowrap' }}>
                         {format(new Date(lead.datum + 'T00:00:00'), 'd MMM yyyy')}
                       </td>
                       <td style={{ ...TD, color: lead.deal_waarde ? '#15803D' : '#B0A99A', fontWeight: lead.deal_waarde ? 500 : 400 }}>
                         {lead.deal_waarde ? `€${Number(lead.deal_waarde).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}` : '—'}
                       </td>
-                      <td style={{ ...TD, color: '#706d66', maxWidth: 140 }}>
+                      <td style={{ ...TD, color: 'rgba(240,246,252,0.45)', maxWidth: 140 }}>
                         <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {lead.website_type || '—'}
                         </span>
@@ -306,3 +306,4 @@ export default function CRMLeads() {
     </div>
   );
 }
+

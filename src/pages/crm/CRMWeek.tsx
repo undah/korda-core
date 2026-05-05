@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -43,13 +43,13 @@ export default function CRMWeek() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B0A99A', marginBottom: '0.3rem' }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.35)', marginBottom: '0.3rem' }}>
           {format(weekStart, 'd MMM', { locale: nl })} – {format(weekEnd, 'd MMM yyyy', { locale: nl })}
         </div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1c1a17', letterSpacing: '-0.02em', margin: 0 }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.02em', margin: 0 }}>
           Weekoverzicht
         </h1>
-        <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.25rem' }}>
+        <p style={{ fontSize: '0.875rem', color: 'rgba(240,246,252,0.45)', marginTop: '0.25rem' }}>
           Doel: {DAILY_GOAL} calls per dag per rep
         </p>
       </div>
@@ -57,22 +57,22 @@ export default function CRMWeek() {
       {/* Legend */}
       <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
-          { label: `0 calls`, bg: '#F9FAFB', color: '#9CA3AF', border: '#E5E7EB' },
-          { label: `1 – 14`, bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' },
-          { label: `15 – 24`, bg: '#FFFBEB', color: '#B45309', border: '#FDE68A' },
-          { label: `25+`, bg: '#F0FDF4', color: '#15803D', border: '#BBF7D0' },
+          { label: `0 calls`, bg: 'rgba(255,255,255,0.03)', color: 'rgba(240,246,252,0.25)', border: 'rgba(255,255,255,0.08)' },
+          { label: `1 – 14`, bg: 'rgba(220,38,38,0.12)', color: '#f87171', border: 'rgba(220,38,38,0.3)' },
+          { label: `15 – 24`, bg: 'rgba(180,83,9,0.15)', color: '#FCD34D', border: 'rgba(180,83,9,0.3)' },
+          { label: `25+`, bg: 'rgba(21,128,61,0.15)', color: '#4ade80', border: 'rgba(21,128,61,0.3)' },
         ].map(({ label, bg, color, border }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <div style={{ width: 14, height: 14, borderRadius: 3, background: bg, border: `1px solid ${border}` }} />
-            <span style={{ fontSize: '0.75rem', color: '#706d66' }}>{label}</span>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.45)' }}>{label}</span>
           </div>
         ))}
       </div>
 
       {isLoading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: '#B0A99A', fontSize: '0.875rem' }}>Laden…</div>
+        <div style={{ padding: '3rem', textAlign: 'center', color: 'rgba(240,246,252,0.35)', fontSize: '0.875rem' }}>Laden…</div>
       ) : (
-        <div style={{ background: '#fff', border: '1px solid #e8e4dc', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
               <thead>
@@ -80,8 +80,8 @@ export default function CRMWeek() {
                   <th style={{
                     padding: '0.7rem 1.25rem', textAlign: 'left',
                     fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em',
-                    textTransform: 'uppercase', color: '#9CA3AF',
-                    background: '#F8F7F4', borderBottom: '1px solid #e8e4dc',
+                    textTransform: 'uppercase', color: 'rgba(240,246,252,0.45)',
+                    background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)',
                     width: 110,
                   }}>
                     Rep
@@ -95,8 +95,8 @@ export default function CRMWeek() {
                         textTransform: 'uppercase',
                         color: isToday(day) ? '#3B82F6' : '#9CA3AF',
                         background: isToday(day) ? '#EFF6FF' : '#F8F7F4',
-                        borderBottom: '1px solid #e8e4dc',
-                        borderLeft: '1px solid #e8e4dc',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        borderLeft: '1px solid rgba(255,255,255,0.08)',
                         minWidth: 62,
                       }}
                     >
@@ -109,9 +109,9 @@ export default function CRMWeek() {
                   <th style={{
                     padding: '0.7rem 0.75rem', textAlign: 'center',
                     fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em',
-                    textTransform: 'uppercase', color: '#9CA3AF',
-                    background: '#F8F7F4', borderBottom: '1px solid #e8e4dc',
-                    borderLeft: '1px solid #e8e4dc',
+                    textTransform: 'uppercase', color: 'rgba(240,246,252,0.45)',
+                    background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    borderLeft: '1px solid rgba(255,255,255,0.08)',
                     minWidth: 64,
                   }}>
                     Week
@@ -127,7 +127,7 @@ export default function CRMWeek() {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#1c1a17' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#f0f6fc' }}>
                           {profile.rep_name}
                         </span>
                       </div>
@@ -143,7 +143,7 @@ export default function CRMWeek() {
                             textAlign: 'center',
                             background: count === 0 ? (today ? '#FAFEFF' : bg) : bg,
                             borderBottom: '1px solid #F0ECE4',
-                            borderLeft: '1px solid #e8e4dc',
+                            borderLeft: '1px solid rgba(255,255,255,0.08)',
                             position: 'relative',
                           }}
                         >
@@ -168,13 +168,13 @@ export default function CRMWeek() {
                     <td style={{
                       padding: '0.6rem 0.75rem', textAlign: 'center',
                       borderBottom: '1px solid #F0ECE4',
-                      borderLeft: '1px solid #e8e4dc',
+                      borderLeft: '1px solid rgba(255,255,255,0.08)',
                       background: '#FAFAF8',
                     }}>
                       <div style={{ fontSize: '1rem', fontWeight: 700, color }}>
                         {total}
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: '#B0A99A', marginTop: '0.1rem' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'rgba(240,246,252,0.35)', marginTop: '0.1rem' }}>
                         /{DAILY_GOAL * 5}
                       </div>
                     </td>
@@ -183,9 +183,9 @@ export default function CRMWeek() {
 
                 {/* Totals row */}
                 {grid.length > 1 && (
-                  <tr style={{ background: '#F8F7F4' }}>
+                  <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
                     <td style={{ padding: '0.7rem 1.25rem', borderTop: '2px solid #e8e4dc' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(240,246,252,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         Totaal
                       </span>
                     </td>
@@ -198,7 +198,7 @@ export default function CRMWeek() {
                             padding: '0.6rem 0.5rem', textAlign: 'center',
                             background: total === 0 ? '#F8F7F4' : bg,
                             borderTop: '2px solid #e8e4dc',
-                            borderLeft: '1px solid #e8e4dc',
+                            borderLeft: '1px solid rgba(255,255,255,0.08)',
                           }}
                         >
                           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: total === 0 ? '#D1D5DB' : text }}>
@@ -209,10 +209,10 @@ export default function CRMWeek() {
                     })}
                     <td style={{
                       padding: '0.6rem 0.75rem', textAlign: 'center',
-                      borderTop: '2px solid #e8e4dc', borderLeft: '1px solid #e8e4dc',
-                      background: '#F0ECE4',
+                      borderTop: '2px solid #e8e4dc', borderLeft: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.06)',
                     }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#706d66' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'rgba(240,246,252,0.45)' }}>
                         {leads.length}
                       </span>
                     </td>
@@ -230,18 +230,18 @@ export default function CRMWeek() {
           const weekGoal = DAILY_GOAL * 5;
           const pct = Math.min(100, (total / weekGoal) * 100);
           return (
-            <div key={profile.id} style={{ background: '#fff', border: '1px solid #e8e4dc', borderRadius: 8, padding: '1rem' }}>
+            <div key={profile.id} style={{ background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: color }} />
-                <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#1c1a17' }}>{profile.rep_name}</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#f0f6fc' }}>{profile.rep_name}</span>
               </div>
               <div style={{ fontSize: '1.4rem', fontWeight: 700, color, lineHeight: 1, marginBottom: '0.5rem' }}>
-                {total} <span style={{ fontSize: '0.8rem', color: '#B0A99A', fontWeight: 400 }}>/ {weekGoal}</span>
+                {total} <span style={{ fontSize: '0.8rem', color: 'rgba(240,246,252,0.35)', fontWeight: 400 }}>/ {weekGoal}</span>
               </div>
-              <div style={{ height: 5, background: '#F0ECE4', borderRadius: 9999, overflow: 'hidden' }}>
+              <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 9999, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 9999, transition: 'width 0.4s' }} />
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#B0A99A', marginTop: '0.35rem' }}>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.35)', marginTop: '0.35rem' }}>
                 {pct >= 100 ? '🎯 Doel bereikt!' : `${Math.round(pct)}% van weekdoel`}
               </div>
             </div>
@@ -251,3 +251,4 @@ export default function CRMWeek() {
     </div>
   );
 }
+

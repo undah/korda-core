@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Trash2, Loader2 } from 'lucide-react';
 import { useUpdateLead, useDeleteLead } from '../hooks/useLeads';
@@ -19,11 +19,11 @@ interface LeadDrawerProps {
 const FIELD_STYLE: React.CSSProperties = {
   width: '100%',
   padding: '0.5rem 0.75rem',
-  border: '1px solid #e8e4dc',
+  border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: 6,
   fontSize: '0.875rem',
-  color: '#1c1a17',
-  background: '#fff',
+  color: '#f0f6fc',
+  background: '#131920',
   outline: 'none',
   fontFamily: 'inherit',
 };
@@ -120,8 +120,8 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
 
   const inputStyle = (disabled: boolean): React.CSSProperties => ({
     ...FIELD_STYLE,
-    background: disabled ? '#F9FAFB' : '#fff',
-    color: disabled ? '#9CA3AF' : '#1c1a17',
+    background: disabled ? 'rgba(255,255,255,0.04)' : '#131920',
+    color: disabled ? 'rgba(240,246,252,0.3)' : '#f0f6fc',
     cursor: disabled ? 'default' : 'text',
   });
 
@@ -133,18 +133,18 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
           width: '100%',
           maxWidth: 480,
           background: '#FAFAF8',
-          borderLeft: '1px solid #e8e4dc',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
           padding: 0,
           overflow: 'auto',
         }}
       >
-        <SheetHeader style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid #f0ece4', background: '#fff' }}>
+        <SheetHeader style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#131920' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: repColor }} />
             <span style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 500 }}>{repName}</span>
             <StatusBadge status={lead.status} size="sm" />
           </div>
-          <SheetTitle style={{ color: '#1c1a17', fontSize: '1.1rem' }}>{lead.lead_naam}</SheetTitle>
+          <SheetTitle style={{ color: '#f0f6fc', fontSize: '1.1rem' }}>{lead.lead_naam}</SheetTitle>
           <div style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>{lead.tel_nummer}</div>
         </SheetHeader>
 
@@ -271,8 +271,8 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
             ) : (
               <div style={{
                 ...FIELD_STYLE,
-                background: '#F9FAFB',
-                color: form.script_id ? '#1c1a17' : '#9CA3AF',
+                background: 'rgba(255,255,255,0.04)',
+                color: form.script_id ? '#f0f6fc' : 'rgba(240,246,252,0.35)',
                 cursor: 'default',
               }}>
                 {form.script_id
@@ -290,7 +290,7 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
                     onClick={() => setEditing(true)}
                     style={{
                       flex: 1, padding: '0.65rem',
-                      background: '#3B82F6', color: '#fff',
+                      background: '#00C8FF', color: '#0A0A0F',
                       border: 'none', borderRadius: 6,
                       fontWeight: 600, fontSize: '0.85rem',
                       cursor: 'pointer',
@@ -382,3 +382,4 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
     </Sheet>
   );
 }
+

@@ -16,43 +16,43 @@ const NAV_ITEMS = [
 
 const CRM_CSS = `
 body.crm-active {
-  --background: 42 25% 97%;
-  --foreground: 224 15% 12%;
-  --card: 0 0% 100%;
-  --card-foreground: 224 15% 12%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 224 15% 12%;
+  --background: 240 20% 5%;
+  --foreground: 210 40% 90%;
+  --card: 240 15% 7%;
+  --card-foreground: 210 40% 90%;
+  --popover: 240 15% 8%;
+  --popover-foreground: 210 40% 90%;
   --primary: 193 100% 50%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 30 10% 93%;
-  --secondary-foreground: 224 15% 12%;
-  --muted: 30 10% 93%;
-  --muted-foreground: 220 9% 46%;
-  --accent: 30 10% 93%;
-  --accent-foreground: 224 15% 12%;
+  --primary-foreground: 240 20% 5%;
+  --secondary: 240 15% 10%;
+  --secondary-foreground: 210 40% 90%;
+  --muted: 240 15% 10%;
+  --muted-foreground: 215 20% 55%;
+  --accent: 240 15% 10%;
+  --accent-foreground: 210 40% 90%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 30 12% 88%;
-  --input: 30 12% 88%;
+  --border: 240 15% 15%;
+  --input: 240 15% 15%;
   --ring: 193 100% 50%;
   --radius: 0.5rem;
-  background-color: hsl(42, 25%, 97%) !important;
-  color: hsl(224, 15%, 12%) !important;
+  background-color: #0A0A0F !important;
+  color: #dde8ed !important;
 }
 
 .crm-app {
   min-height: 100vh;
   display: flex;
-  background-color: hsl(42, 25%, 97%);
-  color: hsl(224, 15%, 12%);
+  background-color: #0A0A0F;
+  color: #dde8ed;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .crm-sidebar {
   width: 240px;
   min-height: 100vh;
-  background: #ffffff;
-  border-right: 1px solid #e8e4dc;
+  background: #0A0A0F;
+  border-right: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0;
@@ -64,11 +64,11 @@ body.crm-active {
 
 .crm-logo {
   padding: 0 1.5rem 1.5rem;
-  border-bottom: 1px solid #f0ece4;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   margin-bottom: 0.75rem;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1c1a17;
+  color: #f0f6fc;
   letter-spacing: -0.02em;
 }
 .crm-logo span { color: #00C8FF; }
@@ -79,19 +79,19 @@ body.crm-active {
   gap: 0.75rem;
   padding: 0.6rem 1.5rem;
   font-size: 0.875rem;
-  color: #706d66;
+  color: rgba(240,246,252,0.45);
   text-decoration: none;
   border-left: 3px solid transparent;
   transition: all 0.15s;
   margin: 1px 0;
 }
-.crm-nav-item:hover { color: #1c1a17; background: #f8f7f4; }
-.crm-nav-item.active { color: #1c1a17; border-left-color: #00C8FF; background: rgba(0,200,255,0.07); font-weight: 500; }
+.crm-nav-item:hover { color: rgba(240,246,252,0.85); background: rgba(255,255,255,0.03); }
+.crm-nav-item.active { color: #00C8FF; border-left-color: #00C8FF; background: rgba(0,200,255,0.07); font-weight: 500; }
 
 .crm-sidebar-bottom {
   margin-top: auto;
   padding: 1.25rem 1.5rem;
-  border-top: 1px solid #f0ece4;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .crm-main {
@@ -107,8 +107,8 @@ body.crm-active {
   top: 0; left: 0; right: 0;
   z-index: 60;
   height: 56px;
-  background: #ffffff;
-  border-bottom: 1px solid #e8e4dc;
+  background: #0A0A0F;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   align-items: center;
   justify-content: space-between;
   padding: 0 1.25rem;
@@ -118,7 +118,7 @@ body.crm-active {
   background: none; border: none; cursor: pointer;
   display: flex; flex-direction: column; gap: 5px; padding: 4px;
 }
-.crm-hamburger span { display: block; width: 22px; height: 2px; background: #706d66; transition: all 0.2s; border-radius: 1px; }
+.crm-hamburger span { display: block; width: 22px; height: 2px; background: rgba(240,246,252,0.6); transition: all 0.2s; border-radius: 1px; }
 .crm-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .crm-hamburger.open span:nth-child(2) { opacity: 0; }
 .crm-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
@@ -126,8 +126,8 @@ body.crm-active {
 .crm-overlay {
   display: none;
   position: fixed; inset: 0; z-index: 55;
-  background: rgba(28,26,23,0.35);
-  backdrop-filter: blur(2px);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
   opacity: 0; transition: opacity 0.3s; pointer-events: none;
 }
 .crm-overlay.open { opacity: 1; pointer-events: all; }
@@ -155,19 +155,19 @@ function ProfileSetup({ userId, onDone }: { userId: string; onDone: () => void }
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.95)',
+      position: 'fixed', inset: 0, background: 'rgba(10,10,15,0.92)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 200, backdropFilter: 'blur(4px)',
+      zIndex: 200, backdropFilter: 'blur(8px)',
     }}>
       <div style={{
-        background: '#fff', border: '1px solid #e8e4dc', borderRadius: 12,
+        background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
         padding: '2.5rem', maxWidth: 400, width: '100%', margin: '0 1rem',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
-        <div style={{ marginBottom: '0.5rem', fontSize: '1.25rem', fontWeight: 700, color: '#1c1a17' }}>
+        <div style={{ marginBottom: '0.5rem', fontSize: '1.25rem', fontWeight: 700, color: '#f0f6fc' }}>
           Korda<span style={{ color: '#00C8FF' }}>CRM</span>
         </div>
-        <p style={{ fontSize: '0.875rem', color: '#706d66', marginBottom: '1.5rem' }}>
+        <p style={{ fontSize: '0.875rem', color: 'rgba(240,246,252,0.45)', marginBottom: '1.5rem' }}>
           Kies je naam om te beginnen.
         </p>
         <form onSubmit={handleSubmit}>
@@ -179,10 +179,10 @@ function ProfileSetup({ userId, onDone }: { userId: string; onDone: () => void }
                 onClick={() => setName(n)}
                 style={{
                   padding: '0.7rem 1rem',
-                  border: `2px solid ${name === n ? getRepColor(n) : '#e8e4dc'}`,
+                  border: `2px solid ${name === n ? getRepColor(n) : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: 8,
-                  background: name === n ? `${getRepColor(n)}10` : '#fff',
-                  color: name === n ? getRepColor(n) : '#1c1a17',
+                  background: name === n ? `${getRepColor(n)}18` : '#131920',
+                  color: name === n ? getRepColor(n) : '#dde8ed',
                   cursor: 'pointer', textAlign: 'left',
                   fontWeight: name === n ? 600 : 400,
                   fontSize: '0.9rem',
@@ -203,8 +203,8 @@ function ProfileSetup({ userId, onDone }: { userId: string; onDone: () => void }
             disabled={!name || upsert.isPending}
             style={{
               width: '100%', padding: '0.75rem',
-              background: name ? '#00C8FF' : '#E5E7EB',
-              color: name ? '#fff' : '#9CA3AF',
+              background: name ? '#00C8FF' : 'rgba(255,255,255,0.08)',
+              color: name ? '#0A0A0F' : 'rgba(240,246,252,0.3)',
               border: 'none', borderRadius: 8,
               fontWeight: 600, fontSize: '0.9rem',
               cursor: name ? 'pointer' : 'not-allowed',
@@ -279,7 +279,7 @@ export default function CRMLayout() {
 
       {/* Mobile topbar */}
       <div className="crm-topbar">
-        <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1c1a17', letterSpacing: '-0.02em' }}>
+        <span style={{ fontWeight: 700, fontSize: '1rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>
           Korda<span style={{ color: '#00C8FF' }}>CRM</span>
         </span>
         <button
@@ -305,9 +305,9 @@ export default function CRMLayout() {
               style={{
                 fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.06em',
                 padding: '0.25rem 0.65rem', borderRadius: 9999,
-                border: `1px solid ${adminMode ? '#FCA5A5' : '#E5E7EB'}`,
-                background: adminMode ? '#FEF2F2' : '#F9FAFB',
-                color: adminMode ? '#DC2626' : '#9CA3AF',
+                border: `1px solid ${adminMode ? '#FCA5A5' : 'rgba(255,255,255,0.1)'}`,
+                background: adminMode ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.04)',
+                color: adminMode ? '#f87171' : 'rgba(240,246,252,0.35)',
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '0.35rem',
                 transition: 'all 0.15s',
@@ -336,18 +336,18 @@ export default function CRMLayout() {
           {repName && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: repColor, flexShrink: 0 }} />
-              <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#1c1a17' }}>{repName}</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#f0f6fc' }}>{repName}</span>
             </div>
           )}
           <Link
             to="/"
             style={{
-              display: 'block', fontSize: '0.75rem', color: '#B0A99A',
+              display: 'block', fontSize: '0.75rem', color: 'rgba(240,246,252,0.3)',
               textDecoration: 'none', marginBottom: '0.5rem',
               transition: 'color 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#706d66')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#B0A99A')}
+            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.7)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.3)')}
           >
             â† Terug naar Korda
           </Link>
@@ -355,12 +355,12 @@ export default function CRMLayout() {
             onClick={handleSignOut}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.45rem',
-              fontSize: '0.78rem', color: '#B0A99A',
+              fontSize: '0.78rem', color: 'rgba(240,246,252,0.3)',
               background: 'none', border: 'none', cursor: 'pointer',
               padding: 0, transition: 'color 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#DC2626')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#B0A99A')}
+            onMouseEnter={e => (e.currentTarget.style.color = '#f87171')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.3)')}
           >
             <LogOut size={13} />
             Uitloggen

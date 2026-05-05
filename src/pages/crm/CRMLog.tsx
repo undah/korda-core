@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Loader2, CheckCircle2, FileText } from 'lucide-react';
@@ -17,18 +17,18 @@ const LABEL: React.CSSProperties = {
   fontWeight: 600,
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#9CA3AF',
+  color: 'rgba(240,246,252,0.45)',
   marginBottom: '0.35rem',
 };
 
 const INPUT: React.CSSProperties = {
   width: '100%',
   padding: '0.6rem 0.85rem',
-  border: '1px solid #e8e4dc',
+  border: '1px solid rgba(255,255,255,0.08)',
   borderRadius: 6,
   fontSize: '0.875rem',
-  color: '#1c1a17',
-  background: '#fff',
+  color: '#f0f6fc',
+  background: '#0D0D14',
   outline: 'none',
   fontFamily: 'inherit',
   transition: 'border-color 0.15s',
@@ -93,23 +93,23 @@ export default function CRMLog() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B0A99A', marginBottom: '0.3rem' }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(240,246,252,0.35)', marginBottom: '0.3rem' }}>
           Nieuw gesprek
         </div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1c1a17', letterSpacing: '-0.02em', margin: 0 }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.02em', margin: 0 }}>
           Log een Call
         </h1>
         {repName && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem' }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: repColor }} />
-            <span style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>Gelogd als {repName}</span>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(240,246,252,0.45)' }}>Gelogd als {repName}</span>
           </div>
         )}
       </div>
 
       <form onSubmit={handleSubmit} style={{ maxWidth: 640 }}>
         <div style={{
-          background: '#fff', border: '1px solid #e8e4dc', borderRadius: 10,
+          background: '#0D0D14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
           padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem',
         }}>
           {/* Row 1: naam + telefoon */}
@@ -123,7 +123,7 @@ export default function CRMLog() {
                 onChange={e => set('lead_naam', e.target.value)}
                 placeholder="Bedrijfsnaam of contactpersoon"
                 onFocus={e => (e.target.style.borderColor = repColor)}
-                onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
               />
             </div>
             <div>
@@ -136,7 +136,7 @@ export default function CRMLog() {
                 onChange={e => set('tel_nummer', e.target.value)}
                 placeholder="+31 6 12345678"
                 onFocus={e => (e.target.style.borderColor = repColor)}
-                onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
               />
             </div>
           </div>
@@ -152,7 +152,7 @@ export default function CRMLog() {
                 value={form.datum}
                 onChange={e => set('datum', e.target.value)}
                 onFocus={e => (e.target.style.borderColor = repColor)}
-                onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
               />
             </div>
             <div>
@@ -164,7 +164,7 @@ export default function CRMLog() {
                 value={form.tijdstip}
                 onChange={e => set('tijdstip', e.target.value)}
                 onFocus={e => (e.target.style.borderColor = repColor)}
-                onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
               />
             </div>
           </div>
@@ -185,9 +185,9 @@ export default function CRMLog() {
                       display: 'flex', alignItems: 'center', gap: '0.4rem',
                       padding: '0.4rem 0.85rem',
                       borderRadius: 9999,
-                      border: `1.5px solid ${active ? ss.color : '#e8e4dc'}`,
-                      background: active ? ss.bg : '#fff',
-                      color: active ? ss.color : '#706d66',
+                      border: `1.5px solid ${active ? ss.color : 'rgba(255,255,255,0.08)'}`,
+                      background: active ? ss.bg : 'rgba(255,255,255,0.04)',
+                      color: active ? ss.color : 'rgba(240,246,252,0.45)',
                       fontSize: '0.8rem', fontWeight: active ? 600 : 400,
                       cursor: 'pointer',
                       transition: 'all 0.15s',
@@ -213,9 +213,9 @@ export default function CRMLog() {
                     display: 'flex', alignItems: 'center', gap: '0.4rem',
                     padding: '0.4rem 0.85rem',
                     borderRadius: 9999,
-                    border: `1.5px solid ${!form.script_id ? '#3B82F6' : '#e8e4dc'}`,
-                    background: !form.script_id ? '#EFF6FF' : '#fff',
-                    color: !form.script_id ? '#3B82F6' : '#706d66',
+                    border: `1.5px solid ${!form.script_id ? '#00C8FF' : 'rgba(255,255,255,0.08)'}`,
+                    background: !form.script_id ? 'rgba(0,200,255,0.08)' : 'rgba(255,255,255,0.04)',
+                    color: !form.script_id ? '#00C8FF' : 'rgba(240,246,252,0.45)',
                     fontSize: '0.8rem', fontWeight: !form.script_id ? 600 : 400,
                     cursor: 'pointer', transition: 'all 0.15s',
                   }}
@@ -233,9 +233,9 @@ export default function CRMLog() {
                         display: 'flex', alignItems: 'center', gap: '0.4rem',
                         padding: '0.4rem 0.85rem',
                         borderRadius: 9999,
-                        border: `1.5px solid ${active ? repColor : '#e8e4dc'}`,
-                        background: active ? `${repColor}12` : '#fff',
-                        color: active ? repColor : '#706d66',
+                        border: `1.5px solid ${active ? repColor : 'rgba(255,255,255,0.08)'}`,
+                        background: active ? `${repColor}18` : 'rgba(255,255,255,0.04)',
+                        color: active ? repColor : 'rgba(240,246,252,0.45)',
                         fontSize: '0.8rem', fontWeight: active ? 600 : 400,
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}
@@ -258,7 +258,7 @@ export default function CRMLog() {
               onChange={e => set('resultaat', e.target.value)}
               placeholder="Aantekeningen over het gesprek..."
               onFocus={e => (e.target.style.borderColor = repColor)}
-              onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
             />
           </div>
 
@@ -275,7 +275,7 @@ export default function CRMLog() {
                 onChange={e => set('deal_waarde', e.target.value)}
                 placeholder="0.00"
                 onFocus={e => (e.target.style.borderColor = repColor)}
-                onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
               />
             </div>
             <div>
@@ -286,7 +286,7 @@ export default function CRMLog() {
                 value={form.follow_up_datum}
                 onChange={e => set('follow_up_datum', e.target.value)}
                 onFocus={e => (e.target.style.borderColor = repColor)}
-                onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
               />
             </div>
           </div>
@@ -299,7 +299,7 @@ export default function CRMLog() {
               onChange={e => set('website_type', e.target.value)}
               placeholder="bijv. webshop, portfolio, landing page, visitekaartje..."
               onFocus={e => (e.target.style.borderColor = repColor)}
-              onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
             />
           </div>
 
@@ -310,7 +310,7 @@ export default function CRMLog() {
               value={form.script_id}
               onChange={e => set('script_id', e.target.value)}
               onFocus={e => (e.target.style.borderColor = repColor)}
-              onBlur={e => (e.target.style.borderColor = '#e8e4dc')}
+              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
             >
               <option value="">— Geen script —</option>
               {scripts.map(s => (
@@ -355,3 +355,4 @@ export default function CRMLog() {
     </div>
   );
 }
+
