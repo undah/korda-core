@@ -8,6 +8,7 @@ import {
   saveScreenshotConfig,
   fetchScreenshotLogs,
   checkServiceHealth,
+  fetchScheduleStatus,
   triggerRunNow,
 } from '../lib/screenshotData';
 
@@ -28,6 +29,7 @@ export default function ScreenshotScheduler() {
   const [draft, setDraft]               = useState<Partial<ScreenshotConfig>>({});
   const [logs, setLogs]                 = useState<ScreenshotLog[]>([]);
   const [serviceOnline, setOnline]      = useState<boolean | null>(null);
+  const [nextRun, setNextRun]           = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
   const [running, setRunning]           = useState(false);
   const [loading, setLoading]           = useState(true);
@@ -58,7 +60,10 @@ export default function ScreenshotScheduler() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    const check = async () => setOnline(await checkServiceHealth());
+    const check = async () => {
+      setOnline(await checkServiceHealth());
+      fetchScheduleStatus().then(s => setNextRun(s.next_run)).catch(() => {});
+    };
     check();
     const id = setInterval(check, 30_000);
     return () => clearInterval(id);
@@ -90,6 +95,7 @@ export default function ScreenshotScheduler() {
     try {
       await persist({});
       toast.success('Settings saved.');
+      fetchScheduleStatus().then(s => setNextRun(s.next_run)).catch(() => {});
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to save.');
     }
@@ -134,7 +140,7 @@ export default function ScreenshotScheduler() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.03em', margin: 0 }}>Screenshot Scheduler</h1>
           <p style={{ fontSize: '0.825rem', color: 'rgba(240,246,252,0.4)', marginTop: '0.35rem' }}>Automate TradingView chart captures for the AI dataset.</p>
         </div>
-        <ServiceStatus online={serviceOnline} />
+        <ServiceStatus online={serviceOnline} nextRun={nextRun} />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: 680 }}>
@@ -383,13 +389,21 @@ export default function ScreenshotScheduler() {
   );
 }
 
-function ServiceStatus({ online }: { online: boolean | null }) {
-  const color  = online === null ? 'rgba(240,246,252,0.25)' : online ? '#10b981' : '#f87171';
-  const label  = online === null ? 'Checking...' : online ? 'Service Online' : 'Service Offline';
+function ServiceStatus({ online, nextRun }: { online: boolean | null; nextRun: string | null }) {
+  const color = online === null ? 'rgba(240,246,252,0.25)' : online ? '#10b981' : '#f87171';
+  const label = online === null ? 'Checking...' : online ? 'Online' : 'Offline';
+  const nextLabel = nextRun
+    ? `Next: ${new Date(nextRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} UTC`
+    : null;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.85rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, fontSize: '0.78rem', color: 'rgba(240,246,252,0.6)', whiteSpace: 'nowrap' }}>
-      <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, display: 'inline-block', boxShadow: online ? `0 0 6px ${color}` : 'none' }} />
-      {label}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.85rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, fontSize: '0.78rem', color: 'rgba(240,246,252,0.6)', whiteSpace: 'nowrap' }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, display: 'inline-block', boxShadow: online ? `0 0 6px ${color}` : 'none' }} />
+        Railway {label}
+      </div>
+      {nextLabel && (
+        <span style={{ fontSize: '0.68rem', color: 'rgba(240,246,252,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>{nextLabel}</span>
+      )}
     </div>
   );
 }
