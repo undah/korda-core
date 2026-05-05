@@ -31,3 +31,16 @@ export interface ConceptEntry {
   created_at: string;
 }
 export type ConceptEntryInsert = Omit<ConceptEntry, 'id' | 'created_at'>;
+
+export type RuleCategory = 'entry' | 'exit' | 'risk' | 'psychology' | 'setup' | 'other';
+
+export interface StrategyRule {
+  id: string;
+  title: string;
+  category: RuleCategory;
+  description: string;
+  example_url: string | null;
+  active: boolean;
+  created_at: string;
+}
+export type StrategyRuleInsert = Omit<StrategyRule, 'id' | 'created_at'>;

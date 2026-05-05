@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { PlusCircle, Clock, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle, BookOpen, BarChart2 } from 'lucide-react';
+import { PlusCircle, Clock, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle, BookOpen, BarChart2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: '/training/history',              label: 'History',     icon: Clock },
   { path: '/training/mistakes',             label: 'Mistakes',       icon: AlertTriangle },
   { path: '/training/concepts',             label: 'Concept Journal', icon: BookOpen },
+  { path: '/training/rules',               label: 'Rules',           icon: ShieldCheck },
   { path: '/training/screenshot-scheduler', label: 'Screenshots',     icon: Camera },
 ];
 

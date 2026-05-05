@@ -24,6 +24,7 @@ import TrainingScheduler from "./pages/training/TrainingScheduler";
 import TrainingMistakes from "./pages/training/TrainingMistakes";
 import TrainingConcepts from "./pages/training/TrainingConcepts";
 import TrainingPerformance from "./pages/training/TrainingPerformance";
+import TrainingRules from "./pages/training/TrainingRules";
 
 import KordaTrading from "./pages/KordaTrading";
 import Index from "./pages/Index";
@@ -123,6 +124,7 @@ function AnimatedRoutes() {
             <Route path="/training/screenshot-scheduler" element={<TrainingScheduler />} />
             <Route path="/training/concepts"             element={<TrainingConcepts />} />
             <Route path="/training/performance"          element={<TrainingPerformance />} />
+            <Route path="/training/rules"               element={<TrainingRules />} />
           </Route>
 
           {/* KordaCRM — public landing */}

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import type { TrainingEntry, TrainingEntryInsert, Mistake, MistakeInsert, ConceptEntry, ConceptEntryInsert } from '../types';
+import type { TrainingEntry, TrainingEntryInsert, Mistake, MistakeInsert, ConceptEntry, ConceptEntryInsert, StrategyRule, StrategyRuleInsert } from '../types';
 
 export async function fetchTrainingEntries(): Promise<TrainingEntry[]> {
   const { data, error } = await supabase
@@ -162,6 +162,58 @@ export async function bulkInsertConceptEntries(entries: ConceptEntryInsert[]): P
     .select();
   if (error) throw error;
   return data ?? [];
+}
+
+// ── Strategy Rules ─────────────────────────────────────────────────────────────
+
+export async function fetchRules(): Promise<StrategyRule[]> {
+  const { data, error } = await supabase
+    .from('strategy_rules')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function insertRule(entry: StrategyRuleInsert): Promise<StrategyRule> {
+  const { data, error } = await supabase
+    .from('strategy_rules')
+    .insert(entry)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateRule(id: string, updates: Partial<StrategyRuleInsert>): Promise<StrategyRule> {
+  const { data, error } = await supabase
+    .from('strategy_rules')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteRule(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('strategy_rules')
+    .delete()
+    .eq('id', id)
+    .select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Delete blocked — check table permissions.');
+}
+
+export async function bulkDeleteRules(ids: string[]): Promise<void> {
+  const { data, error } = await supabase
+    .from('strategy_rules')
+    .delete()
+    .in('id', ids)
+    .select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Bulk delete blocked — check table permissions.');
 }
 
 export async function bulkInsertTrainingEntries(
