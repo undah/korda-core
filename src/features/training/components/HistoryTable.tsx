@@ -296,8 +296,8 @@ function CustomCheckbox({ checked, indeterminate, onChange }: { checked: boolean
       }}
     >
       {checked && (
-        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-          <path d="M1 3.5L3.2 5.8L8 1" stroke={ACCENT} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width={9} height={7} viewBox={'0 0 9 7'} fill={'none'}>
+          <path d={'M1 3.5L3.2 5.8L8 1'} stroke={ACCENT} strokeWidth={1.6} strokeLinecap={'round'} strokeLinejoin={'round'} />
         </svg>
       )}
       {!checked && indeterminate && (

@@ -16,7 +16,10 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\giund\\\\OneDrive\\\\Desktop\" -Recurse -Filter \"tv_session.json\" -ErrorAction SilentlyContinue)",
       "Bash(Select-Object FullName)",
       "Bash(git fetch *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('build:', p.scripts.build\\); console.log\\('vite:', p.devDependencies?.vite || p.dependencies?.vite\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('@vitejs/plugin-react-swc:', p.devDependencies?.['@vitejs/plugin-react-swc']\\)\")",
+      "Bash(npm run *)"
     ]
   }
 }
