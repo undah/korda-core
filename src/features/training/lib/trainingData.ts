@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import type { TrainingEntry, TrainingEntryInsert, Mistake, MistakeInsert, ConceptEntry, ConceptEntryInsert, StrategyRule, StrategyRuleInsert } from '../types';
+import type { TrainingEntry, TrainingEntryInsert, Mistake, MistakeInsert, ConceptEntry, ConceptEntryInsert, ConceptExample, ConceptExampleInsert, StrategyRule, StrategyRuleInsert } from '../types';
 
 export async function fetchTrainingEntries(): Promise<TrainingEntry[]> {
   const { data, error } = await supabase
@@ -162,6 +162,36 @@ export async function bulkInsertConceptEntries(entries: ConceptEntryInsert[]): P
     .select();
   if (error) throw error;
   return data ?? [];
+}
+
+// ── Concept Examples ───────────────────────────────────────────────────────────
+
+export async function fetchConceptExamples(conceptId: string): Promise<ConceptExample[]> {
+  const { data, error } = await supabase
+    .from('concept_examples')
+    .select('*')
+    .eq('concept_id', conceptId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function insertConceptExample(entry: ConceptExampleInsert): Promise<ConceptExample> {
+  const { data, error } = await supabase
+    .from('concept_examples')
+    .insert(entry)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteConceptExample(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('concept_examples')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
 }
 
 // ── Strategy Rules ─────────────────────────────────────────────────────────────
