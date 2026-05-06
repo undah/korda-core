@@ -41,6 +41,48 @@ interface HistoryRun {
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
+function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h);
+  }, [onCancel]);
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div style={{ background: '#0F1419', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 16, width: '100%', maxWidth: 420, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 0 60px rgba(245,158,11,0.08)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.5rem', lineHeight: 1 }}>💸</div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f0f6fc', letterSpacing: '-0.02em' }}>
+            This shit's expensive as hell
+          </div>
+          <div style={{ fontSize: '0.88rem', color: 'rgba(240,246,252,0.5)', lineHeight: 1.6 }}>
+            You're about to trigger a full fine-tune pipeline — Supabase pull, JSONL generation, OpenAI upload, and a training job.
+            <br />
+            <span style={{ color: '#fbbf24', fontWeight: 600 }}>You sure, nigga?</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            onClick={onCancel}
+            style={{ flex: 1, padding: '0.7rem', background: 'transparent', color: 'rgba(240,246,252,0.45)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Nah I'm good
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{ flex: 1, padding: '0.7rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#0A0A0F', border: 'none', borderRadius: 10, fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+          >
+            <Zap size={14} /> Yeah, run it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -90,6 +132,7 @@ export default function FinetunePage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [triggering, setTriggering]   = useState(false);
   const [stepLog, setStepLog]         = useState<string[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevStepRef = useRef('');
@@ -193,7 +236,7 @@ export default function FinetunePage() {
           </p>
         </div>
         <button
-          onClick={handleRun}
+          onClick={() => setShowConfirm(true)}
           disabled={isRunning || triggering}
           style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
@@ -317,6 +360,13 @@ export default function FinetunePage() {
             </div>
           )}
         </div>
+      )}
+
+      {showConfirm && (
+        <ConfirmModal
+          onConfirm={() => { setShowConfirm(false); handleRun(); }}
+          onCancel={() => setShowConfirm(false)}
+        />
       )}
 
       {/* ── History ── */}
