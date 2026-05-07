@@ -179,7 +179,7 @@ export default function Charting() {
           </div>
 
           {/* Height is controlled here */}
-          <div className="relative w-full" style={{ height: 920 }}>
+          <div className="relative w-full" style={{ height: 'clamp(400px, 70vh, 920px)' }}>
             <div id={containerId} ref={containerRef} className="absolute inset-0 w-full h-full" />
           </div>
 
