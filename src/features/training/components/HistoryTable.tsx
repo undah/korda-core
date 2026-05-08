@@ -28,6 +28,40 @@ const VALID_GREEN  = '#10b981';
 const INVALID_RED  = '#ef4444';
 const NOTE_TRUNCATE = 80;
 
+function tvImageUrl(url: string): string | null {
+  const match = url.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+  if (!match) return null;
+  const id = match[1];
+  return `https://s3.tradingview.com/snapshots/${id[0].toLowerCase()}/${id}.png`;
+}
+
+function TvPreview({ url, x, y }: { url: string; x: number; y: number }) {
+  const [failed, setFailed] = useState(false);
+  const imgUrl = tvImageUrl(url);
+  if (!imgUrl || failed) return null;
+
+  const spaceRight = window.innerWidth - x;
+  const left = spaceRight > 360 ? x + 18 : x - 338;
+  const top  = Math.min(y - 10, window.innerHeight - 210);
+
+  return (
+    <div style={{
+      position: 'fixed', left, top, zIndex: 9999, width: 320,
+      background: '#0d1117', border: '1px solid rgba(0,200,255,0.25)',
+      borderRadius: 10, overflow: 'hidden',
+      boxShadow: '0 12px 40px rgba(0,0,0,0.75)',
+      pointerEvents: 'none',
+    }}>
+      <img
+        src={imgUrl}
+        alt=""
+        onError={() => setFailed(true)}
+        style={{ width: '100%', display: 'block' }}
+      />
+    </div>
+  );
+}
+
 // â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EditModal({
@@ -406,6 +440,8 @@ export default function HistoryTable() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [pendingBulk, setPendingBulk] = useState<PendingBulkAction | null>(null);
+  const [hoveredUrl, setHoveredUrl]   = useState<string | null>(null);
+  const [hoverPos,   setHoverPos]     = useState({ x: 0, y: 0 });
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -499,6 +535,7 @@ export default function HistoryTable() {
 
   return (
     <div>
+      {hoveredUrl && <TvPreview url={hoveredUrl} x={hoverPos.x} y={hoverPos.y} />}
       {showImporter && <CSVImporter onClose={() => setShowImporter(false)} onImported={handleImported} />}
       {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={handleSaved} submitters={submitters} />}
       {pendingBulk && (
@@ -674,7 +711,12 @@ export default function HistoryTable() {
                       </td>
 
                       {/* TradingView URL */}
-                      <td style={tdStyle}>
+                      <td
+                        style={tdStyle}
+                        onMouseEnter={e => { setHoveredUrl(entry.tradingview_url); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                        onMouseMove={e => setHoverPos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredUrl(null)}
+                      >
                         <a
                           href={entry.tradingview_url} target="_blank" rel="noreferrer"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: ACCENT, fontSize: '0.75rem', fontFamily: "'JetBrains Mono', monospace", textDecoration: 'none', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
