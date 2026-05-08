@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ComposedChart, Line, Area, XAxis, YAxis,
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
+import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
+import type { TrackerPhoto } from "@/features/tracker/types";
 
 const isMobile = () => window.innerWidth <= 768;
 
@@ -18,20 +20,52 @@ const C = {
   dim:    "rgba(221,232,237,0.15)",
 };
 
-// ── Custom tooltip ────────────────────────────────────────────────────────────
+// ── Tooltip factory ────────────────────────────────────────────────────────────
 
-function WeightTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null;
-  const w = payload.find((p: any) => p.dataKey === "weight");
-  const a = payload.find((p: any) => p.dataKey === "avg7");
-  const date = payload[0]?.payload?.date;
-  return (
-    <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.65rem 0.9rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
-      <p style={{ color: C.muted, marginBottom: "0.35rem" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
-      {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "0.85rem" }}>{w.value} kg</p>}
-      {a && <p style={{ color: `${C.line}99`, marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
-    </div>
-  );
+function makeTooltip(
+  photosByDate: Record<string, TrackerPhoto[]>,
+  startWeight: number | null
+) {
+  return function WeightTooltip({ active, payload }: any) {
+    if (!active || !payload?.length) return null;
+    const w = payload.find((p: any) => p.dataKey === "weight");
+    const a = payload.find((p: any) => p.dataKey === "avg7");
+    const date = payload[0]?.payload?.date;
+    const dayPhotos = date ? (photosByDate[date] ?? []) : [];
+    const pctLoss = startWeight && w?.value != null
+      ? +((startWeight - w.value) / startWeight * 100).toFixed(1)
+      : null;
+
+    return (
+      <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 240, pointerEvents: "none" }}>
+        <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "0.68rem" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
+        {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "0.9rem" }}>{w.value} kg</p>}
+        {pctLoss !== null && (
+          <p style={{ color: pctLoss > 0 ? C.green : C.red, fontSize: "0.7rem", marginTop: "0.15rem" }}>
+            {pctLoss > 0 ? "−" : "+"}{Math.abs(pctLoss)}% from start
+          </p>
+        )}
+        {a && <p style={{ color: "rgba(90,180,212,0.55)", marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
+        {dayPhotos.length > 0 && (
+          <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid rgba(0,200,255,0.1)" }}>
+            <p style={{ fontSize: "0.52rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(221,232,237,0.22)", marginBottom: "0.45rem" }}>
+              photos · click dot to open
+            </p>
+            <div style={{ display: "flex", gap: "0.3rem" }}>
+              {dayPhotos.map(photo => (
+                <div key={photo.id} style={{ position: "relative", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
+                  <img src={photo.url} alt={photo.angle} style={{ width: 54, height: 72, objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "0.46rem", textTransform: "capitalize", color: "rgba(221,232,237,0.7)" }}>
+                    {photo.angle}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -40,9 +74,22 @@ export default function TrackerAnalysis() {
   const { data: checkins = [] } = useTrackerCheckins(365);
   const { data: goal }          = useTrackerGoal();
   const stats                   = useProgressStats();
+  const { data: photos = [] }   = useTrackerPhotos();
   const [mobile]                = useState(isMobile);
+  const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
 
   const sorted = [...checkins].sort((a, b) => a.log_date.localeCompare(b.log_date));
+
+  const photosByDate = useMemo(() =>
+    photos.reduce<Record<string, TrackerPhoto[]>>((acc, p) => {
+      acc[p.log_date] = acc[p.log_date] ?? [];
+      acc[p.log_date].push(p);
+      return acc;
+    }, {}),
+    [photos]
+  );
+
+  const startWeight = sorted[0]?.weight ?? null;
 
   const weeklyData = buildWeekly(sorted);
   const withWaist  = sorted.filter(c => c.waist);
@@ -53,6 +100,11 @@ export default function TrackerAnalysis() {
     ? Math.round((new Date(lastDate).getTime() - new Date(firstDate).getTime()) / 86400000) + 1
     : 0;
   const adherence = totalDays > 0 ? Math.round((sorted.length / totalDays) * 100) : 0;
+
+  const TooltipContent = useMemo(
+    () => makeTooltip(photosByDate, startWeight),
+    [photosByDate, startWeight]
+  );
 
   // Build chart data with 7d rolling avg
   const chartData = sorted.map((c, i) => {
@@ -82,6 +134,33 @@ export default function TrackerAnalysis() {
 
   return (
     <div>
+      {/* Lightbox */}
+      {lightboxPhotos && (
+        <div
+          onClick={() => setLightboxPhotos(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(7,9,11,0.96)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "1.5rem" }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto" }}>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(90,180,212,0.5)", marginBottom: "1rem", textAlign: "center" }}>
+              {lightboxPhotos[0]?.log_date}{lightboxPhotos[0]?.weight_at ? ` · ${lightboxPhotos[0].weight_at} kg` : ""}
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
+              {lightboxPhotos.map(photo => (
+                <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
+                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", textTransform: "capitalize", color: "rgba(221,232,237,0.35)", textAlign: "center", marginTop: "0.4rem" }}>
+                    {photo.angle}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid rgba(221,232,237,0.15)", color: "rgba(221,232,237,0.35)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
+              close ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="kt-page-header">
         <p className="kt-page-eyebrow">Analysis</p>
         <h1 className="kt-page-title">In-depth <em>analysis</em></h1>
@@ -131,46 +210,80 @@ export default function TrackerAnalysis() {
           Raw data + 7-day rolling average{goalVal ? `  ·  Goal: ${goalVal} kg` : ""}
         </p>
 
-        <ResponsiveContainer width="100%" height={260}>
-          <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
-            <defs>
-              <linearGradient id="analysisGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#5ab4d4" stopOpacity={0.16} />
-                <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="date"
-              tickFormatter={d => { try { return format(parseISO(d), "MMM d"); } catch { return ""; } }}
-              tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
-              axisLine={false} tickLine={false} interval="preserveStartEnd"
-            />
-            <YAxis
-              domain={[yMin, yMax]}
-              tickFormatter={v => `${v}`}
-              tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
-              axisLine={false} tickLine={false} tickCount={6} width={32}
-            />
-            <Tooltip content={<WeightTooltip />} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
-
-            {goalVal && (
-              <ReferenceLine
-                y={goalVal}
-                stroke="rgba(90,212,160,0.3)"
-                strokeDasharray="6 4"
-                strokeWidth={1}
-                label={{ value: `goal: ${goalVal} kg`, position: "insideTopRight", fill: "rgba(90,212,160,0.45)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}
+        <div className="kt-chart-wrap" style={{ height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 8, right: 16, bottom: 0, left: -8 }}
+              onClick={(data: any) => {
+                if (!data?.activePayload?.[0]) return;
+                const date = data.activePayload[0].payload?.date;
+                if (!date) return;
+                const dayPhotos = photosByDate[date] ?? [];
+                if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos);
+              }}
+            >
+              <defs>
+                <linearGradient id="analysisGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#5ab4d4" stopOpacity={0.16} />
+                  <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="date"
+                tickFormatter={d => { try { return format(parseISO(d), "MMM d"); } catch { return ""; } }}
+                tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
+                axisLine={false} tickLine={false} interval="preserveStartEnd"
               />
-            )}
+              <YAxis
+                domain={[yMin, yMax]}
+                tickFormatter={v => `${v}`}
+                tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
+                axisLine={false} tickLine={false} tickCount={6} width={32}
+              />
+              <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
 
-            <Area type="monotone" dataKey="avg7" fill="url(#analysisGrad)" stroke="none" dot={false} activeDot={false} />
-            <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.28)" strokeWidth={1} strokeDasharray="3 4"
-              dot={{ r: 2, fill: "rgba(90,180,212,0.45)", strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
-            />
-            <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
-          </ComposedChart>
-        </ResponsiveContainer>
+              {goalVal && (
+                <ReferenceLine
+                  y={goalVal}
+                  stroke="rgba(90,212,160,0.3)"
+                  strokeDasharray="6 4"
+                  strokeWidth={1}
+                  label={{ value: `goal: ${goalVal} kg`, position: "insideTopRight", fill: "rgba(90,212,160,0.45)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}
+                />
+              )}
+
+              <Area type="monotone" dataKey="avg7" fill="url(#analysisGrad)" stroke="none" dot={false} activeDot={false} />
+              <Line
+                type="monotone"
+                dataKey="weight"
+                stroke="rgba(90,180,212,0.28)"
+                strokeWidth={1}
+                strokeDasharray="3 4"
+                dot={(props: any) => {
+                  const { cx, cy, payload } = props;
+                  if (cx == null || cy == null) return <g key={`dot-${payload.date}`} />;
+                  const hasPhotos = (photosByDate[payload.date]?.length ?? 0) > 0;
+                  return hasPhotos ? (
+                    <g key={`dot-${payload.date}`} style={{ cursor: "pointer" }}>
+                      <circle cx={cx} cy={cy} r={8} fill="rgba(0,200,255,0.1)" strokeWidth={0} />
+                      <circle cx={cx} cy={cy} r={4} fill="#00C8FF" strokeWidth={1.5} stroke="rgba(0,200,255,0.5)" />
+                    </g>
+                  ) : (
+                    <circle key={`dot-${payload.date}`} cx={cx} cy={cy} r={2} fill="rgba(90,180,212,0.45)" strokeWidth={0} />
+                  );
+                }}
+                activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
+              />
+              <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        {photos.length > 0 && (
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.12em", color: "rgba(221,232,237,0.2)", marginTop: "0.6rem" }}>
+            cyan dots = days with photos · click to open
+          </p>
+        )}
       </div>
 
       {/* Weekly breakdown */}
