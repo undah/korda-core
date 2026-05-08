@@ -42,7 +42,6 @@ import TrackerLayout from "./features/tracker/components/TrackerLayout";
 import TrackerDashboard from "./pages/tracker/TrackerDashboard";
 import TrackerProgress from "./pages/tracker/TrackerProgress";
 import TrackerJournal from "./pages/tracker/TrackerJournal";
-import TrackerCalories from "./pages/tracker/TrackerCalories";
 import TrackerPhotos from "./pages/tracker/TrackerPhotos";
 import TrackerAnalysis from "./pages/tracker/TrackerAnalysis";
 import TrackerSettings from "./pages/tracker/TrackerSettings";
@@ -98,7 +97,6 @@ function AnimatedRoutes() {
               <Route path="/tracker/dashboard" element={<TrackerDashboard />} />
               <Route path="/tracker/progress"  element={<TrackerProgress />} />
               <Route path="/tracker/journal"   element={<TrackerJournal />} />
-              <Route path="/tracker/calories"  element={<TrackerCalories />} />
               <Route path="/tracker/photos"    element={<TrackerPhotos />} />
               <Route path="/tracker/analysis"  element={<TrackerAnalysis />} />
               <Route path="/tracker/settings" element={<TrackerSettings />} />

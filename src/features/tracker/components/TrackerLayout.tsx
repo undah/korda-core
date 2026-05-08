@@ -1,13 +1,11 @@
-﻿// src/features/tracker/components/TrackerLayout.tsx
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, TrendingUp, BookOpen, Flame, Camera, BarChart2, Settings } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
   { path: "/tracker/dashboard", label: "Overview",  icon: LayoutDashboard },
   { path: "/tracker/progress",  label: "Progress",  icon: TrendingUp },
   { path: "/tracker/journal",   label: "Journal",   icon: BookOpen },
-  { path: "/tracker/calories",  label: "Calories",  icon: Flame },
   { path: "/tracker/photos",    label: "Photos",    icon: Camera },
   { path: "/tracker/analysis",  label: "Analysis",  icon: BarChart2 },
   { path: "/tracker/settings",  label: "Settings",  icon: Settings },
@@ -17,10 +15,8 @@ export default function TrackerLayout() {
   const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // close drawer on route change
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
-  // lock body scroll when drawer open
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -35,79 +31,81 @@ export default function TrackerLayout() {
     const style = document.createElement("style");
     style.id = "kt-app-global";
     style.textContent = `
-      .kt-app { display: flex; min-height: 100vh; background: #0A0A0F; color: #dde8ed; font-family: 'DM Sans', sans-serif; font-weight: 300; }
+      .kt-app { display: flex; min-height: 100vh; background: #080810; color: #dde8ed; font-family: 'DM Sans', sans-serif; font-weight: 300; }
       .kt-app *, .kt-app *::before, .kt-app *::after { box-sizing: border-box; }
 
-      /* â”€â”€ SIDEBAR (desktop) â”€â”€ */
-      .kt-sidebar { width: 220px; min-height: 100vh; background: #0A0A0F; border-right: 1px solid rgba(0,200,255,0.08); display: flex; flex-direction: column; padding: 2rem 0; position: fixed; top: 0; left: 0; z-index: 50; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
-      .kt-sidebar-logo { padding: 0 1.5rem 2rem; border-bottom: 1px solid rgba(0,200,255,0.06); margin-bottom: 1.5rem; }
-      .kt-sidebar-logo a { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: #00C8FF; text-decoration: none; }
-      .kt-sidebar-logo span { font-size: 0.5rem; vertical-align: super; color: rgba(221,232,237,0.2); }
-      .kt-nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1.5rem; font-size: 0.82rem; letter-spacing: 0.04em; color: rgba(221,232,237,0.35); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; }
-      .kt-nav-item:hover { color: rgba(221,232,237,0.7); background: rgba(0,200,255,0.04); }
-      .kt-nav-item.active { color: #00C8FF; border-left-color: #00C8FF; background: rgba(0,200,255,0.06); }
-      .kt-nav-icon { font-size: 0.9rem; width: 16px; text-align: center; }
-      .kt-sidebar-bottom { margin-top: auto; padding: 1.5rem; border-top: 1px solid rgba(0,200,255,0.06); }
-      .kt-back-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: rgba(221,232,237,0.2); text-decoration: none; transition: color 0.2s; }
-      .kt-back-link:hover { color: rgba(221,232,237,0.5); }
+      /* ── SIDEBAR ── */
+      .kt-sidebar { width: 224px; min-height: 100vh; background: #080810; border-right: 1px solid rgba(0,200,255,0.07); display: flex; flex-direction: column; padding: 1.75rem 0; position: fixed; top: 0; left: 0; z-index: 50; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
+      .kt-sidebar-logo { padding: 0 1.25rem 1.75rem; border-bottom: 1px solid rgba(0,200,255,0.06); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+      .kt-sidebar-logo a { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: #00C8FF; text-decoration: none; letter-spacing: -0.01em; }
+      .kt-sidebar-logo span { font-size: 0.48rem; vertical-align: super; color: rgba(221,232,237,0.2); }
+      .kt-nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1.25rem; font-size: 0.8rem; letter-spacing: 0.02em; color: rgba(221,232,237,0.3); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; margin: 1px 0; font-weight: 400; }
+      .kt-nav-item:hover { color: rgba(221,232,237,0.65); background: rgba(0,200,255,0.04); }
+      .kt-nav-item.active { color: #00C8FF; border-left-color: #00C8FF; background: rgba(0,200,255,0.06); font-weight: 500; }
+      .kt-sidebar-bottom { margin-top: auto; padding: 1.25rem 1.25rem 0; border-top: 1px solid rgba(0,200,255,0.06); }
+      .kt-back-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; color: rgba(221,232,237,0.18); text-decoration: none; transition: color 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+      .kt-back-link:hover { color: rgba(221,232,237,0.45); }
 
-      /* â”€â”€ MAIN â”€â”€ */
-      .kt-main { margin-left: 220px; flex: 1; padding: 2.5rem 3rem; max-width: 1100px; }
+      /* ── MAIN ── */
+      .kt-main { margin-left: 224px; flex: 1; padding: 2.5rem 3rem; max-width: 1100px; }
 
-      /* â”€â”€ MOBILE TOPBAR â”€â”€ */
-      .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 56px; background: #0A0A0F; border-bottom: 1px solid rgba(0,200,255,0.08); align-items: center; justify-content: space-between; padding: 0 1.25rem; }
-      .kt-topbar-logo { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: #00C8FF; text-decoration: none; }
+      /* ── MOBILE TOPBAR ── */
+      .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 52px; background: #080810; border-bottom: 1px solid rgba(0,200,255,0.07); align-items: center; justify-content: space-between; padding: 0 1.25rem; }
+      .kt-topbar-logo { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: #00C8FF; text-decoration: none; }
       .kt-hamburger { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
-      .kt-hamburger span { display: block; width: 22px; height: 1.5px; background: rgba(221,232,237,0.6); transition: all 0.2s; }
+      .kt-hamburger span { display: block; width: 20px; height: 1.5px; background: rgba(221,232,237,0.5); transition: all 0.2s; }
       .kt-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
       .kt-hamburger.open span:nth-child(2) { opacity: 0; }
       .kt-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 
-      /* â”€â”€ DRAWER OVERLAY â”€â”€ */
-      .kt-drawer-overlay { display: none; position: fixed; inset: 0; z-index: 55; background: rgba(7,9,11,0.7); backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+      /* ── DRAWER OVERLAY ── */
+      .kt-drawer-overlay { display: none; position: fixed; inset: 0; z-index: 55; background: rgba(4,6,10,0.8); backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
       .kt-drawer-overlay.open { opacity: 1; pointer-events: all; }
 
-      /* â”€â”€ PAGE COMPONENTS â”€â”€ */
-      .kt-page-header { margin-bottom: 2.5rem; }
-      .kt-page-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(0,200,255,0.5); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-      .kt-page-eyebrow::before { content: '//'; color: rgba(221,232,237,0.2); }
-      .kt-page-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 400; line-height: 1.1; }
-      .kt-page-title em { font-style: italic; color: rgba(0,200,255,0.6); }
-      .kt-card { background: #0D0D14; border: 1px solid rgba(0,200,255,0.08); border-top: 1px solid rgba(0,200,255,0.18); padding: 1.5rem; }
-      .kt-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(221,232,237,0.25); margin-bottom: 0.4rem; }
-      .kt-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 500; color: #00C8FF; }
-      .kt-card-sub { font-size: 0.75rem; color: rgba(221,232,237,0.3); margin-top: 0.2rem; }
-      .kt-input { background: #0A0A0F; border: 1px solid rgba(0,200,255,0.12); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; outline: none; transition: border-color 0.2s; }
-      .kt-input:focus { border-color: rgba(0,200,255,0.4); }
-      .kt-input::placeholder { color: rgba(221,232,237,0.2); }
-      .kt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(221,232,237,0.35); display: block; margin-bottom: 0.4rem; }
-      .kt-btn { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.08em; padding: 0.7rem 1.6rem; cursor: pointer; border: none; transition: opacity 0.2s; }
-      .kt-btn-blue { background: #00C8FF; color: #0A0A0F; font-weight: 500; }
-      .kt-btn-blue:hover { opacity: 0.85; }
-      .kt-btn-outline { background: transparent; color: rgba(0,200,255,0.7); border: 1px solid rgba(0,200,255,0.2); }
-      .kt-btn-outline:hover { border-color: rgba(0,200,255,0.5); color: #00C8FF; }
+      /* ── PAGE COMPONENTS ── */
+      .kt-page-header { margin-bottom: 2rem; }
+      .kt-page-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(0,200,255,0.45); margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.5rem; }
+      .kt-page-eyebrow::before { content: '//'; color: rgba(221,232,237,0.15); }
+      .kt-page-title { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; }
+      .kt-page-title em { font-style: italic; color: rgba(0,200,255,0.55); }
+
+      .kt-card { background: #0D0D16; border: 1px solid rgba(0,200,255,0.07); border-top: 2px solid rgba(0,200,255,0.18); padding: 1.35rem 1.5rem; border-radius: 2px; }
+      .kt-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(221,232,237,0.25); margin-bottom: 0.45rem; }
+      .kt-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.55rem; font-weight: 500; color: #00C8FF; line-height: 1; }
+      .kt-card-sub { font-size: 0.72rem; color: rgba(221,232,237,0.22); margin-top: 0.35rem; }
+
+      .kt-input { background: #080810; border: 1px solid rgba(0,200,255,0.1); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; outline: none; transition: border-color 0.2s; border-radius: 6px; }
+      .kt-input:focus { border-color: rgba(0,200,255,0.35); }
+      .kt-input::placeholder { color: rgba(221,232,237,0.18); }
+      .kt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(221,232,237,0.3); display: block; margin-bottom: 0.4rem; }
+      .kt-btn { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.06em; padding: 0.65rem 1.5rem; cursor: pointer; border: none; transition: all 0.2s; border-radius: 6px; }
+      .kt-btn-blue { background: #00C8FF; color: #080810; font-weight: 500; }
+      .kt-btn-blue:hover { opacity: 0.88; }
+      .kt-btn-outline { background: transparent; color: rgba(0,200,255,0.65); border: 1px solid rgba(0,200,255,0.18); }
+      .kt-btn-outline:hover { border-color: rgba(0,200,255,0.45); color: #00C8FF; }
+
       .kt-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; }
       .kt-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
-      .kt-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 1.5rem; }
-      .kt-divider { border: none; border-top: 1px solid rgba(0,200,255,0.07); margin: 2rem 0; }
-      .kt-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.25rem 0.6rem; border: 1px solid; display: inline-block; }
-      .kt-badge-blue { color: #00C8FF; border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.06); }
-      .kt-badge-green { color: #5ad4a0; border-color: rgba(90,212,160,0.3); background: rgba(90,212,160,0.06); }
-      .kt-badge-red { color: #d4705a; border-color: rgba(212,112,90,0.3); background: rgba(212,112,90,0.06); }
+      .kt-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 2px; }
+      .kt-divider { border: none; border-top: 1px solid rgba(0,200,255,0.06); margin: 2rem 0; }
+      .kt-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.55rem; border: 1px solid; display: inline-block; border-radius: 20px; }
+      .kt-badge-blue { color: #00C8FF; border-color: rgba(0,200,255,0.25); background: rgba(0,200,255,0.06); }
+      .kt-badge-green { color: #5ad4a0; border-color: rgba(90,212,160,0.25); background: rgba(90,212,160,0.06); }
+      .kt-badge-red { color: #d4705a; border-color: rgba(212,112,90,0.25); background: rgba(212,112,90,0.06); }
       textarea.kt-input { resize: vertical; min-height: 100px; }
       select.kt-input { appearance: none; cursor: pointer; }
 
-      /* â”€â”€ MOBILE â”€â”€ */
+      /* ── MOBILE ── */
       @media (max-width: 768px) {
         .kt-topbar { display: flex; }
         .kt-drawer-overlay { display: block; }
         .kt-sidebar { transform: translateX(-100%); width: 260px; z-index: 65; }
         .kt-sidebar.open { transform: translateX(0); }
-        .kt-main { margin-left: 0; padding: 1.25rem; padding-top: calc(56px + 1.25rem); }
+        .kt-main { margin-left: 0; padding: 1.25rem; padding-top: calc(52px + 1.25rem); }
         .kt-grid-4 { grid-template-columns: repeat(2,1fr); }
         .kt-grid-3 { grid-template-columns: repeat(2,1fr); }
-        .kt-grid-2 { grid-template-columns: 1fr; gap: 1rem; }
-        .kt-page-title { font-size: 1.6rem; }
+        .kt-grid-2 { grid-template-columns: 1fr; }
+        .kt-page-title { font-size: 1.55rem; }
       }
     `;
     document.head.appendChild(style);
@@ -120,57 +118,42 @@ export default function TrackerLayout() {
 
   return (
     <div className="kt-app">
-
-      {/* â”€â”€ MOBILE TOPBAR â”€â”€ */}
+      {/* Mobile topbar */}
       <div className="kt-topbar">
-        <Link to="/tracker" className="kt-topbar-logo">KordaTrackerâ„¢</Link>
-        <button
-          className={`kt-hamburger${drawerOpen ? " open" : ""}`}
-          onClick={() => setDrawerOpen(v => !v)}
-          aria-label="Toggle menu"
-        >
+        <Link to="/tracker" className="kt-topbar-logo">KordaTracker™</Link>
+        <button className={`kt-hamburger${drawerOpen ? " open" : ""}`} onClick={() => setDrawerOpen(v => !v)} aria-label="Toggle menu">
           <span /><span /><span />
         </button>
       </div>
 
-      {/* â”€â”€ DRAWER OVERLAY â”€â”€ */}
-      <div
-        className={`kt-drawer-overlay${drawerOpen ? " open" : ""}`}
-        onClick={() => setDrawerOpen(false)}
-      />
+      {/* Drawer overlay */}
+      <div className={`kt-drawer-overlay${drawerOpen ? " open" : ""}`} onClick={() => setDrawerOpen(false)} />
 
-      {/* â”€â”€ SIDEBAR / DRAWER â”€â”€ */}
+      {/* Sidebar */}
       <aside className={`kt-sidebar${drawerOpen ? " open" : ""}`}>
-<div className="kt-sidebar-logo">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <img src="/korda-icon.svg" width="22" height="22" style={{ flexShrink: 0 }} />
-            <a href="/tracker">KordaTracker<span>&#x2122;</span></a>
-          </div>
+        <div className="kt-sidebar-logo">
+          <img src="/korda-icon.svg" width="20" height="20" style={{ flexShrink: 0 }} />
+          <a href="/tracker">KordaTracker<span>™</span></a>
         </div>
 
         <nav style={{ flex: 1 }}>
           {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`kt-nav-item${pathname === item.path ? " active" : ""}`}
-            >
-              <item.icon size={15} style={{ flexShrink: 0, opacity: 0.7 }} />
+            <Link key={item.path} to={item.path} className={`kt-nav-item${pathname === item.path ? " active" : ""}`}>
+              <item.icon size={14} style={{ flexShrink: 0 }} />
               {item.label}
             </Link>
           ))}
         </nav>
 
         <div className="kt-sidebar-bottom">
-          <Link to="/" className="kt-back-link">â† Back to Korda</Link>
+          <Link to="/" className="kt-back-link">← Back to Korda</Link>
         </div>
       </aside>
 
-      {/* â”€â”€ MAIN CONTENT â”€â”€ */}
+      {/* Main content */}
       <main className="kt-main">
         <Outlet />
       </main>
-
     </div>
   );
 }

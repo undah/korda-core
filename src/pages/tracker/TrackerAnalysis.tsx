@@ -1,45 +1,84 @@
-// src/pages/tracker/TrackerAnalysis.tsx
 import React, { useState } from "react";
+import {
+  ComposedChart, Line, Area, XAxis, YAxis,
+  Tooltip, ResponsiveContainer, ReferenceLine,
+} from "recharts";
+import { format, parseISO } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
-import { useTrackerCalories } from "@/features/tracker/hooks/useTrackerJournal";
 
 const isMobile = () => window.innerWidth <= 768;
 
+const C = {
+  accent: "#00C8FF",
+  line:   "#5ab4d4",
+  green:  "#5ad4a0",
+  red:    "#d4705a",
+  text:   "#dde8ed",
+  muted:  "rgba(221,232,237,0.32)",
+  dim:    "rgba(221,232,237,0.15)",
+};
+
+// ── Custom tooltip ────────────────────────────────────────────────────────────
+
+function WeightTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const w = payload.find((p: any) => p.dataKey === "weight");
+  const a = payload.find((p: any) => p.dataKey === "avg7");
+  const date = payload[0]?.payload?.date;
+  return (
+    <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.65rem 0.9rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+      <p style={{ color: C.muted, marginBottom: "0.35rem" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
+      {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "0.85rem" }}>{w.value} kg</p>}
+      {a && <p style={{ color: `${C.line}99`, marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 export default function TrackerAnalysis() {
-  const { data: checkins = [] } = useTrackerCheckins(90);
-  const { data: goal } = useTrackerGoal();
-  const { data: calories = [] } = useTrackerCalories(30);
-  const stats = useProgressStats();
-  const [mobile] = useState(isMobile);
+  const { data: checkins = [] } = useTrackerCheckins(365);
+  const { data: goal }          = useTrackerGoal();
+  const stats                   = useProgressStats();
+  const [mobile]                = useState(isMobile);
 
   const sorted = [...checkins].sort((a, b) => a.log_date.localeCompare(b.log_date));
+
   const weeklyData = buildWeekly(sorted);
   const withWaist  = sorted.filter(c => c.waist);
   const withChest  = sorted.filter(c => c.chest);
-  const firstWaist = withWaist[0]?.waist;
-  const lastWaist  = withWaist[withWaist.length - 1]?.waist;
-  const waistDelta = firstWaist && lastWaist ? +(lastWaist - firstWaist).toFixed(1) : null;
-  const avgCal     = calories.length ? Math.round(calories.reduce((s,c) => s + c.calories_in, 0) / calories.length) : null;
-  const avgDeficit = calories.length ? Math.round(calories.reduce((s,c) => s + c.deficit, 0) / calories.length) : null;
   const firstDate  = sorted[0]?.log_date;
   const lastDate   = sorted[sorted.length - 1]?.log_date;
-  const totalDays  = firstDate && lastDate ? Math.round((new Date(lastDate).getTime() - new Date(firstDate).getTime()) / 86400000) + 1 : 0;
-  const adherence  = totalDays > 0 ? Math.round((sorted.length / totalDays) * 100) : 0;
+  const totalDays  = firstDate && lastDate
+    ? Math.round((new Date(lastDate).getTime() - new Date(firstDate).getTime()) / 86400000) + 1
+    : 0;
+  const adherence = totalDays > 0 ? Math.round((sorted.length / totalDays) * 100) : 0;
 
-  if (sorted.length < 3) {
-    return (
-      <div>
-        <div className="kt-page-header">
-          <p className="kt-page-eyebrow">Analysis</p>
-          <h1 className="kt-page-title">In-depth <em>analysis</em></h1>
-        </div>
-        <div className="kt-card" style={{ textAlign: "center", padding: "4rem 1.5rem" }}>
-          <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", marginBottom: "1rem" }}>Need more data.</p>
-          <p style={{ color: "rgba(221,232,237,0.4)", fontSize: "0.9rem" }}>Log at least 3 check-ins to see your analysis.</p>
-        </div>
+  // Build chart data with 7d rolling avg
+  const chartData = sorted.map((c, i) => {
+    const slice = sorted.slice(Math.max(0, i - 6), i + 1);
+    const avg7  = +(slice.reduce((s, x) => s + x.weight, 0) / slice.length).toFixed(2);
+    return { date: c.log_date, weight: c.weight, avg7 };
+  });
+
+  const weights = chartData.map(d => d.weight);
+  const goalVal = goal?.goal_weight;
+  const allVals = goalVal ? [...weights, goalVal] : weights;
+  const yMin    = allVals.length ? Math.floor(Math.min(...allVals) - 1.5) : 0;
+  const yMax    = allVals.length ? Math.ceil(Math.max(...allVals)  + 1.5) : 100;
+
+  if (sorted.length < 3) return (
+    <div>
+      <div className="kt-page-header">
+        <p className="kt-page-eyebrow">Analysis</p>
+        <h1 className="kt-page-title">In-depth <em>analysis</em></h1>
       </div>
-    );
-  }
+      <div className="kt-card" style={{ textAlign: "center", padding: "4rem 1.5rem" }}>
+        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", marginBottom: "1rem" }}>Need more data.</p>
+        <p style={{ color: "rgba(221,232,237,0.4)", fontSize: "0.9rem" }}>Log at least 3 check-ins to see your analysis.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -48,31 +87,31 @@ export default function TrackerAnalysis() {
         <h1 className="kt-page-title">In-depth <em>analysis</em></h1>
       </div>
 
-      {/* stats — 2x2 on mobile, 4 col on desktop */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, marginBottom: 2 }}>
+      {/* Top stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 2, marginBottom: 2 }}>
         <div className="kt-card">
           <p className="kt-card-label">Total lost</p>
-          <p className="kt-card-value">{stats ? `${Math.abs(stats.totalLost)} kg` : "—"}</p>
+          <p className="kt-card-value" style={{ color: stats && stats.totalLost > 0 ? C.green : C.red }}>{stats ? `${Math.abs(stats.totalLost)} kg` : "—"}</p>
           <p className="kt-card-sub">since first check-in</p>
         </div>
         <div className="kt-card">
           <p className="kt-card-label">Goal</p>
           <p className="kt-card-value">{stats ? `${stats.percentToGoal}%` : "—"}</p>
-          <p className="kt-card-sub">{goal?.goal_weight ? `target: ${goal.goal_weight} kg` : "no goal set"}</p>
+          <p className="kt-card-sub">{goalVal ? `target: ${goalVal} kg` : "no goal set"}</p>
         </div>
         <div className="kt-card">
           <p className="kt-card-label">Arrival</p>
-          <p className="kt-card-value" style={{ fontSize: "1rem" }}>{stats?.daysToGoal ? projectedDate(stats.daysToGoal) : "—"}</p>
-          <p className="kt-card-sub">{stats?.daysToGoal ? `${stats.daysToGoal} days` : "set a goal"}</p>
+          <p className="kt-card-value" style={{ fontSize: "1rem", color: C.text }}>{stats?.daysToGoal ? projectedDate(stats.daysToGoal) : "—"}</p>
+          <p className="kt-card-sub">{stats?.daysToGoal ? `${stats.daysToGoal} days remaining` : "set a goal"}</p>
         </div>
         <div className="kt-card">
           <p className="kt-card-label">Adherence</p>
-          <p className="kt-card-value">{adherence}%</p>
-          <p className="kt-card-sub">{sorted.length} of {totalDays} days</p>
+          <p className="kt-card-value" style={{ color: adherence >= 70 ? C.green : adherence >= 50 ? C.accent : C.red }}>{adherence}%</p>
+          <p className="kt-card-sub">{sorted.length} of {totalDays} days logged</p>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, marginBottom: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 2, marginBottom: "1.5rem" }}>
         <div className="kt-card">
           <p className="kt-card-label">Avg weekly loss</p>
           <p className="kt-card-value">{stats ? `${stats.avgWeeklyLoss} kg` : "—"}</p>
@@ -83,49 +122,79 @@ export default function TrackerAnalysis() {
           <p className="kt-card-value">{stats ? `${stats.bestWeek} kg` : "—"}</p>
           <p className="kt-card-sub">largest 7d drop</p>
         </div>
-        <div className="kt-card">
-          <p className="kt-card-label">Avg calories</p>
-          <p className="kt-card-value" style={{ fontSize: "1.1rem" }}>{avgCal ?? "—"}</p>
-          <p className="kt-card-sub">last 30 days</p>
-        </div>
-        <div className="kt-card">
-          <p className="kt-card-label">Avg deficit</p>
-          <p className="kt-card-value" style={{ color: avgDeficit && avgDeficit > 0 ? "#5ad4a0" : "#d4705a", fontSize: "1.1rem" }}>
-            {avgDeficit !== null ? `${avgDeficit > 0 ? "-" : "+"}${Math.abs(avgDeficit)}` : "—"}
-          </p>
-          <p className="kt-card-sub">kcal</p>
-        </div>
       </div>
 
-      {/* weight chart */}
+      {/* Full weight history chart */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
-        <p className="kt-card-label" style={{ marginBottom: "1.5rem" }}>Full weight history</p>
-        <FullChart checkins={sorted} goal={goal?.goal_weight} />
+        <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Full weight history</p>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.dim, marginBottom: "1.5rem" }}>
+          Raw data + 7-day rolling average{goalVal ? `  ·  Goal: ${goalVal} kg` : ""}
+        </p>
+
+        <ResponsiveContainer width="100%" height={260}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
+            <defs>
+              <linearGradient id="analysisGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="#5ab4d4" stopOpacity={0.16} />
+                <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="date"
+              tickFormatter={d => { try { return format(parseISO(d), "MMM d"); } catch { return ""; } }}
+              tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
+              axisLine={false} tickLine={false} interval="preserveStartEnd"
+            />
+            <YAxis
+              domain={[yMin, yMax]}
+              tickFormatter={v => `${v}`}
+              tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
+              axisLine={false} tickLine={false} tickCount={6} width={32}
+            />
+            <Tooltip content={<WeightTooltip />} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
+
+            {goalVal && (
+              <ReferenceLine
+                y={goalVal}
+                stroke="rgba(90,212,160,0.3)"
+                strokeDasharray="6 4"
+                strokeWidth={1}
+                label={{ value: `goal: ${goalVal} kg`, position: "insideTopRight", fill: "rgba(90,212,160,0.45)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}
+              />
+            )}
+
+            <Area type="monotone" dataKey="avg7" fill="url(#analysisGrad)" stroke="none" dot={false} activeDot={false} />
+            <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.28)" strokeWidth={1} strokeDasharray="3 4"
+              dot={{ r: 2, fill: "rgba(90,180,212,0.45)", strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
+            />
+            <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
+          </ComposedChart>
+        </ResponsiveContainer>
       </div>
 
-      {/* weekly breakdown — scrollable on mobile */}
+      {/* Weekly breakdown */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Weekly breakdown</p>
         {mobile ? (
-          /* MOBILE: card list */
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {weeklyData.map((w, i) => {
               const prev = weeklyData[i - 1];
               const change = prev ? +(w.avg - prev.avg).toFixed(1) : null;
               return (
-                <div key={w.week} style={{ padding: "0.75rem", background: "#0a0e12", borderLeft: "2px solid rgba(90,180,212,0.15)" }}>
+                <div key={w.week} style={{ padding: "0.75rem", background: "#08080f", borderLeft: "2px solid rgba(90,180,212,0.15)", borderRadius: "0 6px 6px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "rgba(221,232,237,0.4)" }}>{w.week}</span>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "#5ab4d4" }}>{w.avg} kg</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "rgba(221,232,237,0.35)" }}>{w.week}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.accent }}>{w.avg} kg</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", gap: 2 }}>
+                    <div style={{ display: "flex", gap: 3 }}>
                       {Array.from({ length: 7 }).map((_, d) => (
-                        <div key={d} style={{ width: 7, height: 7, background: d < w.count ? "rgba(90,180,212,0.6)" : "rgba(90,180,212,0.1)" }} />
+                        <div key={d} style={{ width: 6, height: 6, background: d < w.count ? "rgba(90,180,212,0.6)" : "rgba(90,180,212,0.1)", borderRadius: 1 }} />
                       ))}
                     </div>
                     {change !== null && (
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: change < 0 ? "#5ad4a0" : "#d4705a" }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: change < 0 ? C.green : C.red }}>
                         {change > 0 ? "+" : ""}{change} kg
                       </span>
                     )}
@@ -135,12 +204,11 @@ export default function TrackerAnalysis() {
             })}
           </div>
         ) : (
-          /* DESKTOP: table */
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
               <tr>
-                {["Week","Avg weight","Change","Entries","Trend"].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", borderBottom: "1px solid rgba(90,180,212,0.07)" }}>{h}</th>
+                {["Week", "Avg weight", "Change", "Entries", "Trend"].map(h => (
+                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.22)", borderBottom: "1px solid rgba(90,180,212,0.06)" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -150,16 +218,16 @@ export default function TrackerAnalysis() {
                 const change = prev ? +(w.avg - prev.avg).toFixed(1) : null;
                 return (
                   <tr key={w.week} style={{ borderBottom: "1px solid rgba(90,180,212,0.04)" }}>
-                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)" }}>{w.week}</td>
-                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: "#5ab4d4" }}>{w.avg} kg</td>
-                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: change === null ? "rgba(221,232,237,0.2)" : change < 0 ? "#5ad4a0" : "#d4705a" }}>
+                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.35)" }}>{w.week}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: C.accent }}>{w.avg} kg</td>
+                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: change === null ? "rgba(221,232,237,0.2)" : change < 0 ? C.green : C.red }}>
                       {change === null ? "—" : `${change > 0 ? "+" : ""}${change} kg`}
                     </td>
-                    <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.4)" }}>{w.count}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.35)" }}>{w.count}</td>
                     <td style={{ padding: "0.6rem 0.75rem" }}>
-                      <div style={{ display: "flex", gap: 2 }}>
+                      <div style={{ display: "flex", gap: 3 }}>
                         {Array.from({ length: 7 }).map((_, d) => (
-                          <div key={d} style={{ width: 8, height: 8, background: d < w.count ? "rgba(90,180,212,0.6)" : "rgba(90,180,212,0.1)" }} />
+                          <div key={d} style={{ width: 7, height: 7, background: d < w.count ? "rgba(90,180,212,0.55)" : "rgba(90,180,212,0.08)", borderRadius: 1 }} />
                         ))}
                       </div>
                     </td>
@@ -171,49 +239,53 @@ export default function TrackerAnalysis() {
         )}
       </div>
 
-      {/* measurements */}
+      {/* Measurement trends */}
       {withWaist.length > 1 && (
         <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
           <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Measurement trends</p>
           <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 2 }}>
             {[
-              { label: "Waist", first: withWaist[0]?.waist, last: withWaist[withWaist.length-1]?.waist },
-              { label: "Chest", first: withChest[0]?.chest, last: withChest[withChest.length-1]?.chest },
-              { label: "Waist Δ", first: null, last: null, delta: waistDelta },
+              { label: "Waist", arr: withWaist, key: "waist" as const },
+              { label: "Chest", arr: withChest, key: "chest" as const },
             ].map(m => {
-              const delta = m.delta !== undefined ? m.delta : (m.first && m.last ? +(m.last - m.first).toFixed(1) : null);
+              const first = m.arr[0]?.[m.key];
+              const last  = m.arr[m.arr.length - 1]?.[m.key];
+              const delta = first && last ? +(+last - +first).toFixed(1) : null;
               return (
-                <div key={m.label} className="kt-card" style={{ border: "none", borderTop: "1px solid rgba(90,180,212,0.1)", background: "#0f151a" }}>
+                <div key={m.label} className="kt-card" style={{ border: "none", borderTop: "1px solid rgba(90,180,212,0.1)", background: "#0a0a14" }}>
                   <p className="kt-card-label">{m.label}</p>
-                  {m.first && m.last ? (
+                  {first && last ? (
                     <>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.85rem", color: "#dde8ed" }}>{m.first} → {m.last} cm</p>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: delta && delta < 0 ? "#5ad4a0" : "#d4705a", marginTop: "0.3rem" }}>
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.85rem", color: C.text }}>{first} → {last} cm</p>
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: delta && delta < 0 ? C.green : C.red, marginTop: "0.3rem" }}>
                         {delta !== null ? `${delta > 0 ? "+" : ""}${delta} cm` : ""}
                       </p>
                     </>
-                  ) : delta !== null ? (
-                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.1rem", color: delta < 0 ? "#5ad4a0" : "#d4705a" }}>
-                      {delta > 0 ? "+" : ""}{delta} cm
-                    </p>
                   ) : (
                     <p style={{ color: "rgba(221,232,237,0.2)", fontSize: "0.82rem" }}>No data</p>
                   )}
                 </div>
               );
             })}
+            <div className="kt-card" style={{ border: "none", borderTop: "1px solid rgba(90,180,212,0.1)", background: "#0a0a14" }}>
+              <p className="kt-card-label">Waist Δ</p>
+              {withWaist.length > 1 ? (() => {
+                const delta = +(+(withWaist[withWaist.length-1].waist ?? 0) - +(withWaist[0].waist ?? 0)).toFixed(1);
+                return <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.1rem", color: delta < 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta} cm</p>;
+              })() : <p style={{ color: "rgba(221,232,237,0.2)", fontSize: "0.82rem" }}>No data</p>}
+            </div>
           </div>
         </div>
       )}
 
-      {/* insights */}
+      {/* Insights */}
       <div className="kt-card">
         <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Insights</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {generateInsights(stats, adherence, avgDeficit, sorted).map((insight, i) => (
-            <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.75rem", background: "#0a0e12", borderLeft: `2px solid ${insight.color}` }}>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: insight.color, flexShrink: 0 }}>{insight.tag}</span>
-              <p style={{ fontSize: "0.82rem", color: "rgba(221,232,237,0.6)", lineHeight: 1.65 }}>{insight.text}</p>
+          {generateInsights(stats, adherence, sorted).map((insight, i) => (
+            <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.8rem 1rem", background: "#08080f", borderLeft: `2px solid ${insight.color}`, borderRadius: "0 8px 8px 0" }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: insight.color, flexShrink: 0, marginTop: "0.1rem" }}>{insight.tag}</span>
+              <p style={{ fontSize: "0.82rem", color: "rgba(221,232,237,0.55)", lineHeight: 1.65 }}>{insight.text}</p>
             </div>
           ))}
         </div>
@@ -222,7 +294,7 @@ export default function TrackerAnalysis() {
   );
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function projectedDate(days: number): string {
   const d = new Date();
@@ -242,10 +314,10 @@ function buildWeekly(sorted: { log_date: string; weight: number }[]) {
     weeks[key].count++;
   });
   return Object.entries(weeks)
-    .sort(([a],[b]) => a.localeCompare(b))
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([week, { weights, count }]) => ({
       week,
-      avg: +(weights.reduce((s,w) => s+w, 0) / weights.length).toFixed(1),
+      avg: +(weights.reduce((s, w) => s + w, 0) / weights.length).toFixed(1),
       count,
     }));
 }
@@ -253,71 +325,25 @@ function buildWeekly(sorted: { log_date: string; weight: number }[]) {
 function generateInsights(
   stats: ReturnType<typeof useProgressStats>,
   adherence: number,
-  avgDeficit: number | null,
   sorted: { weight: number; log_date: string }[]
 ) {
   const insights: { tag: string; text: string; color: string }[] = [];
-  if (adherence >= 80) insights.push({ tag: "consistency", color: "#5ad4a0", text: `You've logged ${adherence}% of days — excellent consistency. This is one of the strongest predictors of success.` });
-  else if (adherence < 50) insights.push({ tag: "consistency", color: "#d4705a", text: `You've only logged ${adherence}% of days. More frequent check-ins will give you a clearer trend.` });
-  if (stats && stats.avgWeeklyLoss >= 0.5 && stats.avgWeeklyLoss <= 1) {
-    insights.push({ tag: "rate", color: "#5ad4a0", text: `Your average weekly loss of ${stats.avgWeeklyLoss} kg is in the optimal range (0.5–1 kg/week).` });
-  } else if (stats && stats.avgWeeklyLoss > 1.2) {
-    insights.push({ tag: "rate", color: "#d4b45a", text: `You're losing ${stats.avgWeeklyLoss} kg/week — faster than ideal. Consider a slightly higher calorie intake to preserve muscle.` });
-  }
-  if (avgDeficit && avgDeficit > 800) {
-    insights.push({ tag: "deficit", color: "#d4705a", text: `Your average deficit of ${avgDeficit} kcal is aggressive. Consider a more moderate 300–600 kcal deficit.` });
-  } else if (avgDeficit && avgDeficit >= 300 && avgDeficit <= 600) {
-    insights.push({ tag: "deficit", color: "#5ad4a0", text: `A ${avgDeficit} kcal average daily deficit is sustainable and effective.` });
-  }
-  if (stats?.daysToGoal) {
-    insights.push({ tag: "projection", color: "#5ab4d4", text: `At your current pace, you'll reach your goal in approximately ${stats.daysToGoal} days (${projectedDate(stats.daysToGoal)}).` });
-  }
-  if (insights.length === 0) {
-    insights.push({ tag: "info", color: "rgba(90,180,212,0.5)", text: "Keep logging consistently. More data will unlock deeper insights and more accurate projections." });
-  }
-  return insights;
-}
 
-function FullChart({ checkins, goal }: { checkins: { weight: number; log_date: string }[]; goal?: number | null }) {
-  if (checkins.length < 2) return null;
-  const W = 800, H = 180, PAD = 28;
-  const weights = checkins.map(c => c.weight);
-  const allVals = goal ? [...weights, goal] : weights;
-  const min = Math.min(...allVals) - 1;
-  const max = Math.max(...allVals) + 1;
-  const xp = (i: number) => PAD + (i / (checkins.length - 1)) * (W - PAD * 2);
-  const yp = (w: number) => H - PAD - ((w - min) / (max - min)) * (H - PAD * 2);
-  const linePath = checkins.map((c, i) => `${i === 0 ? "M" : "L"}${xp(i)},${yp(c.weight)}`).join(" ");
-  const avgPoints = checkins.map((_, i) => {
-    const slice = checkins.slice(Math.max(0, i - 6), i + 1);
-    const avg = slice.reduce((s,c) => s + c.weight, 0) / slice.length;
-    return { x: xp(i), y: yp(avg) };
-  });
-  const avgPath = avgPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-  const areaPath = `${avgPath} L${avgPoints[avgPoints.length-1].x},${H} L${avgPoints[0].x},${H} Z`;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} preserveAspectRatio="none">
-      {[0.25,0.5,0.75].map(t => {
-        const yy = PAD + t * (H - PAD * 2);
-        const val = max - t * (max - min);
-        return (
-          <g key={t}>
-            <line x1={PAD} y1={yy} x2={W - PAD} y2={yy} stroke="rgba(90,180,212,0.06)" strokeWidth="1" />
-            <text x={PAD - 4} y={yy + 4} fill="rgba(90,180,212,0.3)" fontFamily="IBM Plex Mono,monospace" fontSize="9" textAnchor="end">{val.toFixed(1)}</text>
-          </g>
-        );
-      })}
-      {goal && (
-        <>
-          <line x1={PAD} y1={yp(goal)} x2={W - PAD} y2={yp(goal)} stroke="rgba(90,212,160,0.25)" strokeWidth="1" strokeDasharray="5 3" />
-          <text x={W - PAD + 4} y={yp(goal) + 4} fill="rgba(90,212,160,0.5)" fontFamily="IBM Plex Mono,monospace" fontSize="9">goal</text>
-        </>
-      )}
-      <path d={areaPath} fill="rgba(90,180,212,0.05)" />
-      <path d={linePath} fill="none" stroke="rgba(90,180,212,0.18)" strokeWidth="1" strokeDasharray="2 3" />
-      <path d={avgPath} fill="none" stroke="rgba(90,180,212,0.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={xp(checkins.length - 1)} cy={yp(checkins[checkins.length - 1].weight)} r="4" fill="#5ab4d4" />
-      <circle cx={xp(0)} cy={yp(checkins[0].weight)} r="3" fill="rgba(90,180,212,0.4)" />
-    </svg>
-  );
+  if (adherence >= 80)
+    insights.push({ tag: "consistency", color: "#5ad4a0", text: `You've logged ${adherence}% of days — excellent consistency. This is one of the strongest predictors of long-term success.` });
+  else if (adherence < 50)
+    insights.push({ tag: "consistency", color: "#d4705a", text: `You've only logged ${adherence}% of days. More frequent check-ins will give you a clearer, more accurate trend.` });
+
+  if (stats && stats.avgWeeklyLoss >= 0.5 && stats.avgWeeklyLoss <= 1)
+    insights.push({ tag: "rate", color: "#5ad4a0", text: `Your average weekly loss of ${stats.avgWeeklyLoss} kg is in the optimal range (0.5–1 kg/week).` });
+  else if (stats && stats.avgWeeklyLoss > 1.2)
+    insights.push({ tag: "rate", color: "#d4b45a", text: `You're losing ${stats.avgWeeklyLoss} kg/week — faster than ideal. Consider a slightly higher intake to preserve muscle.` });
+
+  if (stats?.daysToGoal)
+    insights.push({ tag: "projection", color: "#5ab4d4", text: `At your current pace, you'll reach your goal in approximately ${stats.daysToGoal} days (${projectedDate(stats.daysToGoal)}).` });
+
+  if (insights.length === 0)
+    insights.push({ tag: "info", color: "rgba(90,180,212,0.5)", text: "Keep logging consistently. More data will unlock deeper insights and more accurate projections." });
+
+  return insights;
 }
