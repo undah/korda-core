@@ -1,5 +1,6 @@
 // src/pages/tracker/TrackerSettings.tsx
 import React, { useState, useEffect } from "react";
+import { NOTIF_PREFS_KEY, NOTIF_LAST_KEY, type NotifPrefs } from "@/hooks/useNotificationCheck";
 import { useTrackerProfile, useUpsertProfile, useDeleteAllTrackerData } from "@/features/tracker/hooks/useTrackerProfile";
 import { useTrackerGoal, useUpsertGoal } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
@@ -48,6 +49,10 @@ export default function TrackerSettings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [notifForm, setNotifForm] = useState<NotifPrefs>(() => {
+    const raw = localStorage.getItem(NOTIF_PREFS_KEY);
+    return raw ? JSON.parse(raw) : { enabled: false, time: "08:00" };
+  });
 
   // populate forms when data loads
   useEffect(() => {
@@ -131,6 +136,26 @@ export default function TrackerSettings() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Data exported.");
+  };
+
+  const handleToggleNotif = async () => {
+    const turning_on = !notifForm.enabled;
+    if (turning_on) {
+      if (typeof Notification === "undefined") {
+        return toast.error("Notifications not supported in this browser.");
+      }
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        return toast.error("Notification permission denied. Enable it in browser settings.");
+      }
+    }
+    setNotifForm(f => ({ ...f, enabled: turning_on }));
+  };
+
+  const handleNotifSave = () => {
+    localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(notifForm));
+    localStorage.removeItem(NOTIF_LAST_KEY); // reset so it fires today if past the time
+    toast.success(notifForm.enabled ? `Reminder set for ${notifForm.time} daily.` : "Reminder disabled.");
   };
 
   const handleDeleteAll = async () => {
@@ -263,6 +288,43 @@ export default function TrackerSettings() {
 
           <button className="kt-btn kt-btn-blue" onClick={handleGoalSave} disabled={upsertGoal.isPending}>
             {upsertGoal.isPending ? "Saving..." : "Save goals →"}
+          </button>
+        </div>
+      </Section>
+
+      {/* ── NOTIFICATIONS ── */}
+      <Section eyebrow="Notifications" title="Daily reminder">
+        <div className="kt-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: notifForm.enabled ? "1.25rem" : 0 }}>
+            <div>
+              <p style={{ fontSize: "0.88rem", fontWeight: 500, color: "#dde8ed", marginBottom: "0.2rem" }}>Check-in reminder</p>
+              <p style={{ fontSize: "0.75rem", color: "rgba(221,232,237,0.35)", lineHeight: 1.5 }}>Get a daily notification to log your weight</p>
+            </div>
+            {/* Toggle */}
+            <button
+              onClick={handleToggleNotif}
+              style={{ width: 46, height: 26, background: notifForm.enabled ? "#00C8FF" : "rgba(221,232,237,0.1)", border: "none", borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
+              aria-label="Toggle reminder"
+            >
+              <span style={{ position: "absolute", top: 3, left: notifForm.enabled ? 23 : 3, width: 20, height: 20, background: notifForm.enabled ? "#080810" : "rgba(221,232,237,0.4)", borderRadius: "50%", transition: "left 0.2s", display: "block" }} />
+            </button>
+          </div>
+
+          {notifForm.enabled && (
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label className="kt-label">Reminder time</label>
+              <input
+                className="kt-input"
+                type="time"
+                value={notifForm.time}
+                onChange={e => setNotifForm(f => ({ ...f, time: e.target.value }))}
+                style={{ maxWidth: 160 }}
+              />
+            </div>
+          )}
+
+          <button className="kt-btn kt-btn-blue" onClick={handleNotifSave} style={{ marginTop: notifForm.enabled ? 0 : "1.25rem" }}>
+            Save reminder →
           </button>
         </div>
       </Section>

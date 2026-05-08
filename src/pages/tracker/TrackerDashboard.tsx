@@ -251,8 +251,8 @@ export default function TrackerDashboard() {
           <div>
             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: C.dim }}>
-              {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg  ·  ` : ""}Raw data + 7-day rolling average
-              {photos.length > 0 ? "  ·  cyan dots = photos" : ""}
+              {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg  ·  ` : ""}Raw + 7-day avg
+              {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? "  ·  cyan dots = photos" : ""}
             </p>
           </div>
 
@@ -391,11 +391,14 @@ export default function TrackerDashboard() {
               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Goal</span>
             </div>
           )}
-          {photos.length > 0 && (
+          {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg>
               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Photos</span>
             </div>
+          )}
+          {photos.length > 0 && !filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && (
+            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(221,232,237,0.18)", letterSpacing: "0.06em" }}>no photos in this range</span>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 // src/pages/tracker/TrackerJournal.tsx
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useTrackerJournal, useUpsertJournal, useDeleteJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerJournal } from "@/features/tracker/types";
 import { toast } from "sonner";
@@ -7,6 +7,30 @@ import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 
 const today = () => new Date().toISOString().split("T")[0];
 const MOODS   = ["great","good","okay","low","bad"] as const;
+
+function AutoTextarea({ value, onChange, placeholder, minRows = 3 }: {
+  value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string; minRows?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      className="kt-input"
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      rows={minRows}
+      style={{ resize: "none", overflow: "hidden", minHeight: `${minRows * 1.6}rem` }}
+    />
+  );
+}
 const ENERGYS = ["high","medium","low"] as const;
 const moodColor = (m: string) => ({ great: "#5ad4a0", good: "#5ab4d4", okay: "rgba(221,232,237,0.5)", low: "#d4b45a", bad: "#d4705a" }[m] ?? "rgba(221,232,237,0.3)");
 
@@ -96,18 +120,17 @@ export default function TrackerJournal() {
 
         <div style={{ marginBottom: "1rem" }}>
           <label className="kt-label">Notes / how was your day?</label>
-          <textarea className="kt-input" placeholder="How did today go?" value={form.notes} onChange={set("notes")} style={{ minHeight: 80 }} />
+          <AutoTextarea value={form.notes} onChange={set("notes")} placeholder="How did today go?" minRows={3} />
         </div>
 
-        <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1.5rem" }}>
-          <div>
-            <label className="kt-label">Wins today</label>
-            <textarea className="kt-input" placeholder="What went well?" value={form.wins} onChange={set("wins")} style={{ minHeight: 70 }} />
-          </div>
-          <div>
-            <label className="kt-label">Struggles</label>
-            <textarea className="kt-input" placeholder="What was hard?" value={form.struggles} onChange={set("struggles")} style={{ minHeight: 70 }} />
-          </div>
+        <div style={{ marginBottom: "1rem" }}>
+          <label className="kt-label">Wins today</label>
+          <AutoTextarea value={form.wins} onChange={set("wins")} placeholder="What went well?" minRows={2} />
+        </div>
+
+        <div style={{ marginBottom: "1.5rem" }}>
+          <label className="kt-label">Struggles</label>
+          <AutoTextarea value={form.struggles} onChange={set("struggles")} placeholder="What was hard?" minRows={2} />
         </div>
 
         <button className="kt-btn kt-btn-blue" onClick={handleSubmit} disabled={upsert.isPending}>

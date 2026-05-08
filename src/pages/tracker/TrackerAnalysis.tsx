@@ -1,14 +1,12 @@
 import React, { useState, useMemo } from "react";
 import {
-  ComposedChart, Line, Area, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, ReferenceLine,
+  ComposedChart, LineChart, Line, Area, XAxis, YAxis,
+  Tooltip, ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerPhoto } from "@/features/tracker/types";
-
-const isMobile = () => window.innerWidth <= 768;
 
 const C = {
   accent: "#00C8FF",
@@ -70,12 +68,40 @@ function makeTooltip(
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+const M_COLORS: Record<string, string> = {
+  waist:    "#d4705a",
+  chest:    "#5ab4d4",
+  hips:     "#b45ad4",
+  arms:     "#d4c45a",
+  thighs:   "#5ad4a0",
+  body_fat: "#d4905a",
+};
+const M_LABELS: Record<string, string> = {
+  waist: "Waist", chest: "Chest", hips: "Hips", arms: "Arms", thighs: "Thighs", body_fat: "Body fat",
+};
+
+function MeasureTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const date = payload[0]?.payload?.date;
+  return (
+    <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
+      <p style={{ color: "rgba(221,232,237,0.32)", marginBottom: "0.35rem", fontSize: "0.68rem" }}>
+        {date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}
+      </p>
+      {payload.map((p: any) => p.value != null && (
+        <p key={p.dataKey} style={{ color: M_COLORS[p.dataKey] ?? "#dde8ed", marginTop: "0.15rem" }}>
+          {M_LABELS[p.dataKey] ?? p.dataKey}: {p.value}{p.dataKey === "body_fat" ? "%" : " cm"}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export default function TrackerAnalysis() {
   const { data: checkins = [] } = useTrackerCheckins(365);
   const { data: goal }          = useTrackerGoal();
   const stats                   = useProgressStats();
   const { data: photos = [] }   = useTrackerPhotos();
-  const [mobile]                = useState(isMobile);
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
 
   const sorted = [...checkins].sort((a, b) => a.log_date.localeCompare(b.log_date));
@@ -92,8 +118,6 @@ export default function TrackerAnalysis() {
   const startWeight = sorted[0]?.weight ?? null;
 
   const weeklyData = buildWeekly(sorted);
-  const withWaist  = sorted.filter(c => c.waist);
-  const withChest  = sorted.filter(c => c.chest);
   const firstDate  = sorted[0]?.log_date;
   const lastDate   = sorted[sorted.length - 1]?.log_date;
   const totalDays  = firstDate && lastDate
@@ -105,6 +129,37 @@ export default function TrackerAnalysis() {
     () => makeTooltip(photosByDate, startWeight),
     [photosByDate, startWeight]
   );
+
+  // Measurement chart data — include any checkin that has at least one measurement
+  const measureData = useMemo(() =>
+    sorted
+      .filter(c => c.waist || c.chest || c.hips || c.arms || c.thighs || c.body_fat)
+      .map(c => ({
+        date:     c.log_date,
+        waist:    c.waist    ?? undefined,
+        chest:    c.chest    ?? undefined,
+        hips:     c.hips     ?? undefined,
+        arms:     c.arms     ?? undefined,
+        thighs:   c.thighs   ?? undefined,
+        body_fat: c.body_fat ?? undefined,
+      })),
+    [sorted]
+  );
+
+  // Which measurements have enough data to chart
+  const activeMeasures = useMemo(() =>
+    (["waist","chest","hips","arms","thighs"] as const).filter(k =>
+      measureData.filter(d => d[k] != null).length >= 2
+    ),
+    [measureData]
+  );
+
+  const hasBf = measureData.filter(d => d.body_fat != null).length >= 2;
+
+  // Y domain for measurement chart (cm only)
+  const measureVals = activeMeasures.flatMap(k => measureData.map(d => d[k]).filter(Boolean) as number[]);
+  const mYMin = measureVals.length ? Math.floor(Math.min(...measureVals) - 2) : 0;
+  const mYMax = measureVals.length ? Math.ceil(Math.max(...measureVals)  + 2) : 120;
 
   // Build chart data with 7d rolling avg
   const chartData = sorted.map((c, i) => {
@@ -289,7 +344,9 @@ export default function TrackerAnalysis() {
       {/* Weekly breakdown */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Weekly breakdown</p>
-        {mobile ? (
+
+        {/* Mobile card list */}
+        <div className="kt-mobile-only">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {weeklyData.map((w, i) => {
               const prev = weeklyData[i - 1];
@@ -316,7 +373,10 @@ export default function TrackerAnalysis() {
               );
             })}
           </div>
-        ) : (
+        </div>
+
+        {/* Desktop table */}
+        <div className="kt-desktop-only">
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
               <tr>
@@ -349,47 +409,95 @@ export default function TrackerAnalysis() {
               })}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
 
-      {/* Measurement trends */}
-      {withWaist.length > 1 && (
+      {/* Measurement trends chart */}
+      {(activeMeasures.length >= 1 || hasBf) && (
         <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
-          <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Measurement trends</p>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 2 }}>
-            {[
-              { label: "Waist", arr: withWaist, key: "waist" as const },
-              { label: "Chest", arr: withChest, key: "chest" as const },
-            ].map(m => {
-              const first = m.arr[0]?.[m.key];
-              const last  = m.arr[m.arr.length - 1]?.[m.key];
-              const delta = first && last ? +(+last - +first).toFixed(1) : null;
-              return (
-                <div key={m.label} className="kt-card" style={{ border: "none", borderTop: "1px solid rgba(90,180,212,0.1)", background: "#0a0a14" }}>
-                  <p className="kt-card-label">{m.label}</p>
-                  {first && last ? (
-                    <>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.85rem", color: C.text }}>{first} → {last} cm</p>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: delta && delta < 0 ? C.green : C.red, marginTop: "0.3rem" }}>
-                        {delta !== null ? `${delta > 0 ? "+" : ""}${delta} cm` : ""}
-                      </p>
-                    </>
-                  ) : (
-                    <p style={{ color: "rgba(221,232,237,0.2)", fontSize: "0.82rem" }}>No data</p>
-                  )}
-                </div>
-              );
-            })}
-            <div className="kt-card" style={{ border: "none", borderTop: "1px solid rgba(90,180,212,0.1)", background: "#0a0a14" }}>
-              <p className="kt-card-label">Waist Δ</p>
-              {withWaist.length > 1 ? (() => {
-                const delta = +(+(withWaist[withWaist.length-1].waist ?? 0) - +(withWaist[0].waist ?? 0)).toFixed(1);
-                return <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.1rem", color: delta < 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta} cm</p>;
-              })() : <p style={{ color: "rgba(221,232,237,0.2)", fontSize: "0.82rem" }}>No data</p>}
+          <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Measurement trends</p>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.dim, marginBottom: "1.25rem" }}>
+            Body measurements over time (cm){hasBf ? " · body fat on separate scale" : ""}
+          </p>
+
+          {activeMeasures.length >= 1 && (
+            <div className="kt-chart-wrap" style={{ height: 220, marginBottom: hasBf ? "1.5rem" : 0 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={measureData} margin={{ top: 4, right: 16, bottom: 0, left: -8 }}>
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={d => { try { return format(parseISO(d), "MMM d"); } catch { return ""; } }}
+                    tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
+                    axisLine={false} tickLine={false} interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    domain={[mYMin, mYMax]}
+                    tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
+                    axisLine={false} tickLine={false} tickCount={5} width={32}
+                    tickFormatter={v => `${v}`}
+                  />
+                  <Tooltip content={<MeasureTooltip />} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
+                  {activeMeasures.map(k => (
+                    <Line
+                      key={k}
+                      type="monotone"
+                      dataKey={k}
+                      stroke={M_COLORS[k]}
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: M_COLORS[k], strokeWidth: 0 }}
+                      activeDot={{ r: 5, fill: M_COLORS[k], strokeWidth: 2, stroke: `${M_COLORS[k]}55` }}
+                      connectNulls={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          </div>
+          )}
+
+          {/* Legend */}
+          {activeMeasures.length >= 1 && (
+            <div style={{ display: "flex", gap: "1.2rem", flexWrap: "wrap", marginTop: activeMeasures.length >= 1 ? "0.75rem" : 0, paddingTop: "0.75rem", borderTop: "1px solid rgba(0,200,255,0.05)" }}>
+              {activeMeasures.map(k => (
+                <div key={k} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <span style={{ width: 20, height: 2, background: M_COLORS[k], display: "inline-block", borderRadius: 2 }} />
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.35)", letterSpacing: "0.05em" }}>{M_LABELS[k]}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Body fat — separate mini stat if charted alone */}
+          {hasBf && (
+            <div style={{ marginTop: activeMeasures.length >= 1 ? "1.25rem" : 0 }}>
+              {activeMeasures.length >= 1 && <div style={{ borderTop: "1px solid rgba(0,200,255,0.06)", marginBottom: "1rem" }} />}
+              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+                {[
+                  { label: "Body fat start", val: measureData.find(d => d.body_fat != null)?.body_fat },
+                  { label: "Body fat now",   val: [...measureData].reverse().find(d => d.body_fat != null)?.body_fat },
+                ].map(({ label, val }) => val != null && (
+                  <div key={label}>
+                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", marginBottom: "0.2rem" }}>{label}</p>
+                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: M_COLORS.body_fat }}>{val}%</p>
+                  </div>
+                ))}
+                {(() => {
+                  const first = measureData.find(d => d.body_fat != null)?.body_fat;
+                  const last  = [...measureData].reverse().find(d => d.body_fat != null)?.body_fat;
+                  if (!first || !last) return null;
+                  const delta = +(last - first).toFixed(1);
+                  return (
+                    <div key="delta">
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", marginBottom: "0.2rem" }}>Change</p>
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: delta < 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta}%</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       )}
+
 
       {/* Insights */}
       <div className="kt-card">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings } from "lucide-react";
+import { useNotificationCheck } from "@/hooks/useNotificationCheck";
 
 const NAV_ITEMS = [
   { path: "/tracker/dashboard", label: "Overview",  icon: LayoutDashboard },
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
 export default function TrackerLayout() {
   const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  useNotificationCheck();
 
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
@@ -108,8 +110,14 @@ export default function TrackerLayout() {
         .kt-chart-wrap { height: 190px; }
       }
 
+      /* ── RESPONSIVE UTILS ── */
+      .kt-mobile-only { display: none; }
+      .kt-desktop-only { display: block; }
+
       /* ── MOBILE ── */
       @media (max-width: 768px) {
+        .kt-mobile-only { display: block; }
+        .kt-desktop-only { display: none; }
         .kt-topbar { display: flex; }
         .kt-drawer-overlay { display: block; }
         .kt-sidebar { transform: translateX(-100%); width: 260px; z-index: 65; }
