@@ -21,7 +21,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
       {/* Quick-adjust chips */}
       <div style={{ display: "flex", gap: "0.4rem" }}>
         {[-1, -0.5, +0.5, +1].map(d => (
@@ -49,7 +49,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
       <div style={{ display: "flex", alignItems: "stretch", background: "#080810", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 12, overflow: "hidden" }}>
         <button
           type="button" onClick={() => adjust(-0.1)}
-          style={{ width: 64, background: "rgba(0,200,255,0.04)", border: "none", borderRight: "1px solid rgba(0,200,255,0.08)", color: "rgba(221,232,237,0.5)", fontSize: "1.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, userSelect: "none", WebkitTapHighlightColor: "transparent", transition: "background 0.1s" }}
+          style={{ width: 52, background: "rgba(0,200,255,0.04)", border: "none", borderRight: "1px solid rgba(0,200,255,0.08)", color: "rgba(221,232,237,0.5)", fontSize: "1.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, userSelect: "none", WebkitTapHighlightColor: "transparent", transition: "background 0.1s" }}
           onTouchStart={e => (e.currentTarget.style.background = "rgba(0,200,255,0.14)")}
           onTouchEnd={e => (e.currentTarget.style.background = "rgba(0,200,255,0.04)")}
         >−</button>
@@ -61,7 +61,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
             onChange={e => onChange(e.target.value)}
             placeholder="0.0"
             style={{
-              width: "100%", background: "transparent", border: "none", outline: "none",
+              width: "100%", minWidth: 0, background: "transparent", border: "none", outline: "none",
               color: value ? C.accent : "rgba(221,232,237,0.18)",
               fontFamily: "'IBM Plex Mono',monospace", fontSize: "2.4rem", fontWeight: 500,
               textAlign: "center", padding: "0 0.5rem",
@@ -72,7 +72,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
 
         <button
           type="button" onClick={() => adjust(+0.1)}
-          style={{ width: 64, background: "rgba(0,200,255,0.04)", border: "none", borderLeft: "1px solid rgba(0,200,255,0.08)", color: "rgba(221,232,237,0.5)", fontSize: "1.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, userSelect: "none", WebkitTapHighlightColor: "transparent", transition: "background 0.1s" }}
+          style={{ width: 52, background: "rgba(0,200,255,0.04)", border: "none", borderLeft: "1px solid rgba(0,200,255,0.08)", color: "rgba(221,232,237,0.5)", fontSize: "1.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, userSelect: "none", WebkitTapHighlightColor: "transparent", transition: "background 0.1s" }}
           onTouchStart={e => (e.currentTarget.style.background = "rgba(0,200,255,0.14)")}
           onTouchEnd={e => (e.currentTarget.style.background = "rgba(0,200,255,0.04)")}
         >+</button>
