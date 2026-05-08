@@ -31,6 +31,7 @@ export default function TrackerLayout() {
     const style = document.createElement("style");
     style.id = "kt-app-global";
     style.textContent = `
+      html, body { background: #080810; margin: 0; }
       .kt-app { display: flex; min-height: 100vh; background: #080810; color: #dde8ed; font-family: 'DM Sans', sans-serif; font-weight: 300; }
       .kt-app *, .kt-app *::before, .kt-app *::after { box-sizing: border-box; }
 
@@ -69,12 +70,12 @@ export default function TrackerLayout() {
       .kt-page-title { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; }
       .kt-page-title em { font-style: italic; color: rgba(0,200,255,0.55); }
 
-      .kt-card { background: #0D0D16; border: 1px solid rgba(0,200,255,0.07); border-top: 2px solid rgba(0,200,255,0.18); padding: 1.35rem 1.5rem; border-radius: 2px; }
+      .kt-card { background: #0D0D16; border: 1px solid rgba(0,200,255,0.07); border-top: 2px solid rgba(0,200,255,0.18); padding: 1.35rem 1.5rem; border-radius: 2px; overflow: hidden; }
       .kt-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(221,232,237,0.25); margin-bottom: 0.45rem; }
       .kt-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.55rem; font-weight: 500; color: #00C8FF; line-height: 1; }
       .kt-card-sub { font-size: 0.72rem; color: rgba(221,232,237,0.22); margin-top: 0.35rem; }
 
-      .kt-input { background: #080810; border: 1px solid rgba(0,200,255,0.1); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; outline: none; transition: border-color 0.2s; border-radius: 6px; }
+      .kt-input { background: #080810; border: 1px solid rgba(0,200,255,0.1); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; min-width: 0; outline: none; transition: border-color 0.2s; border-radius: 6px; }
       .kt-input:focus { border-color: rgba(0,200,255,0.35); }
       .kt-input::placeholder { color: rgba(221,232,237,0.18); }
       .kt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(221,232,237,0.3); display: block; margin-bottom: 0.4rem; }
@@ -87,6 +88,7 @@ export default function TrackerLayout() {
       .kt-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; }
       .kt-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
       .kt-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 2px; }
+      .kt-grid-4 > *, .kt-grid-3 > *, .kt-grid-2 > * { min-width: 0; }
       .kt-divider { border: none; border-top: 1px solid rgba(0,200,255,0.06); margin: 2rem 0; }
       .kt-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.55rem; border: 1px solid; display: inline-block; border-radius: 20px; }
       .kt-badge-blue { color: #00C8FF; border-color: rgba(0,200,255,0.25); background: rgba(0,200,255,0.06); }
@@ -112,11 +114,13 @@ export default function TrackerLayout() {
         .kt-drawer-overlay { display: block; }
         .kt-sidebar { transform: translateX(-100%); width: 260px; z-index: 65; }
         .kt-sidebar.open { transform: translateX(0); }
-        .kt-main { margin-left: 0; padding: 1.25rem; padding-top: calc(52px + 1.25rem); }
+        .kt-main { margin-left: 0; padding: 1rem; padding-top: calc(52px + 1rem); }
+        .kt-card { padding: 1rem 1rem; }
         .kt-grid-4 { grid-template-columns: repeat(2,1fr); }
         .kt-grid-3 { grid-template-columns: repeat(2,1fr); }
         .kt-grid-2 { grid-template-columns: 1fr; }
-        .kt-page-title { font-size: 1.55rem; }
+        .kt-page-title { font-size: 1.45rem; }
+        .kt-page-header { margin-bottom: 1.25rem; }
       }
     `;
     document.head.appendChild(style);

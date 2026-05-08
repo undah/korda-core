@@ -59,7 +59,7 @@ export default function TrackerJournal() {
 
       <div className="kt-card" style={{ marginBottom: "2rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "1.5rem" }}>New entry</p>
-        <div className="kt-grid-3" style={{ gap: "1rem", marginBottom: "1rem" }}>
+        <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1rem" }}>
           <div>
             <label className="kt-label">Date</label>
             <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} />

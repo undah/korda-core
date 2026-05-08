@@ -171,8 +171,8 @@ export default function TrackerPhotos() {
           <div className="kt-card" style={{ marginBottom: "2rem" }}>
             <p className="kt-card-label" style={{ marginBottom: "1.5rem" }}>Upload photo</p>
 
-            {/* date + weight — always stacked on mobile */}
-            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+            {/* date + weight */}
+            <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label className="kt-label">Date</label>
                 <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} />
@@ -188,7 +188,7 @@ export default function TrackerPhotos() {
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {ANGLES.map(a => (
                   <button key={a} onClick={() => setForm(f => ({ ...f, angle: a }))}
-                    style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: form.angle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: form.angle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", transition: "all 0.15s", flex: mobile ? 1 : "none" }}>
+                    style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: form.angle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: form.angle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", transition: "all 0.15s", flex: 1 }}>
                     {a}
                   </button>
                 ))}
@@ -196,7 +196,7 @@ export default function TrackerPhotos() {
             </div>
 
             <div onClick={() => fileRef.current?.click()}
-              style={{ border: "1px dashed rgba(90,180,212,0.2)", padding: mobile ? "1.5rem" : "2.5rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(90,180,212,0.02)" }}
+              style={{ border: "1px dashed rgba(90,180,212,0.2)", padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(90,180,212,0.02)" }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(90,180,212,0.4)")}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(90,180,212,0.2)")}>
               {preview ? (
@@ -227,8 +227,7 @@ export default function TrackerPhotos() {
                     {byDate[date][0]?.weight_at && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: "#5ab4d4" }}>{byDate[date][0].weight_at} kg</span>}
                     <div style={{ flex: 1, height: 1, background: "rgba(90,180,212,0.06)" }} />
                   </div>
-                  {/* 3 col on desktop, scrollable row on mobile */}
-                  <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(3, calc(33vw - 24px))" : "repeat(3,1fr)", gap: "0.5rem", overflowX: mobile ? "auto" : "visible" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.5rem" }}>
                     {ANGLES.map(angle => {
                       const photo = byDate[date].find(p => p.angle === angle);
                       return (
@@ -271,7 +270,7 @@ export default function TrackerPhotos() {
             <>
               <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
                 <p className="kt-card-label" style={{ marginBottom: "1.25rem" }}>Comparison settings</p>
-                <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: "0.75rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
                   <div>
                     <label className="kt-label">Before</label>
                     <select className="kt-input" value={dateA} onChange={e => setDateA(e.target.value)}>
@@ -286,7 +285,7 @@ export default function TrackerPhotos() {
                       {dates.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
-                  <div style={{ gridColumn: mobile ? "1 / -1" : "auto" }}>
+                  <div style={{ gridColumn: "1 / -1" }}>
                     <label className="kt-label">Angle</label>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       {ANGLES.map(a => (
@@ -303,7 +302,7 @@ export default function TrackerPhotos() {
               {dateA && dateB ? (
                 <>
                   {/* side by side — stacked on mobile */}
-                  <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 2, marginBottom: 2 }}>
+                  <div className="kt-grid-2" style={{ gap: 2, marginBottom: 2 }}>
                     {[{ date: dateA, photo: photoA, label: "Before", checkin: checkinA }, { date: dateB, photo: photoB, label: "After", checkin: checkinB }].map(({ date, photo, label, checkin }) => (
                       <div key={date} style={{ background: "#0c1217", padding: "1.25rem", borderTop: `1px solid ${label === "Before" ? "rgba(221,232,237,0.1)" : "rgba(90,180,212,0.4)"}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
@@ -311,11 +310,11 @@ export default function TrackerPhotos() {
                           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{date}</span>
                         </div>
                         {photo ? (
-                          <div style={{ aspectRatio: "3/4", overflow: "hidden", marginBottom: "0.75rem", cursor: "pointer", maxHeight: mobile ? 280 : "none" }} onClick={() => setLightbox(photo)}>
+                          <div style={{ aspectRatio: "3/4", overflow: "hidden", marginBottom: "0.75rem", cursor: "pointer", maxHeight: "clamp(240px, 45vw, 400px)" }} onClick={() => setLightbox(photo)}>
                             <img src={photo.url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                           </div>
                         ) : (
-                          <div style={{ aspectRatio: "3/4", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: mobile ? 280 : "none" }}>
+                          <div style={{ aspectRatio: "3/4", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: "clamp(240px, 45vw, 400px)" }}>
                             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo</p>
                           </div>
                         )}
@@ -343,7 +342,7 @@ export default function TrackerPhotos() {
                       <StatDiff label="Body fat" from={checkinA?.body_fat} to={checkinB?.body_fat} unit="%" invert />
 
                       {checkinA?.weight && checkinB?.weight && (
-                        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(90,180,212,0.07)", display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "1rem" }}>
+                        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(90,180,212,0.07)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
                           <div>
                             <p className="kt-card-label">Total change</p>
                             <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", fontWeight: 400, color: checkinB.weight < checkinA.weight ? "#5ad4a0" : "#d4705a" }}>
@@ -356,7 +355,7 @@ export default function TrackerPhotos() {
                               {Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000)} days
                             </p>
                           </div>
-                          <div style={{ gridColumn: mobile ? "1 / -1" : "auto" }}>
+                          <div style={{ gridColumn: "1 / -1" }}>
                             <p className="kt-card-label">Avg per week</p>
                             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#dde8ed" }}>
                               {(Math.abs(checkinB.weight - checkinA.weight) / (Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000) / 7)).toFixed(2)} kg

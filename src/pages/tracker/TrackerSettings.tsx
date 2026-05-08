@@ -174,7 +174,7 @@ export default function TrackerSettings() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+          <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1rem" }}>
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="kt-label">Display name</label>
               <input className="kt-input" type="text" placeholder="e.g. Alex" value={profileForm.display_name} onChange={setP("display_name")} />
@@ -195,7 +195,7 @@ export default function TrackerSettings() {
               </select>
             </div>
             <div>
-              <label className="kt-label">TDEE (maintenance kcal)</label>
+              <label className="kt-label">TDEE (kcal)</label>
               <input className="kt-input" type="number" placeholder="2000" value={profileForm.tdee} onChange={setP("tdee")} />
             </div>
           </div>
@@ -222,13 +222,13 @@ export default function TrackerSettings() {
       {/* ── GOALS ── */}
       <Section eyebrow="Goals" title="Weight goals">
         <div className="kt-card">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1.5rem" }}>
             <div>
               <label className="kt-label">Target weight (kg)</label>
               <input className="kt-input" type="number" step="0.1" placeholder="e.g. 75" value={goalForm.goal_weight} onChange={e => setGoalForm(f => ({ ...f, goal_weight: e.target.value }))} />
             </div>
             <div>
-              <label className="kt-label">Weekly loss target (kg)</label>
+              <label className="kt-label">Weekly target (kg)</label>
               <input className="kt-input" type="number" step="0.1" placeholder="0.5" value={goalForm.weekly_target} onChange={e => setGoalForm(f => ({ ...f, weekly_target: e.target.value }))} />
             </div>
           </div>
