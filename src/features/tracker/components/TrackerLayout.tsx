@@ -92,8 +92,19 @@ export default function TrackerLayout() {
       .kt-badge-blue { color: #00C8FF; border-color: rgba(0,200,255,0.25); background: rgba(0,200,255,0.06); }
       .kt-badge-green { color: #5ad4a0; border-color: rgba(90,212,160,0.25); background: rgba(90,212,160,0.06); }
       .kt-badge-red { color: #d4705a; border-color: rgba(212,112,90,0.25); background: rgba(212,112,90,0.06); }
-      textarea.kt-input { resize: vertical; min-height: 100px; }
+      textarea.kt-input { resize: vertical; min-height: 90px; }
       select.kt-input { appearance: none; cursor: pointer; }
+
+      /* ── HIDE NATIVE NUMBER SPINNERS ── */
+      input[type=number]::-webkit-inner-spin-button,
+      input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+      input[type=number] { -moz-appearance: textfield; }
+
+      /* ── RESPONSIVE CHART HEIGHT ── */
+      .kt-chart-wrap { height: 240px; }
+      @media (max-width: 768px) {
+        .kt-chart-wrap { height: 190px; }
+      }
 
       /* ── MOBILE ── */
       @media (max-width: 768px) {
