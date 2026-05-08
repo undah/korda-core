@@ -70,8 +70,8 @@ function parseCSV(text: string): ParsedRow[] {
 function downloadTemplate() {
   const csv = [
     'screenshot_url,mistake,reason',
-    'https://www.tradingview.com/x/abc123/,"Said invalid, was actually valid","The structural high was never broken â€” aggressive pullback is not a reversal."',
-    'https://www.tradingview.com/x/xyz456/,"Said valid, was invalid","Failed to check conviction quality at the cutoff â€” momentum was weak."',
+    'https://www.tradingview.com/x/abc123/,"Said invalid, was actually valid","The structural high was never broken — aggressive pullback is not a reversal."',
+    'https://www.tradingview.com/x/xyz456/,"Said valid, was invalid","Failed to check conviction quality at the cutoff — momentum was weak."',
   ].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
@@ -204,13 +204,13 @@ export default function MistakesImporter({ onClose, onImported }: Props) {
                             {ok ? <CheckCircle2 size={14} style={{ color: VALID_GREEN }} /> : <XCircle size={14} style={{ color: INVALID_RED }} />}
                           </td>
                           <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.72rem', color: 'rgba(240,246,252,0.55)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {url || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                            {url || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: '#f0f6fc', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {mistake || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                            {mistake || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'rgba(240,246,252,0.45)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {reason || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                            {reason || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
                           </td>
                           <td style={tdStyle}>
                             {row.errors.length > 0 && (

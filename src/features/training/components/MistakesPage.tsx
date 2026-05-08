@@ -259,7 +259,7 @@ export default function MistakesPage() {
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '-0.03em', margin: 0 }}>Bot Mistakes</h1>
           <p style={{ fontSize: '0.825rem', color: 'rgba(240,246,252,0.4)', marginTop: '0.35rem' }}>
-            {entries.length} logged mistake{entries.length !== 1 ? 's' : ''} â€” used to improve future evaluations.
+            {entries.length} logged mistake{entries.length !== 1 ? 's' : ''} — used to improve future evaluations.
           </p>
         </div>
         <button onClick={() => setShowImporter(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 8, color: ACCENT, fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}>
@@ -379,7 +379,7 @@ export default function MistakesPage() {
                         {reasonText ? (
                           <div>
                             <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(240,246,252,0.55)', lineHeight: 1.5 }}>
-                              {isExpanded || !truncated ? reasonText : `${reasonText.slice(0, NOTE_TRUNCATE)}â€¦`}
+                              {isExpanded || !truncated ? reasonText : `${reasonText.slice(0, NOTE_TRUNCATE)}…`}
                             </p>
                             {truncated && (
                               <button onClick={() => toggleExpand(entry.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontSize: '0.72rem', padding: '0.2rem 0', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
@@ -387,7 +387,7 @@ export default function MistakesPage() {
                               </button>
                             )}
                           </div>
-                        ) : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                        ) : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>}
                       </td>
 
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.72rem', color: 'rgba(240,246,252,0.35)' }}>

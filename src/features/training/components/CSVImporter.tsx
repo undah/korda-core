@@ -295,7 +295,7 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                             }
                           </td>
                           <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.72rem', color: 'rgba(240,246,252,0.55)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {tvUrl || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                            {tvUrl || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
                           </td>
                           <td style={tdStyle}>
                             {row.entry ? (
@@ -307,11 +307,11 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                                 {row.entry.is_valid_setup ? 'Valid' : 'Invalid'}
                               </span>
                             ) : (
-                              <span style={{ fontSize: '0.72rem', color: WARN_YELLOW }}>{validRaw || 'â€”'}</span>
+                              <span style={{ fontSize: '0.72rem', color: WARN_YELLOW }}>{validRaw || '—'}</span>
                             )}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'rgba(240,246,252,0.45)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {notes || <span style={{ color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                            {notes || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
                           </td>
                           <td style={tdStyle}>
                             {row.errors.length > 0 && (

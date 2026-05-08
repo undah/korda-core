@@ -735,7 +735,7 @@ export default function HistoryTable() {
                               {s.label}
                             </span>
                           ) : null;
-                        })() : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>}
+                        })() : <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>}
                       </td>
 
                       {/* Valid? */}
@@ -758,7 +758,7 @@ export default function HistoryTable() {
                             {entry.submitted_by.split('@')[0]}
                           </span>
                         ) : (
-                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>
                         )}
                       </td>
 
@@ -767,7 +767,7 @@ export default function HistoryTable() {
                         {noteText ? (
                           <div>
                             <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(240,246,252,0.55)', lineHeight: 1.5 }}>
-                              {isExpanded || !truncated ? noteText : `${noteText.slice(0, NOTE_TRUNCATE)}â€¦`}
+                              {isExpanded || !truncated ? noteText : `${noteText.slice(0, NOTE_TRUNCATE)}…`}
                             </p>
                             {truncated && (
                               <button onClick={() => toggleExpand(entry.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontSize: '0.72rem', padding: '0.2rem 0', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
@@ -776,7 +776,7 @@ export default function HistoryTable() {
                             )}
                           </div>
                         ) : (
-                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>â€”</span>
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>
                         )}
                       </td>
 
