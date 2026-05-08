@@ -72,12 +72,12 @@ export default function TrackerLayout() {
       .kt-page-title { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; }
       .kt-page-title em { font-style: italic; color: rgba(0,200,255,0.55); }
 
-      .kt-card { background: #0D0D16; border: 1px solid rgba(0,200,255,0.07); border-top: 2px solid rgba(0,200,255,0.18); padding: 1.35rem 1.5rem; border-radius: 2px; }
+      .kt-card { background: #0D0D16; border: 1px solid rgba(0,200,255,0.07); border-top: 2px solid rgba(0,200,255,0.18); padding: 1.35rem 1.5rem; border-radius: 2px; overflow-x: hidden; }
       .kt-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(221,232,237,0.25); margin-bottom: 0.45rem; }
       .kt-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.55rem; font-weight: 500; color: #00C8FF; line-height: 1; }
       .kt-card-sub { font-size: 0.72rem; color: rgba(221,232,237,0.22); margin-top: 0.35rem; }
 
-      .kt-input { background: #080810; border: 1px solid rgba(0,200,255,0.1); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; min-width: 0; outline: none; transition: border-color 0.2s; border-radius: 6px; }
+      .kt-input { box-sizing: border-box; background: #080810; border: 1px solid rgba(0,200,255,0.1); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; max-width: 100%; min-width: 0; outline: none; transition: border-color 0.2s; border-radius: 6px; }
       .kt-input:focus { border-color: rgba(0,200,255,0.35); }
       .kt-input::placeholder { color: rgba(221,232,237,0.18); }
       .kt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(221,232,237,0.3); display: block; margin-bottom: 0.4rem; }
