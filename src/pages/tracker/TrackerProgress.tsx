@@ -54,7 +54,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
           onTouchEnd={e => (e.currentTarget.style.background = "rgba(0,200,255,0.04)")}
         >−</button>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0.6rem 0 0.5rem" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0.6rem 0 0.5rem" }}>
           <input
             type="number" inputMode="decimal" step={0.1}
             value={value}
@@ -63,8 +63,8 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
             style={{
               width: "100%", minWidth: 0, background: "transparent", border: "none", outline: "none",
               color: value ? C.accent : "rgba(221,232,237,0.18)",
-              fontFamily: "'IBM Plex Mono',monospace", fontSize: "2.4rem", fontWeight: 500,
-              textAlign: "center", padding: "0 0.5rem",
+              fontFamily: "'IBM Plex Mono',monospace", fontSize: "clamp(1.6rem, 7vw, 2.4rem)", fontWeight: 500,
+              textAlign: "center", padding: "0 0.25rem",
             }}
           />
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.22)", letterSpacing: "0.12em" }}>kg</span>
