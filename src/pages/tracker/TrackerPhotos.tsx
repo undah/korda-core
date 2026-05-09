@@ -7,9 +7,10 @@ import { toast } from "sonner";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 
 const today = () => new Date().toISOString().split("T")[0];
-const ANGLES = ["front", "side", "back"] as const;
+const ANGLES = ["front", "side", "back", "face"] as const;
 const isMobile = () => window.innerWidth <= 768;
 type Tab = "timeline" | "compare";
+type Angle = typeof ANGLES[number];
 
 function StatDiff({ label, from, to, unit = "", invert = false }: { label: string; from?: number | null; to?: number | null; unit?: string; invert?: boolean }) {
   if (!from || !to) return null;
@@ -42,13 +43,14 @@ export default function TrackerPhotos() {
   const [mobile] = useState(isMobile);
 
   const [tab, setTab] = useState<Tab>("timeline");
-  const [form, setForm] = useState({ log_date: today(), angle: "front" as "front" | "side" | "back", weight_at: "" });
+  const [form, setForm] = useState({ log_date: today(), angle: "front" as Angle, weight_at: "" });
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [fileKey, setFileKey] = useState(0);
   const [lightbox, setLightbox] = useState<TrackerPhoto | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showPhotoConflict, setShowPhotoConflict] = useState(false);
-  const [compareAngle, setCompareAngle] = useState<"front" | "side" | "back">("front");
+  const [compareAngle, setCompareAngle] = useState<Angle>("front");
   const [dateA, setDateA] = useState("");
   const [dateB, setDateB] = useState("");
 
@@ -65,7 +67,7 @@ export default function TrackerPhotos() {
       await uploadPhoto.mutateAsync({ file, angle: form.angle, log_date: form.log_date, weight_at: form.weight_at ? parseFloat(form.weight_at) : undefined });
       toast.success("Photo uploaded.");
       setFile(null); setPreview(null); setShowPhotoConflict(false);
-      if (fileRef.current) fileRef.current.value = "";
+      setFileKey(k => k + 1); // remount input to clear mobile camera cache
     } catch { toast.error("Upload failed."); }
   };
 
@@ -208,7 +210,7 @@ export default function TrackerPhotos() {
                 </>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+            <input key={fileKey} ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
             <button className="kt-btn kt-btn-blue" onClick={handleUpload} disabled={!file || uploadPhoto.isPending} style={{ width: "100%" }}>
               {uploadPhoto.isPending ? "Uploading..." : "Upload photo →"}
             </button>
@@ -227,7 +229,7 @@ export default function TrackerPhotos() {
                     {byDate[date][0]?.weight_at && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: "#5ab4d4" }}>{byDate[date][0].weight_at} kg</span>}
                     <div style={{ flex: 1, height: 1, background: "rgba(90,180,212,0.06)" }} />
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.5rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.5rem" }}>
                     {ANGLES.map(angle => {
                       const photo = byDate[date].find(p => p.angle === angle);
                       return (

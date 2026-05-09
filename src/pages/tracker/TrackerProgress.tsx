@@ -159,6 +159,7 @@ export default function TrackerProgress() {
   const [showConflict, setShowConflict]       = useState(false);
   const [pendingPayload, setPendingPayload]   = useState<any>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId]             = useState<string | null>(null);
 
   const setField = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }));
 
@@ -173,14 +174,40 @@ export default function TrackerProgress() {
     notes:    form.notes    || null,
   });
 
-  const resetForm = () => setForm(f => ({ ...f, weight: "", waist: "", chest: "", hips: "", arms: "", thighs: "", body_fat: "", notes: "" }));
+  const resetForm = () => {
+    setForm(f => ({ ...f, weight: "", waist: "", chest: "", hips: "", arms: "", thighs: "", body_fat: "", notes: "" }));
+    setEditingId(null);
+  };
+
+  const handleEdit = (c: TrackerCheckin) => {
+    setForm({
+      log_date: c.log_date,
+      weight:   c.weight?.toString()   ?? "",
+      waist:    c.waist?.toString()    ?? "",
+      chest:    c.chest?.toString()    ?? "",
+      hips:     c.hips?.toString()     ?? "",
+      arms:     c.arms?.toString()     ?? "",
+      thighs:   c.thighs?.toString()   ?? "",
+      body_fat: c.body_fat?.toString() ?? "",
+      notes:    c.notes               ?? "",
+    });
+    setEditingId(c.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleSubmit = async () => {
     if (!form.weight) return toast.error("Weight is required.");
     const payload  = buildPayload();
-    const existing = checkins.find(c => c.log_date === form.log_date);
-    if (existing) { setPendingPayload(payload); setShowConflict(true); return; }
-    try { await addCheckin.mutateAsync(payload); toast.success("Check-in saved."); resetForm(); }
+    // skip conflict check when editing — we're intentionally overwriting
+    if (!editingId) {
+      const existing = checkins.find(c => c.log_date === form.log_date);
+      if (existing) { setPendingPayload(payload); setShowConflict(true); return; }
+    }
+    try {
+      await addCheckin.mutateAsync(payload);
+      toast.success(editingId ? "Check-in updated." : "Check-in saved.");
+      resetForm();
+    }
     catch { toast.error("Failed to save."); }
   };
 
@@ -266,8 +293,15 @@ export default function TrackerProgress() {
       )}
 
       {/* Check-in form */}
-      <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
-        <p className="kt-card-label" style={{ marginBottom: "1.25rem" }}>New check-in</p>
+      <div className="kt-card" style={{ marginBottom: "1.5rem", borderColor: editingId ? "rgba(0,200,255,0.25)" : undefined }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+          <p className="kt-card-label" style={{ margin: 0 }}>{editingId ? "Edit check-in" : "New check-in"}</p>
+          {editingId && (
+            <button onClick={resetForm} style={{ background: "none", border: "none", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.1em", color: "rgba(221,232,237,0.3)", cursor: "pointer", textTransform: "uppercase" }}>
+              cancel ×
+            </button>
+          )}
+        </div>
 
         {/* Date */}
         <div style={{ marginBottom: "1.25rem" }}>
@@ -322,7 +356,7 @@ export default function TrackerProgress() {
           disabled={addCheckin.isPending || !form.weight}
           style={{ width: "100%", opacity: !form.weight ? 0.45 : 1, fontSize: "0.78rem" }}
         >
-          {addCheckin.isPending ? "Saving..." : "Save check-in →"}
+          {addCheckin.isPending ? "Saving..." : editingId ? "Update check-in →" : "Save check-in →"}
         </button>
       </div>
 
@@ -360,14 +394,23 @@ export default function TrackerProgress() {
                       {c.notes    && <span style={{ fontSize: "0.68rem", color: "rgba(221,232,237,0.2)", fontStyle: "italic" }}>{c.notes}</span>}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setConfirmDeleteId(c.id)}
-                    style={{ width: 32, height: 32, background: "none", border: "1px solid rgba(212,112,90,0.15)", borderRadius: 8, color: "rgba(212,112,90,0.4)", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s", WebkitTapHighlightColor: "transparent" }}
-                    onTouchStart={e => { (e.currentTarget.style.background = "rgba(212,112,90,0.12)"); (e.currentTarget.style.color = C.red); }}
-                    onTouchEnd={e => { (e.currentTarget.style.background = "none"); (e.currentTarget.style.color = "rgba(212,112,90,0.4)"); }}
-                    onMouseEnter={e => { (e.currentTarget.style.background = "rgba(212,112,90,0.1)"); (e.currentTarget.style.color = C.red); }}
-                    onMouseLeave={e => { (e.currentTarget.style.background = "none"); (e.currentTarget.style.color = "rgba(212,112,90,0.4)"); }}
-                  >×</button>
+                  <div style={{ display: "flex", gap: "0.35rem", flexShrink: 0 }}>
+                    <button
+                      onClick={() => handleEdit(c)}
+                      title="Edit"
+                      style={{ width: 32, height: 32, background: editingId === c.id ? "rgba(0,200,255,0.12)" : "none", border: `1px solid ${editingId === c.id ? "rgba(0,200,255,0.4)" : "rgba(0,200,255,0.12)"}`, borderRadius: 8, color: editingId === c.id ? C.accent : "rgba(0,200,255,0.35)", cursor: "pointer", fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s", WebkitTapHighlightColor: "transparent" }}
+                      onMouseEnter={e => { if (editingId !== c.id) { (e.currentTarget.style.background = "rgba(0,200,255,0.08)"); (e.currentTarget.style.color = C.accent); } }}
+                      onMouseLeave={e => { if (editingId !== c.id) { (e.currentTarget.style.background = "none"); (e.currentTarget.style.color = "rgba(0,200,255,0.35)"); } }}
+                    >✎</button>
+                    <button
+                      onClick={() => setConfirmDeleteId(c.id)}
+                      style={{ width: 32, height: 32, background: "none", border: "1px solid rgba(212,112,90,0.15)", borderRadius: 8, color: "rgba(212,112,90,0.4)", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s", WebkitTapHighlightColor: "transparent" }}
+                      onTouchStart={e => { (e.currentTarget.style.background = "rgba(212,112,90,0.12)"); (e.currentTarget.style.color = C.red); }}
+                      onTouchEnd={e => { (e.currentTarget.style.background = "none"); (e.currentTarget.style.color = "rgba(212,112,90,0.4)"); }}
+                      onMouseEnter={e => { (e.currentTarget.style.background = "rgba(212,112,90,0.1)"); (e.currentTarget.style.color = C.red); }}
+                      onMouseLeave={e => { (e.currentTarget.style.background = "none"); (e.currentTarget.style.color = "rgba(212,112,90,0.4)"); }}
+                    >×</button>
+                  </div>
                 </div>
               );
             })}
