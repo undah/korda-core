@@ -1,17 +1,18 @@
 ﻿import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { PlusCircle, Clock, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle, BookOpen, BarChart2, ShieldCheck, Zap } from 'lucide-react';
+import { PlusCircle, Clock, ArrowLeft, LogOut, Menu, X, Camera, AlertTriangle, BookOpen, BarChart2, ShieldCheck, Zap, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
   { path: '/training/performance',          label: 'Performance',     icon: BarChart2 },
-  { path: '/training/new',                  label: 'New Entry',   icon: PlusCircle },
-  { path: '/training/history',              label: 'History',     icon: Clock },
-  { path: '/training/mistakes',             label: 'Mistakes',       icon: AlertTriangle },
+  { path: '/training/new',                  label: 'New Entry',       icon: PlusCircle },
+  { path: '/training/history',              label: 'History',         icon: Clock },
+  { path: '/training/mistakes',             label: 'Mistakes',        icon: AlertTriangle },
   { path: '/training/concepts',             label: 'Concept Journal', icon: BookOpen },
-  { path: '/training/rules',               label: 'Rules',           icon: ShieldCheck },
+  { path: '/training/rules',                label: 'Rules',           icon: ShieldCheck },
   { path: '/training/screenshot-scheduler', label: 'Screenshots',     icon: Camera },
   { path: '/training/finetune',             label: 'Fine-tune',       icon: Zap },
+  { path: '/training/chat',                 label: 'Chat',            icon: MessageSquare },
 ];
 
 export default function TrainingLayout() {
