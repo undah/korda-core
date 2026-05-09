@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
   { path: '/training/performance',          label: 'Performance',     icon: BarChart2 },
+  { path: '/training/chat',                 label: 'Chat',            icon: MessageSquare },
   { path: '/training/new',                  label: 'New Entry',       icon: PlusCircle },
   { path: '/training/history',              label: 'History',         icon: Clock },
   { path: '/training/mistakes',             label: 'Mistakes',        icon: AlertTriangle },
@@ -12,7 +13,6 @@ const NAV_ITEMS = [
   { path: '/training/rules',                label: 'Rules',           icon: ShieldCheck },
   { path: '/training/screenshot-scheduler', label: 'Screenshots',     icon: Camera },
   { path: '/training/finetune',             label: 'Fine-tune',       icon: Zap },
-  { path: '/training/chat',                 label: 'Chat',            icon: MessageSquare },
 ];
 
 export default function TrainingLayout() {
