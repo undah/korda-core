@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
-import { Send, Image as ImageIcon, X, ChevronDown, ChevronUp, Loader2, Copy, Trash2 } from 'lucide-react';
+import { Send, Image as ImageIcon, X, ChevronDown, ChevronUp, Loader2, Copy, Trash2, BookmarkPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { insertMistake } from '@/features/training/lib/trainingData';
 
 const MODEL_ID = 'ft:gpt-4o-2024-08-06:korda::DczJwNyv';
 const ACCENT = '#00C8FF';
@@ -35,6 +36,7 @@ interface Exchange {
   id: string;
   userText: string;
   imageSrc: string | null;
+  imageBase64: string | null;
   response: string;
   timestamp: Date;
 }
@@ -73,6 +75,10 @@ export default function ChatPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [loggingId, setLoggingId] = useState<string | null>(null);
+  const [logMistake, setLogMistake] = useState('');
+  const [logReason, setLogReason] = useState('');
+  const [logSaving, setLogSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const attachImage = (file: File) => {
@@ -119,9 +125,10 @@ export default function ChatPage() {
       if (capturedText.trim()) {
         userContent.push({ type: 'text', text: capturedText.trim() });
       }
+      let capturedBase64: string | null = null;
       if (capturedFile) {
-        const b64 = await fileToBase64(capturedFile);
-        userContent.push({ type: 'image_url', image_url: { url: b64, detail: 'high' } });
+        capturedBase64 = await fileToBase64(capturedFile);
+        userContent.push({ type: 'image_url', image_url: { url: capturedBase64, detail: 'high' } });
       }
 
       const messages: any[] = [];
@@ -162,6 +169,7 @@ export default function ChatPage() {
           id: crypto.randomUUID(),
           userText: capturedText,
           imageSrc: capturedPreviewUrl,
+          imageBase64: capturedBase64,
           response: responseText,
           timestamp: new Date(),
         },
@@ -175,6 +183,30 @@ export default function ChatPage() {
   };
 
   const canSend = !loading && (!!userText.trim() || !!imageFile);
+
+  const openLog = (id: string) => {
+    setLoggingId(id);
+    setLogMistake('');
+    setLogReason('');
+  };
+
+  const handleLogSubmit = async (ex: Exchange) => {
+    if (!logMistake.trim()) { toast.error('Mistake description is required'); return; }
+    setLogSaving(true);
+    try {
+      await insertMistake({
+        screenshot_url: ex.imageBase64 ?? 'chat-log',
+        mistake: logMistake.trim(),
+        reason: logReason.trim() || null,
+      });
+      toast.success('Logged to Mistakes');
+      setLoggingId(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to save');
+    } finally {
+      setLogSaving(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -359,16 +391,80 @@ export default function ChatPage() {
               <p style={{ flex: 1, fontSize: '0.875rem', color: '#f0f6fc', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap', minWidth: 0 }}>
                 {ex.response}
               </p>
-              <button
-                onClick={() => { navigator.clipboard.writeText(ex.response); toast.success('Copied'); }}
-                title="Copy response"
-                style={{ flexShrink: 0, padding: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,246,252,0.2)', borderRadius: 4, transition: 'color 0.15s', alignSelf: 'flex-start' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.6)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.2)')}
-              >
-                <Copy size={13} />
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0, alignSelf: 'flex-start' }}>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(ex.response); toast.success('Copied'); }}
+                  title="Copy response"
+                  style={{ padding: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,246,252,0.2)', borderRadius: 4, transition: 'color 0.15s', display: 'flex' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.6)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.2)')}
+                >
+                  <Copy size={13} />
+                </button>
+                <button
+                  onClick={() => loggingId === ex.id ? setLoggingId(null) : openLog(ex.id)}
+                  title="Log as mistake"
+                  style={{ padding: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', color: loggingId === ex.id ? ACCENT : 'rgba(240,246,252,0.2)', borderRadius: 4, transition: 'color 0.15s', display: 'flex' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = ACCENT)}
+                  onMouseLeave={e => (e.currentTarget.style.color = loggingId === ex.id ? ACCENT : 'rgba(240,246,252,0.2)')}
+                >
+                  <BookmarkPlus size={13} />
+                </button>
+              </div>
             </div>
+
+            {/* Log-as-mistake inline form */}
+            {loggingId === ex.id && (
+              <div style={{ borderTop: '1px solid rgba(0,200,255,0.12)', background: 'rgba(0,200,255,0.03)', padding: '1rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: ACCENT, marginBottom: '0.75rem' }}>
+                  Log as Mistake
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', marginBottom: '0.3rem' }}>
+                      What was wrong <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={logMistake}
+                      onChange={e => setLogMistake(e.target.value)}
+                      placeholder="e.g. Incorrectly identified no-trade as valid setup"
+                      style={{ ...INPUT, resize: 'none', padding: '0.6rem 0.75rem', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', marginBottom: '0.3rem' }}>
+                      Notes / explanation <span style={{ color: 'rgba(240,246,252,0.25)' }}>(optional)</span>
+                    </label>
+                    <textarea
+                      value={logReason}
+                      onChange={e => setLogReason(e.target.value)}
+                      rows={3}
+                      placeholder="Add more detail about why the answer was wrong…"
+                      style={{ ...INPUT, fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                    <button
+                      onClick={() => setLoggingId(null)}
+                      style={{ padding: '0.4rem 0.9rem', borderRadius: 6, background: 'none', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '0.78rem', color: 'rgba(240,246,252,0.4)', transition: 'color 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.75)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.4)')}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleLogSubmit(ex)}
+                      disabled={logSaving || !logMistake.trim()}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.9rem', borderRadius: 6, background: logMistake.trim() ? ACCENT : 'rgba(0,200,255,0.08)', border: 'none', cursor: logMistake.trim() ? 'pointer' : 'not-allowed', fontSize: '0.78rem', fontWeight: 600, color: logMistake.trim() ? '#000' : 'rgba(0,200,255,0.3)', transition: 'all 0.15s' }}
+                    >
+                      {logSaving && <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />}
+                      {logSaving ? 'Saving…' : 'Log Mistake'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
