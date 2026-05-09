@@ -12,6 +12,29 @@ const NOTE_TRUNCATE = 100;
 
 type PendingBulkAction = { kind: 'delete' };
 
+function previewImageUrl(url: string): string | null {
+  if (!url || url === 'chat-log') return null;
+  if (url.includes('/storage/v1/object/')) return url;
+  const match = url.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+  if (!match) return null;
+  const id = match[1];
+  return `https://s3.tradingview.com/snapshots/${id[0].toLowerCase()}/${id}.png`;
+}
+
+function ScreenshotPreview({ url, x, y }: { url: string; x: number; y: number }) {
+  const [failed, setFailed] = useState(false);
+  const imgUrl = previewImageUrl(url);
+  if (!imgUrl || failed) return null;
+  const spaceRight = window.innerWidth - x;
+  const left = spaceRight > 360 ? x + 18 : x - 338;
+  const top  = Math.min(y - 10, window.innerHeight - 210);
+  return (
+    <div style={{ position: 'fixed', left, top, zIndex: 9999, width: 320, background: '#0d1117', border: '1px solid rgba(0,200,255,0.25)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.75)', pointerEvents: 'none' }}>
+      <img src={imgUrl} alt="" onError={() => setFailed(true)} style={{ width: '100%', display: 'block' }} />
+    </div>
+  );
+}
+
 const CLASSIFICATIONS: { value: MistakeClassification; label: string; color: string }[] = [
   { value: 'false_positive',  label: 'False Positive',  color: '#f87171' },
   { value: 'false_negative',  label: 'False Negative',  color: '#fbbf24' },
@@ -225,6 +248,8 @@ export default function MistakesPage() {
   const [classification, setClassification] = useState<MistakeClassification | null>(null);
   const [urlUploading, setUrlUploading] = useState(false);
   const urlFileRef = useRef<HTMLInputElement>(null);
+  const [hoveredUrl, setHoveredUrl] = useState<string | null>(null);
+  const [hoverPos,   setHoverPos]   = useState({ x: 0, y: 0 });
 
   const handleUrlFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -309,6 +334,7 @@ export default function MistakesPage() {
   return (
     <div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {hoveredUrl && <ScreenshotPreview url={hoveredUrl} x={hoverPos.x} y={hoverPos.y} />}
       {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} onSaved={updated => setEntries(prev => prev.map(e => e.id === updated.id ? updated : e))} />}
       {showImporter && <MistakesImporter onClose={() => setShowImporter(false)} onImported={imported => setEntries(prev => [...imported, ...prev])} />}
       {pendingBulk && <BulkConfirmModal count={selected.size} onConfirm={handleBulkDelete} onCancel={() => setPendingBulk(null)} working={bulkWorking} />}
@@ -442,7 +468,12 @@ export default function MistakesPage() {
                       </td>
                       <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 36 }}>{globalIdx + 1}</td>
 
-                      <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                      <td
+                        style={{ ...tdStyle, verticalAlign: 'middle' }}
+                        onMouseEnter={e => { setHoveredUrl(entry.screenshot_url); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                        onMouseMove={e => setHoverPos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredUrl(null)}
+                      >
                         {entry.screenshot_url.includes('/storage/v1/object/') ? (
                           <a href={entry.screenshot_url} target="_blank" rel="noreferrer" title="View full screenshot">
                             <img
