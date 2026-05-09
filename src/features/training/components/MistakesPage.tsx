@@ -3,7 +3,7 @@ import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Tra
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchMistakes, insertMistake, updateMistake, deleteMistake, bulkDeleteMistakes } from '../lib/trainingData';
-import type { Mistake } from '../types';
+import type { Mistake, MistakeClassification } from '../types';
 import MistakesImporter from './MistakesImporter';
 
 const ACCENT      = '#00C8FF';
@@ -11,6 +11,36 @@ const DELETE_RED  = '#ef4444';
 const NOTE_TRUNCATE = 100;
 
 type PendingBulkAction = { kind: 'delete' };
+
+const CLASSIFICATIONS: { value: MistakeClassification; label: string; color: string }[] = [
+  { value: 'false_positive',  label: 'False Positive',  color: '#f87171' },
+  { value: 'false_negative',  label: 'False Negative',  color: '#fbbf24' },
+  { value: 'wrong_reasoning', label: 'Wrong Reasoning', color: '#818cf8' },
+];
+
+function ClassificationBadge({ value }: { value: MistakeClassification | null }) {
+  if (!value) return <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>;
+  const c = CLASSIFICATIONS.find(x => x.value === value);
+  if (!c) return null;
+  return (
+    <span style={{ display: 'inline-block', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.04em', padding: '0.15rem 0.55rem', borderRadius: 5, background: `${c.color}18`, border: `1px solid ${c.color}40`, color: c.color, whiteSpace: 'nowrap' }}>
+      {c.label}
+    </span>
+  );
+}
+
+function ClassificationSelect({ value, onChange }: { value: MistakeClassification | null; onChange: (v: MistakeClassification | null) => void }) {
+  return (
+    <select
+      value={value ?? ''}
+      onChange={e => onChange((e.target.value as MistakeClassification) || null)}
+      style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(240,246,252,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center' }}
+    >
+      <option value="">— None —</option>
+      {CLASSIFICATIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+    </select>
+  );
+}
 
 // ── Custom checkbox ───────────────────────────────────────────────────────────
 
@@ -93,10 +123,11 @@ function EditModal({ entry, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (updated: Mistake) => void;
 }) {
-  const [url, setUrl]         = useState(entry.screenshot_url);
-  const [mistake, setMistake] = useState(entry.mistake);
-  const [reason, setReason]   = useState(entry.reason ?? '');
-  const [saving, setSaving]   = useState(false);
+  const [url, setUrl]                   = useState(entry.screenshot_url);
+  const [mistake, setMistake]           = useState(entry.mistake);
+  const [reason, setReason]             = useState(entry.reason ?? '');
+  const [classification, setClassification] = useState<MistakeClassification | null>(entry.classification ?? null);
+  const [saving, setSaving]             = useState(false);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -112,6 +143,7 @@ function EditModal({ entry, onClose, onSaved }: {
         screenshot_url: url.trim(),
         mistake: mistake.trim(),
         reason: reason.trim() || null,
+        classification,
       });
       toast.success('Mistake updated.');
       onSaved(updated);
@@ -143,6 +175,11 @@ function EditModal({ entry, onClose, onSaved }: {
         <div>
           <label style={labelStyle}>Mistake</label>
           <input value={mistake} onChange={e => setMistake(e.target.value)} style={inputStyle} placeholder="e.g. Said invalid, was actually valid" />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Classification</label>
+          <ClassificationSelect value={classification} onChange={setClassification} />
         </div>
 
         <div>
@@ -185,6 +222,7 @@ export default function MistakesPage() {
   const [url, setUrl]         = useState('');
   const [mistake, setMistake] = useState('');
   const [reason, setReason]   = useState('');
+  const [classification, setClassification] = useState<MistakeClassification | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -200,9 +238,9 @@ export default function MistakesPage() {
     if (!url.trim() || !mistake.trim()) { toast.error('URL and mistake are required.'); return; }
     setSubmitting(true);
     try {
-      const created = await insertMistake({ screenshot_url: url.trim(), mistake: mistake.trim(), reason: reason.trim() || null });
+      const created = await insertMistake({ screenshot_url: url.trim(), mistake: mistake.trim(), reason: reason.trim() || null, classification });
       setEntries(prev => [created, ...prev]);
-      setUrl(''); setMistake(''); setReason('');
+      setUrl(''); setMistake(''); setReason(''); setClassification(null);
       toast.success('Mistake logged.');
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to save.');
@@ -283,6 +321,10 @@ export default function MistakesPage() {
             <label style={labelStyle}>Mistake</label>
             <input value={mistake} onChange={e => setMistake(e.target.value)} placeholder="e.g. Said invalid, was actually valid" style={inputStyle} />
           </div>
+          <div style={{ flex: '1 1 180px' }}>
+            <label style={labelStyle}>Classification</label>
+            <ClassificationSelect value={classification} onChange={setClassification} />
+          </div>
         </div>
 
         <div>
@@ -338,7 +380,7 @@ export default function MistakesPage() {
                   <th style={{ ...thStyle, width: 36 }}>
                     <CustomCheckbox checked={allPageSelected} indeterminate={somePageSelected && !allPageSelected} onChange={toggleSelectAll} />
                   </th>
-                  {['#', 'Screenshot', 'Mistake', 'Reason', 'Date', ''].map((h, i) => (
+                  {['#', 'Screenshot', 'Mistake', 'Classification', 'Reason', 'Date', ''].map((h, i) => (
                     <th key={i} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -373,6 +415,10 @@ export default function MistakesPage() {
 
                       <td style={{ ...tdStyle, maxWidth: 200 }}>
                         <span style={{ fontSize: '0.8rem', color: '#f0f6fc', fontWeight: 500 }}>{entry.mistake}</span>
+                      </td>
+
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                        <ClassificationBadge value={entry.classification} />
                       </td>
 
                       <td style={{ ...tdStyle, maxWidth: 320 }}>

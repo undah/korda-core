@@ -2,6 +2,13 @@ import { useState, useRef, useCallback } from 'react';
 import { Send, Image as ImageIcon, X, ChevronDown, ChevronUp, Loader2, Copy, Trash2, BookmarkPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { insertMistake } from '@/features/training/lib/trainingData';
+import type { MistakeClassification } from '@/features/training/types';
+
+const CLASSIFICATIONS: { value: MistakeClassification; label: string; color: string }[] = [
+  { value: 'false_positive',  label: 'False Positive',  color: '#f87171' },
+  { value: 'false_negative',  label: 'False Negative',  color: '#fbbf24' },
+  { value: 'wrong_reasoning', label: 'Wrong Reasoning', color: '#818cf8' },
+];
 
 const MODEL_ID = 'ft:gpt-4o-2024-08-06:korda::DczJwNyv';
 const ACCENT = '#00C8FF';
@@ -80,6 +87,7 @@ export default function ChatPage() {
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [logMistake, setLogMistake] = useState('');
   const [logReason, setLogReason] = useState('');
+  const [logClassification, setLogClassification] = useState<MistakeClassification | null>(null);
   const [logSaving, setLogSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -190,6 +198,7 @@ export default function ChatPage() {
     setLoggingId(id);
     setLogMistake('');
     setLogReason('');
+    setLogClassification(null);
   };
 
   const handleLogSubmit = async (ex: Exchange) => {
@@ -200,6 +209,7 @@ export default function ChatPage() {
         screenshot_url: ex.imageBase64 ?? 'chat-log',
         mistake: logMistake.trim(),
         reason: logReason.trim() || null,
+        classification: logClassification,
       });
       toast.success('Logged to Mistakes');
       setLoggingId(null);
@@ -442,6 +452,20 @@ export default function ChatPage() {
                       style={{ ...INPUT, resize: 'none', padding: '0.6rem 0.75rem', fontSize: '0.8rem' }}
                     />
                   </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', marginBottom: '0.3rem' }}>
+                      Classification <span style={{ color: 'rgba(240,246,252,0.25)' }}>(optional)</span>
+                    </label>
+                    <select
+                      value={logClassification ?? ''}
+                      onChange={e => setLogClassification((e.target.value as MistakeClassification) || null)}
+                      style={{ ...INPUT, resize: 'none', padding: '0.6rem 0.75rem', fontSize: '0.8rem', cursor: 'pointer', appearance: 'none' as any }}
+                    >
+                      <option value="">— None —</option>
+                      {CLASSIFICATIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', marginBottom: '0.3rem' }}>
                       Notes / explanation <span style={{ color: 'rgba(240,246,252,0.25)' }}>(optional)</span>
