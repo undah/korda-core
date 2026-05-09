@@ -189,7 +189,15 @@ export default function TrackerPhotos() {
               <label className="kt-label">Angle</label>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {ANGLES.map(a => (
-                  <button key={a} onClick={() => setForm(f => ({ ...f, angle: a }))}
+                  <button key={a} onClick={() => {
+                    setForm(f => ({ ...f, angle: a }));
+                    if (a !== form.angle) {
+                      setFile(null);
+                      if (preview) URL.revokeObjectURL(preview);
+                      setPreview(null);
+                      setFileKey(k => k + 1);
+                    }
+                  }}
                     style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: form.angle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: form.angle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", transition: "all 0.15s", flex: 1 }}>
                     {a}
                   </button>
