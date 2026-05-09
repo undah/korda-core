@@ -53,6 +53,19 @@ export async function fetchMistakes(): Promise<Mistake[]> {
   return data ?? [];
 }
 
+export async function uploadMistakeScreenshot(dataUrl: string): Promise<string> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png';
+  const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('mistake-screenshots')
+    .upload(path, blob, { contentType: blob.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from('mistake-screenshots').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function insertMistake(entry: MistakeInsert): Promise<Mistake> {
   const { data, error } = await supabase
     .from('mistakes')

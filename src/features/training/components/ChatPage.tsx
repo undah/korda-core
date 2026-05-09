@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Send, Image as ImageIcon, X, ChevronDown, ChevronUp, Loader2, Copy, Trash2, BookmarkPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { insertMistake } from '@/features/training/lib/trainingData';
+import { insertMistake, uploadMistakeScreenshot } from '@/features/training/lib/trainingData';
 import type { MistakeClassification } from '@/features/training/types';
 
 const CLASSIFICATIONS: { value: MistakeClassification; label: string; color: string }[] = [
@@ -205,8 +205,12 @@ export default function ChatPage() {
     if (!logMistake.trim()) { toast.error('Mistake description is required'); return; }
     setLogSaving(true);
     try {
+      let screenshotUrl = 'chat-log';
+      if (ex.imageBase64) {
+        screenshotUrl = await uploadMistakeScreenshot(ex.imageBase64);
+      }
       await insertMistake({
-        screenshot_url: ex.imageBase64 ?? 'chat-log',
+        screenshot_url: screenshotUrl,
         mistake: logMistake.trim(),
         reason: logReason.trim() || null,
         classification: logClassification,

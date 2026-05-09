@@ -1,8 +1,8 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { fetchMistakes, insertMistake, updateMistake, deleteMistake, bulkDeleteMistakes } from '../lib/trainingData';
+import { fetchMistakes, insertMistake, updateMistake, deleteMistake, bulkDeleteMistakes, uploadMistakeScreenshot } from '../lib/trainingData';
 import type { Mistake, MistakeClassification } from '../types';
 import MistakesImporter from './MistakesImporter';
 
@@ -223,6 +223,27 @@ export default function MistakesPage() {
   const [mistake, setMistake] = useState('');
   const [reason, setReason]   = useState('');
   const [classification, setClassification] = useState<MistakeClassification | null>(null);
+  const [urlUploading, setUrlUploading] = useState(false);
+  const urlFileRef = useRef<HTMLInputElement>(null);
+
+  const handleUrlFileUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setUrlUploading(true);
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((res, rej) => {
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const uploadedUrl = await uploadMistakeScreenshot(dataUrl);
+      setUrl(uploadedUrl);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Upload failed');
+    } finally {
+      setUrlUploading(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -311,11 +332,26 @@ export default function MistakesPage() {
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 260px' }}>
-            <label style={labelStyle}>Screenshot URL</label>
-            <div style={{ position: 'relative' }}>
-              <LinkIcon size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(240,246,252,0.3)', pointerEvents: 'none' }} />
-              <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.tradingview.com/x/..." style={{ ...inputStyle, paddingLeft: '2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem' }} />
+            <label style={labelStyle}>Screenshot</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <LinkIcon size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(240,246,252,0.3)', pointerEvents: 'none' }} />
+                <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.tradingview.com/x/..." style={{ ...inputStyle, paddingLeft: '2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem' }} />
+              </div>
+              <input type="file" accept="image/*" ref={urlFileRef} style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleUrlFileUpload(f); e.target.value = ''; }} />
+              <button
+                onClick={() => urlFileRef.current?.click()}
+                disabled={urlUploading}
+                title="Upload screenshot"
+                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.6rem 0.75rem', background: 'rgba(0,200,255,0.07)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: 8, color: ACCENT, fontSize: '0.75rem', fontWeight: 500, cursor: urlUploading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {urlUploading ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Upload size={13} />}
+                {urlUploading ? 'Uploading…' : 'Upload'}
+              </button>
             </div>
+            {url && url.includes('/storage/v1/object/') && (
+              <img src={url} alt="preview" style={{ marginTop: '0.5rem', height: 48, borderRadius: 5, border: '1px solid rgba(255,255,255,0.1)', objectFit: 'cover', background: '#000' }} />
+            )}
           </div>
           <div style={{ flex: '1 1 220px' }}>
             <label style={labelStyle}>Mistake</label>
@@ -406,11 +442,23 @@ export default function MistakesPage() {
                       </td>
                       <td style={{ ...tdStyle, color: 'rgba(240,246,252,0.25)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', width: 36 }}>{globalIdx + 1}</td>
 
-                      <td style={tdStyle}>
-                        <a href={entry.screenshot_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: ACCENT, fontSize: '0.75rem', fontFamily: "'JetBrains Mono', monospace", textDecoration: 'none', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <ExternalLink size={11} style={{ flexShrink: 0 }} />
-                          {entry.screenshot_url.replace(/^https?:\/\/(www\.)?/, '')}
-                        </a>
+                      <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                        {entry.screenshot_url.includes('/storage/v1/object/') ? (
+                          <a href={entry.screenshot_url} target="_blank" rel="noreferrer" title="View full screenshot">
+                            <img
+                              src={entry.screenshot_url}
+                              alt="chart screenshot"
+                              style={{ height: 48, width: 80, objectFit: 'cover', borderRadius: 5, border: '1px solid rgba(255,255,255,0.1)', display: 'block', background: '#000' }}
+                            />
+                          </a>
+                        ) : entry.screenshot_url === 'chat-log' ? (
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.2)' }}>—</span>
+                        ) : (
+                          <a href={entry.screenshot_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: ACCENT, fontSize: '0.75rem', fontFamily: "'JetBrains Mono', monospace", textDecoration: 'none', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <ExternalLink size={11} style={{ flexShrink: 0 }} />
+                            {entry.screenshot_url.replace(/^https?:\/\/(www\.)?/, '')}
+                          </a>
+                        )}
                       </td>
 
                       <td style={{ ...tdStyle, maxWidth: 200 }}>
