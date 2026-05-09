@@ -99,7 +99,7 @@ export function useUploadPhoto() {
       weight_at,
     }: {
       file: File;
-      angle: "front" | "side" | "back";
+      angle: "front" | "side" | "back" | "face";
       log_date: string;
       weight_at?: number;
     }) => {

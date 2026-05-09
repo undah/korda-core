@@ -56,7 +56,7 @@ export interface TrackerPhoto {
   id: string;
   user_id: string;
   log_date: string;
-  angle: "front" | "side" | "back";
+  angle: "front" | "side" | "back" | "face";
   url: string;
   weight_at?: number | null;
   created_at: string;
