@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(git -C \"C:/Users/giund/korda-core\" status)",
+      "Bash(git -C \"C:/Users/giund/korda-core\" diff --stat)",
+      "Bash(git -C \"C:/Users/giund/korda-core\" add src/App.tsx src/features/crm/components/CRMLayout.tsx src/features/crm/components/LeadDrawer.tsx src/features/crm/types.ts src/pages/crm/CRMLog.tsx src/pages/crm/CRMScripts.tsx src/features/crm/hooks/useScripts.ts supabase/crm_schema.sql supabase/migrate_add_scripts.sql)",
+      "Bash(git -C C:/Users/giund/korda-core commit -m ' *)",
+      "Bash(git -C \"C:/Users/giund/korda-core\" push origin main)"
+    ]
+  }
+}

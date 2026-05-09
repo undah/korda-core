@@ -68,7 +68,9 @@ const INPUT: React.CSSProperties = {
 export default function ChatPage() {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
 
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM);
+  const [systemPrompt, setSystemPrompt] = useState(() =>
+    localStorage.getItem('korda_system_prompt') ?? DEFAULT_SYSTEM
+  );
   const [systemOpen, setSystemOpen] = useState(false);
   const [userText, setUserText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -248,14 +250,22 @@ export default function ChatPage() {
               style={INPUT}
               placeholder="Enter a system message…"
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
               <button
-                onClick={() => setSystemPrompt('')}
+                onClick={() => { setSystemPrompt(''); localStorage.removeItem('korda_system_prompt'); }}
                 style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.25)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, transition: 'color 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#f87171')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'rgba(240,246,252,0.25)')}
               >
                 Clear
+              </button>
+              <button
+                onClick={() => { localStorage.setItem('korda_system_prompt', systemPrompt); toast.success('System prompt saved'); }}
+                style={{ fontSize: '0.72rem', fontWeight: 600, color: ACCENT, background: 'none', border: 'none', cursor: 'pointer', padding: 0, transition: 'opacity 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                Save
               </button>
             </div>
           </div>
