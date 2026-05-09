@@ -3,6 +3,7 @@ import { Send, Image as ImageIcon, X, ChevronDown, ChevronUp, Loader2, Copy, Tra
 import { toast } from 'sonner';
 import { insertMistake, uploadMistakeScreenshot } from '@/features/training/lib/trainingData';
 import type { MistakeClassification } from '@/features/training/types';
+import { DarkSelect } from '@/components/ui/DarkSelect';
 
 const CLASSIFICATIONS: { value: MistakeClassification; label: string; color: string }[] = [
   { value: 'false_positive',  label: 'False Positive',  color: '#f87171' },
@@ -460,14 +461,17 @@ export default function ChatPage() {
                     <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', marginBottom: '0.3rem' }}>
                       Classification <span style={{ color: 'rgba(240,246,252,0.25)' }}>(optional)</span>
                     </label>
-                    <select
+                    <DarkSelect
+                      options={[
+                        { value: '', label: '— None —' },
+                        ...CLASSIFICATIONS.map(c => ({ value: c.value, label: c.label, color: c.color })),
+                      ]}
                       value={logClassification ?? ''}
-                      onChange={e => setLogClassification((e.target.value as MistakeClassification) || null)}
-                      style={{ ...INPUT, resize: 'none', padding: '0.6rem 0.75rem', fontSize: '0.8rem', cursor: 'pointer', appearance: 'none' as any }}
-                    >
-                      <option value="">— None —</option>
-                      {CLASSIFICATIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
+                      onChange={v => setLogClassification((v as MistakeClassification) || null)}
+                      background="#080C10"
+                      fontSize="0.8rem"
+                      padding="0.6rem 0.75rem"
+                    />
                   </div>
 
                   <div>

@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Trash2, Loader2 } from 'lucide-react';
+import { DarkSelect } from '@/components/ui/DarkSelect';
 import { useUpdateLead, useDeleteLead } from '../hooks/useLeads';
 import { useScripts } from '../hooks/useScripts';
 import { StatusBadge } from './StatusBadge';
@@ -193,15 +194,14 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
           <div style={{ marginBottom: '1rem' }}>
             <label style={LABEL_STYLE}>Status</label>
             {editing ? (
-              <select
-                style={{ ...FIELD_STYLE, cursor: 'pointer' }}
+              <DarkSelect
+                options={LEAD_STATUSES.map(s => ({ value: s, label: s, color: STATUS_STYLE[s]?.color }))}
                 value={form.status}
-                onChange={e => set('status', e.target.value as LeadStatus)}
-              >
-                {LEAD_STATUSES.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                onChange={v => set('status', v as LeadStatus)}
+                fontSize="0.875rem"
+                padding="0.5rem 0.75rem"
+                background="#131920"
+              />
             ) : (
               <div style={{ marginTop: '0.2rem' }}>
                 <StatusBadge status={form.status} />
@@ -258,16 +258,17 @@ export function LeadDrawer({ lead, open, onClose, profiles, canEdit }: LeadDrawe
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={LABEL_STYLE}>Script gebruikt</label>
             {editing ? (
-              <select
-                style={{ ...FIELD_STYLE, cursor: 'pointer', appearance: 'auto' }}
-                value={form.script_id}
-                onChange={e => set('script_id', e.target.value)}
-              >
-                <option value="">— Geen script —</option>
-                {scripts.map(s => (
-                  <option key={s.id} value={s.id}>{s.title}</option>
-                ))}
-              </select>
+              <DarkSelect
+                options={[
+                  { value: '', label: '— Geen script —' },
+                  ...scripts.map(s => ({ value: s.id, label: s.title })),
+                ]}
+                value={form.script_id ?? ''}
+                onChange={v => set('script_id', v)}
+                fontSize="0.875rem"
+                padding="0.5rem 0.75rem"
+                background="#131920"
+              />
             ) : (
               <div style={{
                 ...FIELD_STYLE,

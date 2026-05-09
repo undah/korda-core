@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { ExternalLink, FileUp, Link as LinkIcon, Loader2, Pencil, RefreshCw, Trash2, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { DarkSelect } from '@/components/ui/DarkSelect';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchMistakes, insertMistake, updateMistake, deleteMistake, bulkDeleteMistakes, uploadMistakeScreenshot } from '../lib/trainingData';
@@ -53,15 +54,18 @@ function ClassificationBadge({ value }: { value: MistakeClassification | null })
 }
 
 function ClassificationSelect({ value, onChange }: { value: MistakeClassification | null; onChange: (v: MistakeClassification | null) => void }) {
+  const options = [
+    { value: '', label: '— None —' },
+    ...CLASSIFICATIONS.map(c => ({ value: c.value, label: c.label, color: c.color })),
+  ];
   return (
-    <select
+    <DarkSelect
+      options={options}
       value={value ?? ''}
-      onChange={e => onChange((e.target.value as MistakeClassification) || null)}
-      style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(240,246,252,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center' }}
-    >
-      <option value="">— None —</option>
-      {CLASSIFICATIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-    </select>
+      onChange={v => onChange((v as MistakeClassification) || null)}
+      fontSize="0.85rem"
+      padding="0.6rem 0.9rem"
+    />
   );
 }
 
