@@ -34,7 +34,7 @@ export default function TrackerLayout() {
     style.id = "kt-app-global";
     style.textContent = `
       html, body { background: #080810; margin: 0; }
-      .kt-app { display: flex; min-height: 100vh; background: #080810; color: #dde8ed; font-family: 'DM Sans', sans-serif; font-weight: 300; }
+      .kt-app { display: flex; min-height: 100vh; background: #080810; color: #e8f0f4; font-family: 'DM Sans', sans-serif; font-weight: 400; }
       .kt-app *, .kt-app *::before, .kt-app *::after { box-sizing: border-box; }
 
       /* ── SIDEBAR ── */
@@ -42,8 +42,8 @@ export default function TrackerLayout() {
       .kt-sidebar-logo { padding: 0 1.25rem 1.75rem; border-bottom: 1px solid rgba(0,200,255,0.06); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
       .kt-sidebar-logo a { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: #00C8FF; text-decoration: none; letter-spacing: -0.01em; }
       .kt-sidebar-logo span { font-size: 0.48rem; vertical-align: super; color: rgba(221,232,237,0.2); }
-      .kt-nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1.25rem; font-size: 0.8rem; letter-spacing: 0.02em; color: rgba(221,232,237,0.3); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; margin: 1px 0; font-weight: 400; }
-      .kt-nav-item:hover { color: rgba(221,232,237,0.65); background: rgba(0,200,255,0.04); }
+      .kt-nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1.25rem; font-size: 0.8rem; letter-spacing: 0.02em; color: rgba(232,240,244,0.55); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; margin: 1px 0; font-weight: 400; }
+      .kt-nav-item:hover { color: rgba(232,240,244,0.85); background: rgba(0,200,255,0.04); }
       .kt-nav-item.active { color: #00C8FF; border-left-color: #00C8FF; background: rgba(0,200,255,0.06); font-weight: 500; }
       .kt-sidebar-bottom { margin-top: auto; padding: 1.25rem 1.25rem 0; border-top: 1px solid rgba(0,200,255,0.06); }
       .kt-back-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; color: rgba(221,232,237,0.18); text-decoration: none; transition: color 0.2s; display: flex; align-items: center; gap: 0.4rem; }
@@ -67,25 +67,25 @@ export default function TrackerLayout() {
 
       /* ── PAGE COMPONENTS ── */
       .kt-page-header { margin-bottom: 2rem; }
-      .kt-page-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(0,200,255,0.45); margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.5rem; }
-      .kt-page-eyebrow::before { content: '//'; color: rgba(221,232,237,0.15); }
+      .kt-page-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(0,200,255,0.75); margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.5rem; }
+      .kt-page-eyebrow::before { content: '//'; color: rgba(232,240,244,0.25); }
       .kt-page-title { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; }
-      .kt-page-title em { font-style: italic; color: rgba(0,200,255,0.55); }
+      .kt-page-title em { font-style: italic; color: rgba(0,200,255,0.9); }
 
       .kt-card { background: #0D0D16; border: 1px solid rgba(0,200,255,0.07); border-top: 2px solid rgba(0,200,255,0.18); padding: 1.35rem 1.5rem; border-radius: 2px; overflow-x: hidden; }
-      .kt-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(221,232,237,0.25); margin-bottom: 0.45rem; }
+      .kt-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(232,240,244,0.52); margin-bottom: 0.45rem; }
       .kt-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.55rem; font-weight: 500; color: #00C8FF; line-height: 1; }
-      .kt-card-sub { font-size: 0.72rem; color: rgba(221,232,237,0.22); margin-top: 0.35rem; }
+      .kt-card-sub { font-size: 0.72rem; color: rgba(232,240,244,0.52); margin-top: 0.35rem; }
 
-      .kt-input { box-sizing: border-box; background: #080810; border: 1px solid rgba(0,200,255,0.1); color: #dde8ed; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; max-width: 100%; min-width: 0; outline: none; transition: border-color 0.2s; border-radius: 6px; }
-      .kt-input:focus { border-color: rgba(0,200,255,0.35); }
-      .kt-input::placeholder { color: rgba(221,232,237,0.18); }
-      .kt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(221,232,237,0.3); display: block; margin-bottom: 0.4rem; }
+      .kt-input { box-sizing: border-box; background: #080810; border: 1px solid rgba(0,200,255,0.15); color: #e8f0f4; padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; width: 100%; max-width: 100%; min-width: 0; outline: none; transition: border-color 0.2s; border-radius: 6px; }
+      .kt-input:focus { border-color: rgba(0,200,255,0.45); }
+      .kt-input::placeholder { color: rgba(232,240,244,0.25); }
+      .kt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(232,240,244,0.6); display: block; margin-bottom: 0.4rem; font-weight: 500; }
       .kt-btn { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.06em; padding: 0.65rem 1.5rem; cursor: pointer; border: none; transition: all 0.2s; border-radius: 6px; }
-      .kt-btn-blue { background: #00C8FF; color: #080810; font-weight: 500; }
+      .kt-btn-blue { background: #00C8FF; color: #080810; font-weight: 600; }
       .kt-btn-blue:hover { opacity: 0.88; }
-      .kt-btn-outline { background: transparent; color: rgba(0,200,255,0.65); border: 1px solid rgba(0,200,255,0.18); }
-      .kt-btn-outline:hover { border-color: rgba(0,200,255,0.45); color: #00C8FF; }
+      .kt-btn-outline { background: transparent; color: rgba(0,200,255,0.88); border: 1px solid rgba(0,200,255,0.25); }
+      .kt-btn-outline:hover { border-color: rgba(0,200,255,0.55); color: #00C8FF; }
 
       .kt-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; }
       .kt-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }

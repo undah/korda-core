@@ -100,7 +100,7 @@ export default function TrackerCalories() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
           <div>
             <label className="kt-label">Date</label>
-            <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} />
+            <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} style={{ textAlign: "center" }} />
           </div>
           <div>
             <label className="kt-label">TDEE</label>

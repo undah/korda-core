@@ -8,7 +8,7 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const C = {
   accent: "#00C8FF", green: "#5ad4a0", red: "#d4705a",
-  text: "#dde8ed", muted: "rgba(221,232,237,0.3)", dim: "rgba(221,232,237,0.15)",
+  text: "#e8f0f4", muted: "rgba(232,240,244,0.55)", dim: "rgba(232,240,244,0.32)",
   border: "rgba(0,200,255,0.08)", card: "#0D0D16",
 };
 
@@ -307,7 +307,8 @@ export default function TrackerProgress() {
         <div style={{ marginBottom: "1.25rem" }}>
           <label className="kt-label">Date</label>
           <input className="kt-input" type="date" value={form.log_date}
-            onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} />
+            onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))}
+            style={{ textAlign: "center" }} />
         </div>
 
         {/* Weight */}

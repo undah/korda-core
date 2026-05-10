@@ -18,9 +18,9 @@ const C = {
   line:    "#5ab4d4",
   green:   "#5ad4a0",
   red:     "#d4705a",
-  text:    "#dde8ed",
-  muted:   "rgba(221,232,237,0.32)",
-  dim:     "rgba(221,232,237,0.15)",
+  text:    "#e8f0f4",
+  muted:   "rgba(232,240,244,0.55)",
+  dim:     "rgba(232,240,244,0.32)",
   card:    "#0D0D16",
   border:  "rgba(0,200,255,0.07)",
 };
