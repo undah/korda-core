@@ -1,5 +1,6 @@
 // src/pages/tracker/TrackerJournal.tsx
 import React, { useState, useRef, useEffect } from "react";
+import { format, parseISO } from "date-fns";
 import { useTrackerJournal, useUpsertJournal, useDeleteJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerJournal } from "@/features/tracker/types";
 import { toast } from "sonner";
@@ -86,7 +87,13 @@ export default function TrackerJournal() {
         <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1rem" }}>
           <div>
             <label className="kt-label">Date</label>
-            <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} style={{ textAlign: "center" }} />
+            <div style={{ position: "relative" }}>
+              <input type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 1 }} />
+              <div className="kt-input" style={{ textAlign: "center", cursor: "pointer", userSelect: "none" }}>
+                {format(parseISO(form.log_date), "d MMM yyyy")}
+              </div>
+            </div>
           </div>
           <div>
             <label className="kt-label">Sleep (hours)</label>

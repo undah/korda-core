@@ -1,5 +1,6 @@
 // src/pages/tracker/TrackerPhotos.tsx
 import React, { useState, useRef } from "react";
+import { format, parseISO } from "date-fns";
 import { useTrackerPhotos, useUploadPhoto, useDeletePhoto } from "@/features/tracker/hooks/useTrackerJournal";
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
 import type { TrackerPhoto } from "@/features/tracker/types";
@@ -177,7 +178,13 @@ export default function TrackerPhotos() {
             <div className="kt-grid-2" style={{ gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label className="kt-label">Date</label>
-                <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} style={{ textAlign: "center" }} />
+                <div style={{ position: "relative" }}>
+                  <input type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 1 }} />
+                  <div className="kt-input" style={{ textAlign: "center", cursor: "pointer", userSelect: "none" }}>
+                    {format(parseISO(form.log_date), "d MMM yyyy")}
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="kt-label">Weight at time (kg)</label>

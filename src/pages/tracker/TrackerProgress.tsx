@@ -306,9 +306,14 @@ export default function TrackerProgress() {
         {/* Date */}
         <div style={{ marginBottom: "1.25rem" }}>
           <label className="kt-label">Date</label>
-          <input className="kt-input" type="date" value={form.log_date}
-            onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))}
-            style={{ textAlign: "center" }} />
+          <div style={{ position: "relative" }}>
+            <input type="date" value={form.log_date}
+              onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 1 }} />
+            <div className="kt-input" style={{ textAlign: "center", cursor: "pointer", userSelect: "none" }}>
+              {format(parseISO(form.log_date), "d MMM yyyy")}
+            </div>
+          </div>
         </div>
 
         {/* Weight */}

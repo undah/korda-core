@@ -1,5 +1,6 @@
 // src/pages/tracker/TrackerCalories.tsx
 import React, { useState } from "react";
+import { format, parseISO } from "date-fns";
 import { useTrackerCalories, useUpsertCalories, useDeleteCalories } from "@/features/tracker/hooks/useTrackerJournal";
 import { toast } from "sonner";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
@@ -100,7 +101,13 @@ export default function TrackerCalories() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
           <div>
             <label className="kt-label">Date</label>
-            <input className="kt-input" type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))} style={{ textAlign: "center" }} />
+            <div style={{ position: "relative" }}>
+              <input type="date" value={form.log_date} onChange={e => setForm(f => ({ ...f, log_date: e.target.value }))}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 1 }} />
+              <div className="kt-input" style={{ textAlign: "center", cursor: "pointer", userSelect: "none" }}>
+                {format(parseISO(form.log_date), "d MMM yyyy")}
+              </div>
+            </div>
           </div>
           <div>
             <label className="kt-label">TDEE</label>
