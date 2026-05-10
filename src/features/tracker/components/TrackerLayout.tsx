@@ -99,6 +99,10 @@ export default function TrackerLayout() {
       textarea.kt-input { resize: vertical; min-height: 90px; }
       select.kt-input { appearance: none; cursor: pointer; }
 
+      /* ── DATE INPUT CENTERING (iOS Safari) ── */
+      input[type=date]::-webkit-date-and-time-value { text-align: center; }
+      input[type=date] { text-align: center; }
+
       /* ── HIDE NATIVE NUMBER SPINNERS ── */
       input[type=number]::-webkit-inner-spin-button,
       input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
