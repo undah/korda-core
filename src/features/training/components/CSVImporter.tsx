@@ -21,26 +21,6 @@ const WARN_YELLOW = '#f59e0b';
 
 // â”€â”€ CSV parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
 
 function parseBool(val: string): boolean | null {
   const v = val.toLowerCase().trim();
@@ -57,21 +37,48 @@ interface ParsedRow {
 }
 
 function parseCSV(text: string): ParsedRow[] {
-  // Strip BOM and normalise line endings
-  const clean  = text.replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines  = clean.split('\n').filter(l => l.trim() !== '');
-  if (lines.length < 2) return [];
+  const clean = text.replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+  // ── Tokenize respecting quoted fields ──────────────────────────────────────
+  const records: string[][] = [];
+  let current = '';
+  let inQuotes = false;
+  let fields: string[] = [];
 
-  return lines.slice(1).map((line, i) => {
-    const values = parseCSVLine(line);
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+
+    if (ch === '"') {
+      if (inQuotes && clean[i + 1] === '"') { current += '"'; i++; } // escaped quote
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current.trim());
+      current = '';
+    } else if (ch === '\n' && !inQuotes) {
+      fields.push(current.trim());
+      current = '';
+      if (fields.some(f => f !== '')) records.push(fields); // skip blank lines
+      fields = [];
+    } else {
+      current += ch;
+    }
+  }
+  // flush last field/record
+  if (current || fields.length) {
+    fields.push(current.trim());
+    if (fields.some(f => f !== '')) records.push(fields);
+  }
+
+  if (records.length < 2) return [];
+
+  const headers = records[0].map(h => h.toLowerCase().replace(/\s+/g, '_'));
+
+  return records.slice(1).map((values, i) => {
     const raw: Record<string, string> = {};
     headers.forEach((h, j) => { raw[h] = values[j] ?? ''; });
 
     const errors: string[] = [];
 
-    // Resolve column aliases
     const tvUrl      = raw['tradingview_url'] ?? raw['tv_url'] ?? raw['url'] ?? '';
     const validRaw   = raw['is_valid_setup'] ?? raw['valid'] ?? raw['valid_setup'] ?? '';
     const sessionRaw = raw['session'] ?? raw['sessions'] ?? '';
@@ -89,6 +96,7 @@ function parseCSV(text: string): ParsedRow[] {
       is_valid_setup:  isValid as boolean,
       session:         session,
       notes:           notes || null,
+      submitted_by:    null,
     } : null;
 
     return { index: i + 1, raw, entry, errors };
