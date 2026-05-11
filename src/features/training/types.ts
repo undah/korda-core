@@ -10,7 +10,7 @@ export interface TrainingEntry {
   created_at: string;
 }
 
-export type TrainingEntryInsert = Omit<TrainingEntry, 'id' | 'created_at'>;
+export type TrainingEntryInsert = Omit<TrainingEntry, 'id' | 'created_at'> & { created_at?: string };
 
 export type MistakeClassification =
   | 'false_positive'

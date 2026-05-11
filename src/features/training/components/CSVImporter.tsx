@@ -79,10 +79,12 @@ function parseCSV(text: string): ParsedRow[] {
 
     const errors: string[] = [];
 
-    const tvUrl      = raw['tradingview_url'] ?? raw['tv_url'] ?? raw['url'] ?? '';
-    const validRaw   = raw['is_valid_setup'] ?? raw['valid'] ?? raw['valid_setup'] ?? '';
-    const sessionRaw = raw['session'] ?? raw['sessions'] ?? '';
-    const notes      = raw['notes'] ?? raw['note'] ?? '';
+    const tvUrl       = raw['tradingview_url'] ?? raw['tv_url'] ?? raw['url'] ?? '';
+    const validRaw    = raw['is_valid_setup'] ?? raw['valid'] ?? raw['valid_setup'] ?? '';
+    const sessionRaw  = raw['session'] ?? raw['sessions'] ?? '';
+    const notes       = raw['notes'] ?? raw['note'] ?? '';
+    const submittedBy = raw['submitted_by'] ?? raw['by'] ?? raw['user'] ?? '';
+    const createdAt   = raw['created_at'] ?? raw['date'] ?? '';
 
     const isValid = parseBool(validRaw);
     const session = sessionRaw ? parseSession(sessionRaw) : null;
@@ -96,7 +98,8 @@ function parseCSV(text: string): ParsedRow[] {
       is_valid_setup:  isValid as boolean,
       session:         session,
       notes:           notes || null,
-      submitted_by:    null,
+      submitted_by:    submittedBy || null,
+      ...(createdAt ? { created_at: createdAt } : {}),
     } : null;
 
     return { index: i + 1, raw, entry, errors };
@@ -107,9 +110,9 @@ function parseCSV(text: string): ParsedRow[] {
 
 function downloadTemplate() {
   const csv = [
-    'tradingview_url,is_valid_setup,session,notes',
-    'https://www.tradingview.com/x/abc123/,true,london,"Bullish divergence on 4H"',
-    'https://www.tradingview.com/x/xyz456/,false,new_york,"No clear trend direction"',
+    'tradingview_url,is_valid_setup,session,notes,submitted_by,created_at',
+    'https://www.tradingview.com/x/abc123/,true,london,"Bullish divergence on 4H",tradingjamiro49,2026-05-08T10:00:00Z',
+    'https://www.tradingview.com/x/xyz456/,false,new_york,"No clear trend direction",tradingjamiro49,2026-05-08T11:00:00Z',
   ].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
@@ -276,7 +279,7 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: '#131920' }}>
-                      {['#', 'Status', 'TradingView URL', 'Valid?', 'Notes', 'Issues'].map((h: string, i: number) => (
+                      {['#', 'Status', 'TradingView URL', 'Valid?', 'By', 'Notes', 'Issues'].map((h: string, i: number) => (
                         <th key={i} style={thStyle}>{h}</th>
                       ))}
                     </tr>
@@ -287,6 +290,7 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                       const tvUrl = row.raw['tradingview_url'] ?? row.raw['tv_url'] ?? row.raw['url'] ?? '';
                       const validRaw = row.raw['is_valid_setup'] ?? row.raw['valid'] ?? row.raw['valid_setup'] ?? '';
                       const notes = row.raw['notes'] ?? row.raw['note'] ?? '';
+                      const by = row.raw['submitted_by'] ?? row.raw['by'] ?? row.raw['user'] ?? '';
 
                       return (
                         <tr
@@ -317,6 +321,9 @@ export default function CSVImporter({ onClose, onImported }: Props) {
                             ) : (
                               <span style={{ fontSize: '0.72rem', color: WARN_YELLOW }}>{validRaw || '—'}</span>
                             )}
+                          </td>
+                          <td style={{ ...tdStyle, fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+                            {by || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'rgba(240,246,252,0.45)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {notes || <span style={{ color: 'rgba(240,246,252,0.2)' }}>—</span>}
