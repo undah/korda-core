@@ -62,7 +62,7 @@ function makeTooltip(
         fontFamily: "'IBM Plex Mono', monospace",
         fontSize: "0.72rem",
         boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
-        maxWidth: 240,
+        maxWidth: 320,
         pointerEvents: "none",
       }}>
         <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "0.68rem" }}>

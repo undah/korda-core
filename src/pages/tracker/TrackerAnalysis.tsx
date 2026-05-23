@@ -35,7 +35,7 @@ function makeTooltip(
       : null;
 
     return (
-      <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 240, pointerEvents: "none" }}>
+      <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 320, pointerEvents: "none" }}>
         <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "0.68rem" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
         {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "0.9rem" }}>{w.value} kg</p>}
         {pctLoss !== null && (
