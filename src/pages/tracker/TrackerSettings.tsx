@@ -16,6 +16,20 @@ const GENDERS = [
   { value: "prefer_not",  label: "Prefer not to say" },
 ];
 
+const ACTIVITY_LEVELS = [
+  { value: "",      label: "Select to auto-calculate..." },
+  { value: "1.2",   label: "Sedentary (desk job, little/no exercise)" },
+  { value: "1.375", label: "Lightly active (1–3 days/week)" },
+  { value: "1.55",  label: "Moderately active (3–5 days/week)" },
+  { value: "1.725", label: "Very active (6–7 days/week)" },
+  { value: "1.9",   label: "Extra active (athlete / physical job)" },
+];
+
+function calcTDEE(weight: number, heightCm: number, age: number, gender: string, activityFactor: number): number {
+  const bmr = 10 * weight + 6.25 * heightCm - 5 * age + (gender === "female" ? -161 : 5);
+  return Math.round(bmr * activityFactor);
+}
+
 function Section({ title, eyebrow, children }: { title: string; eyebrow: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: "2rem" }}>
@@ -41,7 +55,7 @@ export default function TrackerSettings() {
   const navigate = useNavigate();
 
   const [profileForm, setProfileForm] = useState({
-    display_name: "", height_cm: "", age: "", gender: "", tdee: "2000",
+    display_name: "", height_cm: "", age: "", gender: "", tdee: "2000", activity_level: "",
   });
   const [goalForm, setGoalForm] = useState({
     goal_weight: "", weekly_target: "0.5",
@@ -75,6 +89,15 @@ export default function TrackerSettings() {
       });
     }
   }, [goal]);
+
+  // Auto-compute TDEE whenever activity level or profile fields change
+  useEffect(() => {
+    const { activity_level, height_cm, age, gender } = profileForm;
+    if (!activity_level || !height_cm || !age || !gender || checkins.length === 0) return;
+    const latestWeight = [...checkins].sort((a, b) => b.log_date.localeCompare(a.log_date))[0].weight;
+    const computed = calcTDEE(latestWeight, parseFloat(height_cm), parseInt(age), gender, parseFloat(activity_level));
+    setProfileForm(f => ({ ...f, tdee: computed.toString() }));
+  }, [profileForm.activity_level, profileForm.height_cm, profileForm.age, profileForm.gender, checkins]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -223,6 +246,12 @@ export default function TrackerSettings() {
               <label className="kt-label">TDEE (kcal)</label>
               <input className="kt-input" type="number" placeholder="2000" value={profileForm.tdee} onChange={setP("tdee")} />
             </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label className="kt-label">Activity level <span style={{ color: "rgba(90,180,212,0.45)", fontStyle: "normal" }}>— auto-fills TDEE</span></label>
+              <select className="kt-input" value={profileForm.activity_level} onChange={setP("activity_level")}>
+                {ACTIVITY_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* BMI display */}
@@ -263,9 +292,9 @@ export default function TrackerSettings() {
               {(() => {
                 const latest = [...checkins].sort((a,b) => b.log_date.localeCompare(a.log_date))[0];
                 const remaining = latest.weight - parseFloat(goalForm.goal_weight);
-                const weeks = remaining > 0 ? Math.ceil(remaining / parseFloat(goalForm.weekly_target)) : 0;
+                const days = remaining > 0 ? Math.round(remaining / parseFloat(goalForm.weekly_target) * 7) : 0;
                 const eta = new Date();
-                eta.setDate(eta.getDate() + weeks * 7);
+                eta.setDate(eta.getDate() + days);
                 return (
                   <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
                     <div>

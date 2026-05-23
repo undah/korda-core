@@ -146,9 +146,11 @@ export default function TrackerDashboard() {
   const yMax = weights.length ? Math.ceil(Math.max(...weights) + 1.5) : 100;
 
   const latest  = sorted[sorted.length - 1];
-  const last7   = sorted.slice(-7);
+  const cutoff7d  = subDays(new Date(), 7).toISOString().split("T")[0];
+  const cutoff14d = subDays(new Date(), 14).toISOString().split("T")[0];
+  const last7   = sorted.filter(c => c.log_date >= cutoff7d);
+  const prev7   = sorted.filter(c => c.log_date >= cutoff14d && c.log_date < cutoff7d);
   const avg7    = last7.length ? +(last7.reduce((s, c) => s + c.weight, 0) / last7.length).toFixed(1) : null;
-  const prev7   = sorted.slice(-14, -7);
   const avgPrev = prev7.length ? +(prev7.reduce((s, c) => s + c.weight, 0) / prev7.length).toFixed(1) : null;
   const weekChg = avg7 && avgPrev ? +(+avg7 - +avgPrev).toFixed(1) : null;
 
