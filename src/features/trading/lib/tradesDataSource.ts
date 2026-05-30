@@ -120,20 +120,32 @@ export async function refreshCtraderToken(refreshToken: string): Promise<CTrader
 }
 
 export async function fetchCTraderAccounts(token: string): Promise<CTraderAccount[]> {
-  const res = await fetch(`${CTRADER_BASE}/trading/accounts`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`cTrader accounts failed: ${res.status} ${res.statusText}`);
-  const json = await res.json();
-  // Handle { accounts: [...] } or { data: [...] } or plain array
-  const list: any[] = Array.isArray(json) ? json : (json.accounts ?? json.data ?? []);
-  return list.map((a: any) => ({
-    ctidTraderAccountId: a.ctidTraderAccountId ?? a.accountId ?? a.id,
-    ctid: a.ctid ?? a.ctId,
-    isLive: a.isLive ?? a.live,
-    brokerTitle: a.brokerTitle ?? a.broker,
-    traderLogin: a.traderLogin ?? a.login,
-  }));
+  // Try several known cTrader REST endpoint paths for listing accounts
+  const candidates = [
+    `${CTRADER_BASE}/trading/accounts`,
+    `${CTRADER_BASE}/accounts`,
+    `${CTRADER_BASE}/v1/trading/accounts`,
+  ];
+
+  let lastDetail = '';
+  for (const endpoint of candidates) {
+    const res = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const json = await res.json();
+      const list: any[] = Array.isArray(json) ? json : (json.accounts ?? json.data ?? []);
+      return list.map((a: any) => ({
+        ctidTraderAccountId: a.ctidTraderAccountId ?? a.accountId ?? a.id,
+        ctid: a.ctid ?? a.ctId,
+        isLive: a.isLive ?? a.live,
+        brokerTitle: a.brokerTitle ?? a.broker,
+        traderLogin: a.traderLogin ?? a.login,
+      }));
+    }
+    const body = await res.text().catch(() => '');
+    lastDetail = `${endpoint} → ${res.status}: ${body.slice(0, 300)}`;
+  }
+
+  throw new Error(`cTrader accounts failed — tried all endpoints. Last: ${lastDetail}`);
 }
 
 export async function fetchDealsFromCTrader(
