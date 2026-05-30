@@ -138,10 +138,28 @@ export async function refreshCtraderToken(refreshToken: string): Promise<CTrader
 }
 
 export async function fetchCTraderAccounts(token: string, ctid?: number): Promise<CTraderAccount[]> {
-  // Build candidates — ctid-scoped endpoint is authoritative per cTrader docs
-  const ctidFromJwt = tryDecodeCtid(token);
-  const resolvedCtid = ctid ?? ctidFromJwt;
+  const headers = { Authorization: `Bearer ${token}` };
 
+  // Step 1: resolve ctid — from stored value, JWT decode, or profile endpoint
+  let resolvedCtid: number | undefined = ctid ?? tryDecodeCtid(token) ?? undefined;
+  let profileDebug = '';
+
+  if (!resolvedCtid) {
+    for (const profilePath of ['/trading/profile', '/profile', '/me']) {
+      const pr = await fetch(`${CTRADER_BASE}${profilePath}`, { headers });
+      const body = await pr.text().catch(() => '');
+      profileDebug += `${profilePath}→${pr.status}: ${body.slice(0, 120)} | `;
+      if (pr.ok) {
+        try {
+          const p = JSON.parse(body);
+          resolvedCtid = p.ctid ?? p.cTid ?? p.userId ?? p.id ?? undefined;
+        } catch {}
+        if (resolvedCtid) break;
+      }
+    }
+  }
+
+  // Step 2: try accounts endpoints
   const candidates = [
     ...(resolvedCtid ? [`${CTRADER_BASE}/trading/ctid/${resolvedCtid}/accounts`] : []),
     `${CTRADER_BASE}/trading/accounts`,
@@ -150,7 +168,7 @@ export async function fetchCTraderAccounts(token: string, ctid?: number): Promis
 
   let lastDetail = '';
   for (const endpoint of candidates) {
-    const res = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(endpoint, { headers });
     if (res.ok) {
       const json = await res.json();
       const list: any[] = Array.isArray(json) ? json : (json.accounts ?? json.data ?? []);
@@ -163,10 +181,10 @@ export async function fetchCTraderAccounts(token: string, ctid?: number): Promis
       }));
     }
     const body = await res.text().catch(() => '');
-    lastDetail = `${endpoint} → ${res.status}: ${body.slice(0, 200)}`;
+    lastDetail = `${endpoint}→${res.status}: ${body.slice(0, 120)}`;
   }
 
-  throw new Error(`cTrader accounts failed. ctid=${resolvedCtid ?? 'none'}. Last: ${lastDetail}`);
+  throw new Error(`accounts failed. ctid=${resolvedCtid ?? 'none'} | profile: ${profileDebug} | last: ${lastDetail}`);
 }
 
 export async function fetchDealsFromCTrader(
