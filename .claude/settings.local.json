@@ -28,7 +28,9 @@
       "Bash(git -C \"C:/Users/giund/korda-core\" status)",
       "Bash(git -C C:/Users/giund/korda-core commit -m ' *)",
       "Bash(git -C \"C:/Users/giund/korda-core\" push origin main)",
-      "Bash(git -C \"C:/Users/giund/korda-core\" pull origin main)"
+      "Bash(git -C \"C:/Users/giund/korda-core\" pull origin main)",
+      "Bash(cat _redirects)",
+      "Bash(cat public/_redirects)"
     ]
   }
 }

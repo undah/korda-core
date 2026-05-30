@@ -120,7 +120,7 @@ export async function refreshCtraderToken(refreshToken: string): Promise<CTrader
 }
 
 export async function fetchCTraderAccounts(token: string): Promise<CTraderAccount[]> {
-  const res = await fetch(`${CTRADER_BASE}/accounts`, {
+  const res = await fetch(`${CTRADER_BASE}/trading/accounts`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`cTrader accounts failed: ${res.status} ${res.statusText}`);
