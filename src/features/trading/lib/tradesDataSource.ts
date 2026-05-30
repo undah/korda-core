@@ -81,7 +81,7 @@ export function buildCtraderAuthUrl(redirectUri: string): string {
     redirect_uri: redirectUri,
     response_type: 'code',
   });
-  return `https://connect.ctrader.com/oauth/authorize?${params}`;
+  return `https://openapi.ctrader.com/apps/auth?${params}`;
 }
 
 async function postToken(body: Record<string, string>): Promise<CTraderTokens> {
