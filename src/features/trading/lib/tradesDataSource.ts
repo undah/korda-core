@@ -80,8 +80,9 @@ export async function getCtraderToken(): Promise<string> {
   });
   if (!res.ok) throw new Error(`cTrader auth failed: ${res.status} ${res.statusText}`);
   const json = await res.json();
-  const token = json.accessToken ?? json.access_token;
-  if (!token) throw new Error('cTrader auth: no accessToken in response');
+  // Try all known field names; expose raw response if none match
+  const token = json.accessToken ?? json.access_token ?? json.token ?? json.Token;
+  if (!token) throw new Error(`cTrader auth: unexpected response — ${JSON.stringify(json)}`);
   return token;
 }
 
