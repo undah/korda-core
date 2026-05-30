@@ -106,6 +106,7 @@ async function postToken(body: Record<string, string>): Promise<CTraderTokens> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(body),
   });
+  if (res.status === 429) throw new Error('cTrader rate limit hit — wait a few minutes then try again');
   if (!res.ok) throw new Error(`cTrader token request failed: ${res.status} ${res.statusText}`);
   const json = await res.json();
   const accessToken = json.accessToken ?? json.access_token ?? json.token;
