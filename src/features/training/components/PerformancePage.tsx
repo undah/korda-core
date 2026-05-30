@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -7,9 +7,12 @@ import { format, parseISO, subDays } from 'date-fns';
 import { Loader2, RefreshCw, TrendingUp, TrendingDown, Activity, Award, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  getCtraderToken, fetchCTraderAccounts, fetchDealsFromCTrader,
-  type CTraderAccount, type TradeEntry,
+  buildCtraderAuthUrl, exchangeAuthCode, refreshCtraderToken,
+  fetchCTraderAccounts, fetchDealsFromCTrader,
+  type CTraderAccount, type TradeEntry, type CTraderTokens,
 } from '@/features/trading/lib/tradesDataSource';
+
+const TOKEN_KEY = 'ct_tokens';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -184,6 +187,21 @@ function CustomTooltip({ active, payload }: any) {
 
 type ConnState = 'idle' | 'connecting' | 'connected' | 'error';
 
+function getRedirectUri() {
+  return window.location.origin + window.location.pathname;
+}
+
+function loadStoredTokens(): CTraderTokens | null {
+  try {
+    const raw = localStorage.getItem(TOKEN_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveTokens(t: CTraderTokens) {
+  localStorage.setItem(TOKEN_KEY, JSON.stringify(t));
+}
+
 export default function PerformancePage() {
   const [connState, setConnState] = useState<ConnState>('idle');
   const [connError, setConnError] = useState<string | null>(null);
@@ -199,23 +217,53 @@ export default function PerformancePage() {
     import.meta.env.VITE_CTRADER_CLIENT_SECRET
   );
 
-  const connect = useCallback(async () => {
+  const connectWithToken = useCallback(async (accessToken: string) => {
     setConnState('connecting');
-    setConnError(null);
     try {
-      const t = await getCtraderToken();
-      setToken(t);
-      const accs = await fetchCTraderAccounts(t);
+      const accs = await fetchCTraderAccounts(accessToken);
       if (!accs.length) throw new Error('No trading accounts found for this app.');
+      setToken(accessToken);
       setAccounts(accs);
       setConnState('connected');
-      // Auto-select if only one account
       if (accs.length === 1) setSelectedAcc(accs[0]);
     } catch (e: any) {
       setConnState('error');
       setConnError(e?.message ?? 'Connection failed');
     }
   }, []);
+
+  // On mount: handle OAuth callback code or restore stored tokens
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+      // Clean the code from the URL immediately
+      window.history.replaceState({}, '', window.location.pathname);
+      setConnState('connecting');
+      exchangeAuthCode(code, getRedirectUri())
+        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken); })
+        .catch(e => { setConnState('error'); setConnError(e?.message ?? 'Auth failed'); });
+      return;
+    }
+
+    // Restore existing session
+    const stored = loadStoredTokens();
+    if (!stored) return;
+
+    if (Date.now() < stored.expiresAt - 60_000) {
+      connectWithToken(stored.accessToken);
+    } else if (stored.refreshToken) {
+      setConnState('connecting');
+      refreshCtraderToken(stored.refreshToken)
+        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken); })
+        .catch(() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); });
+    }
+  }, [connectWithToken]);
+
+  const handleConnect = () => {
+    window.location.href = buildCtraderAuthUrl(getRedirectUri());
+  };
 
   const loadDeals = useCallback(async (acc: CTraderAccount, tok: string) => {
     setLoading(true);
@@ -289,7 +337,7 @@ export default function PerformancePage() {
         )}
 
         <button
-          onClick={connect}
+          onClick={handleConnect}
           disabled={connState === 'connecting' || !hasEnvCreds}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
@@ -403,7 +451,7 @@ export default function PerformancePage() {
           </button>
 
           <button
-            onClick={() => { setConnState('idle'); setSelectedAcc(null); setDeals([]); setToken(null); setAccounts([]); }}
+            onClick={() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); setSelectedAcc(null); setDeals([]); setToken(null); setAccounts([]); }}
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '0.4rem 0.75rem', color: 'rgba(240,246,252,0.3)', cursor: 'pointer', fontSize: '0.68rem', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.05em', transition: 'all 0.15s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(240,246,252,0.6)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.18)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(240,246,252,0.3)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}

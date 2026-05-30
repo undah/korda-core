@@ -68,22 +68,54 @@ type CTraderRawDeal = {
   closeTimestamp: number; // ms UTC
 };
 
-export async function getCtraderToken(): Promise<string> {
+export type CTraderTokens = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number; // ms timestamp
+};
+
+export function buildCtraderAuthUrl(redirectUri: string): string {
+  const clientId = import.meta.env.VITE_CTRADER_CLIENT_ID ?? '';
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+  });
+  return `https://connect.ctrader.com/oauth/authorize?${params}`;
+}
+
+async function postToken(body: Record<string, string>): Promise<CTraderTokens> {
   const res = await fetch(`${CTRADER_BASE}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: import.meta.env.VITE_CTRADER_CLIENT_ID ?? '',
-      client_secret: import.meta.env.VITE_CTRADER_CLIENT_SECRET ?? '',
-    }),
+    body: new URLSearchParams(body),
   });
-  if (!res.ok) throw new Error(`cTrader auth failed: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`cTrader token request failed: ${res.status} ${res.statusText}`);
   const json = await res.json();
-  // Try all known field names; expose raw response if none match
-  const token = json.accessToken ?? json.access_token ?? json.token ?? json.Token;
-  if (!token) throw new Error(`cTrader auth: unexpected response — ${JSON.stringify(json)}`);
-  return token;
+  const accessToken = json.accessToken ?? json.access_token ?? json.token;
+  const refreshToken = json.refreshToken ?? json.refresh_token ?? '';
+  const expiresIn = json.expiresIn ?? json.expires_in ?? 3600;
+  if (!accessToken) throw new Error(`cTrader token: unexpected response — ${JSON.stringify(json)}`);
+  return { accessToken, refreshToken, expiresAt: Date.now() + expiresIn * 1000 };
+}
+
+export async function exchangeAuthCode(code: string, redirectUri: string): Promise<CTraderTokens> {
+  return postToken({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    client_id: import.meta.env.VITE_CTRADER_CLIENT_ID ?? '',
+    client_secret: import.meta.env.VITE_CTRADER_CLIENT_SECRET ?? '',
+  });
+}
+
+export async function refreshCtraderToken(refreshToken: string): Promise<CTraderTokens> {
+  return postToken({
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    client_id: import.meta.env.VITE_CTRADER_CLIENT_ID ?? '',
+    client_secret: import.meta.env.VITE_CTRADER_CLIENT_SECRET ?? '',
+  });
 }
 
 export async function fetchCTraderAccounts(token: string): Promise<CTraderAccount[]> {
