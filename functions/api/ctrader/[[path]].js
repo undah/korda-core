@@ -89,9 +89,22 @@ const msgDeals       = (aid, f, t) => frame(2155, concat(vf(1, aid), vf(3, BigIn
 // ── CF Workers outbound WebSocket (fetch + Upgrade pattern) ───────────────────
 
 async function openWS() {
-  const resp = await fetch(CTRADER_WS, {
-    headers: { 'Upgrade': 'websocket' },
-  });
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), 8000);
+  let resp;
+  try {
+    resp = await fetch(CTRADER_WS, {
+      headers: { 'Upgrade': 'websocket' },
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    clearTimeout(tid);
+    const msg = e?.name === 'AbortError'
+      ? 'WS connect timed out after 8s — port 5035 may be blocked on Cloudflare Workers'
+      : 'WS fetch failed: ' + String(e?.message ?? e);
+    throw new Error(msg);
+  }
+  clearTimeout(tid);
   const ws = resp.webSocket;
   if (!ws) throw new Error(`WebSocket upgrade rejected — HTTP ${resp.status}`);
   ws.accept();
