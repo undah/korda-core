@@ -80,6 +80,7 @@ export function buildCtraderAuthUrl(redirectUri: string): string {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
+    scope: 'trading',
   });
   return `https://openapi.ctrader.com/apps/auth?${params}`;
 }
