@@ -43,7 +43,9 @@ export async function fetchTradesFromSupabase(
 
 // ── cTrader Open API ──────────────────────────────────────────────────────────
 
-const CTRADER_BASE = 'https://openapi.ctrader.com/apps';
+// In dev: Vite proxies /api/ctrader → https://openapi.ctrader.com/apps
+// In prod: Cloudflare Pages Function at functions/api/ctrader/[[path]].js does the same
+const CTRADER_BASE = '/api/ctrader';
 
 export type CTraderAccount = {
   ctidTraderAccountId: number;
