@@ -401,6 +401,15 @@ export default function PerformancePage() {
           >
             <RefreshCw size={14} style={loading ? { animation: 'spin 0.8s linear infinite' } : undefined} />
           </button>
+
+          <button
+            onClick={() => { setConnState('idle'); setSelectedAcc(null); setDeals([]); setToken(null); setAccounts([]); }}
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '0.4rem 0.75rem', color: 'rgba(240,246,252,0.3)', cursor: 'pointer', fontSize: '0.68rem', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.05em', transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(240,246,252,0.6)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.18)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(240,246,252,0.3)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+          >
+            disconnect
+          </button>
         </div>
       </div>
 
