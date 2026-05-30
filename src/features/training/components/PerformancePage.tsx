@@ -217,10 +217,10 @@ export default function PerformancePage() {
     import.meta.env.VITE_CTRADER_CLIENT_SECRET
   );
 
-  const connectWithToken = useCallback(async (accessToken: string) => {
+  const connectWithToken = useCallback(async (accessToken: string, ctid?: number) => {
     setConnState('connecting');
     try {
-      const accs = await fetchCTraderAccounts(accessToken);
+      const accs = await fetchCTraderAccounts(accessToken, ctid);
       if (!accs.length) throw new Error('No trading accounts found for this app.');
       setToken(accessToken);
       setAccounts(accs);
@@ -242,7 +242,7 @@ export default function PerformancePage() {
       window.history.replaceState({}, '', window.location.pathname);
       setConnState('connecting');
       exchangeAuthCode(code, getRedirectUri())
-        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken); })
+        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken, tokens.ctid); })
         .catch(e => { setConnState('error'); setConnError(e?.message ?? 'Auth failed'); });
       return;
     }
@@ -252,11 +252,11 @@ export default function PerformancePage() {
     if (!stored) return;
 
     if (Date.now() < stored.expiresAt - 60_000) {
-      connectWithToken(stored.accessToken);
+      connectWithToken(stored.accessToken, stored.ctid);
     } else if (stored.refreshToken) {
       setConnState('connecting');
       refreshCtraderToken(stored.refreshToken)
-        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken); })
+        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken, tokens.ctid); })
         .catch(() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); });
     }
   }, [connectWithToken]);

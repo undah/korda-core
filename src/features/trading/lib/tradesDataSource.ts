@@ -72,6 +72,7 @@ export type CTraderTokens = {
   accessToken: string;
   refreshToken: string;
   expiresAt: number; // ms timestamp
+  ctid?: number;    // cTrader ID — returned by token endpoint, used for accounts URL
 };
 
 export function buildCtraderAuthUrl(redirectUri: string): string {
@@ -83,6 +84,20 @@ export function buildCtraderAuthUrl(redirectUri: string): string {
     scope: 'trading',
   });
   return `https://openapi.ctrader.com/apps/auth?${params}`;
+}
+
+function tryDecodeCtid(token: string): number | null {
+  // cTrader access tokens are JWTs — decode the payload to extract ctid
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const raw = payload.ctid ?? payload.cTid ?? payload.userId ?? payload.sub;
+    const n = Number(raw);
+    return raw != null && !isNaN(n) ? n : null;
+  } catch {
+    return null;
+  }
 }
 
 async function postToken(body: Record<string, string>): Promise<CTraderTokens> {
@@ -97,7 +112,10 @@ async function postToken(body: Record<string, string>): Promise<CTraderTokens> {
   const refreshToken = json.refreshToken ?? json.refresh_token ?? '';
   const expiresIn = json.expiresIn ?? json.expires_in ?? 3600;
   if (!accessToken) throw new Error(`cTrader token: unexpected response — ${JSON.stringify(json)}`);
-  return { accessToken, refreshToken, expiresAt: Date.now() + expiresIn * 1000 };
+  // ctid may come from the response body or from the JWT payload
+  const ctid: number | undefined =
+    json.ctid ?? json.cTid ?? tryDecodeCtid(accessToken) ?? undefined;
+  return { accessToken, refreshToken, expiresAt: Date.now() + expiresIn * 1000, ctid };
 }
 
 export async function exchangeAuthCode(code: string, redirectUri: string): Promise<CTraderTokens> {
@@ -119,12 +137,15 @@ export async function refreshCtraderToken(refreshToken: string): Promise<CTrader
   });
 }
 
-export async function fetchCTraderAccounts(token: string): Promise<CTraderAccount[]> {
-  // Try several known cTrader REST endpoint paths for listing accounts
+export async function fetchCTraderAccounts(token: string, ctid?: number): Promise<CTraderAccount[]> {
+  // Build candidates — ctid-scoped endpoint is authoritative per cTrader docs
+  const ctidFromJwt = tryDecodeCtid(token);
+  const resolvedCtid = ctid ?? ctidFromJwt;
+
   const candidates = [
+    ...(resolvedCtid ? [`${CTRADER_BASE}/trading/ctid/${resolvedCtid}/accounts`] : []),
     `${CTRADER_BASE}/trading/accounts`,
     `${CTRADER_BASE}/accounts`,
-    `${CTRADER_BASE}/v1/trading/accounts`,
   ];
 
   let lastDetail = '';
@@ -142,10 +163,10 @@ export async function fetchCTraderAccounts(token: string): Promise<CTraderAccoun
       }));
     }
     const body = await res.text().catch(() => '');
-    lastDetail = `${endpoint} → ${res.status}: ${body.slice(0, 300)}`;
+    lastDetail = `${endpoint} → ${res.status}: ${body.slice(0, 200)}`;
   }
 
-  throw new Error(`cTrader accounts failed — tried all endpoints. Last: ${lastDetail}`);
+  throw new Error(`cTrader accounts failed. ctid=${resolvedCtid ?? 'none'}. Last: ${lastDetail}`);
 }
 
 export async function fetchDealsFromCTrader(
