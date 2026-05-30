@@ -153,7 +153,11 @@ export async function fetchCTraderAccountsViaWebSocket(token: string): Promise<C
     headers: { 'Content-Type': 'application/json' },
     body: bridgeBody({ token }),
   });
-  const json = await res.json();
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch {
+    throw new Error(`Bridge not reachable (status ${res.status}). Are you testing on Cloudflare Pages, not localhost? Body: ${text.slice(0, 120)}`);
+  }
   if (!res.ok || json.error) throw new Error(json.error ?? `accounts bridge: ${res.status}`);
   return (json.accounts ?? []) as CTraderAccount[];
 }
