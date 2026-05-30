@@ -137,6 +137,43 @@ export async function refreshCtraderToken(refreshToken: string): Promise<CTrader
   });
 }
 
+// ── WebSocket bridge (via Cloudflare Pages Function) ─────────────────────────
+
+function bridgeBody(extra: Record<string, unknown>) {
+  return JSON.stringify({
+    clientId: import.meta.env.VITE_CTRADER_CLIENT_ID ?? '',
+    clientSecret: import.meta.env.VITE_CTRADER_CLIENT_SECRET ?? '',
+    ...extra,
+  });
+}
+
+export async function fetchCTraderAccountsViaWebSocket(token: string): Promise<CTraderAccount[]> {
+  const res = await fetch('/api/ctrader/accounts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: bridgeBody({ token }),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error ?? `accounts bridge: ${res.status}`);
+  return (json.accounts ?? []) as CTraderAccount[];
+}
+
+export async function fetchDealsViaWebSocket(
+  token: string,
+  ctidTraderAccountId: number,
+  fromMs: number,
+  toMs: number
+): Promise<TradeEntry[]> {
+  const res = await fetch('/api/ctrader/deals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: bridgeBody({ token, ctidTraderAccountId, from: fromMs, to: toMs }),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error ?? `deals bridge: ${res.status}`);
+  return ((json.deals ?? []) as TradeEntry[]).sort((a, b) => a.trade_time.localeCompare(b.trade_time));
+}
+
 export async function fetchCTraderAccounts(token: string, ctid?: number): Promise<CTraderAccount[]> {
   const headers = { Authorization: `Bearer ${token}` };
 

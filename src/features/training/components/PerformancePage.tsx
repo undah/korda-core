@@ -8,7 +8,7 @@ import { Loader2, RefreshCw, TrendingUp, TrendingDown, Activity, Award, BarChart
 import { toast } from 'sonner';
 import {
   buildCtraderAuthUrl, exchangeAuthCode, refreshCtraderToken,
-  fetchDealsFromCTrader,
+  fetchCTraderAccountsViaWebSocket, fetchDealsViaWebSocket,
   type CTraderAccount, type TradeEntry, type CTraderTokens,
 } from '@/features/trading/lib/tradesDataSource';
 
@@ -202,35 +202,33 @@ function saveTokens(t: CTraderTokens) {
   localStorage.setItem(TOKEN_KEY, JSON.stringify(t));
 }
 
-const ACC_KEY = 'ct_account_id';
-
 export default function PerformancePage() {
   const [connState, setConnState] = useState<ConnState>('idle');
   const [connError, setConnError] = useState<string | null>(null);
+  const [accounts, setAccounts]   = useState<CTraderAccount[]>([]);
   const [selectedAcc, setSelectedAcc] = useState<CTraderAccount | null>(null);
   const [token, setToken]         = useState<string | null>(null);
   const [deals, setDeals]         = useState<TradeEntry[]>([]);
   const [loading, setLoading]     = useState(false);
   const [range, setRange]         = useState<Range>('3M');
-  // Account ID input shown after OAuth succeeds (cTrader REST doesn't expose an accounts list endpoint)
-  const [accountIdInput, setAccountIdInput] = useState('');
-  const [accountIdError, setAccountIdError] = useState('');
 
   const hasEnvCreds = !!(
     import.meta.env.VITE_CTRADER_CLIENT_ID &&
     import.meta.env.VITE_CTRADER_CLIENT_SECRET
   );
 
-  const connectWithToken = useCallback((accessToken: string) => {
-    setToken(accessToken);
-    // Check if we already have a saved account ID
-    const savedId = localStorage.getItem(ACC_KEY);
-    if (savedId) {
-      const acc: CTraderAccount = { ctidTraderAccountId: Number(savedId) };
-      setSelectedAcc(acc);
+  const connectWithToken = useCallback(async (accessToken: string) => {
+    setConnState('connecting');
+    try {
+      const accs = await fetchCTraderAccountsViaWebSocket(accessToken);
+      if (!accs.length) throw new Error('No trading accounts found for this app.');
+      setToken(accessToken);
+      setAccounts(accs);
       setConnState('connected');
-    } else {
-      setConnState('connected');
+      if (accs.length === 1) setSelectedAcc(accs[0]);
+    } catch (e: any) {
+      setConnState('error');
+      setConnError(e?.message ?? 'Connection failed');
     }
   }, []);
 
@@ -243,7 +241,7 @@ export default function PerformancePage() {
       window.history.replaceState({}, '', window.location.pathname);
       setConnState('connecting');
       exchangeAuthCode(code, getRedirectUri())
-        .then(tokens => { saveTokens(tokens); connectWithToken(tokens.accessToken); })
+        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken); })
         .catch(e => { setConnState('error'); setConnError(e?.message ?? 'Auth failed'); });
       return;
     }
@@ -256,7 +254,7 @@ export default function PerformancePage() {
     } else if (stored.refreshToken) {
       setConnState('connecting');
       refreshCtraderToken(stored.refreshToken)
-        .then(tokens => { saveTokens(tokens); connectWithToken(tokens.accessToken); })
+        .then(tokens => { saveTokens(tokens); return connectWithToken(tokens.accessToken); })
         .catch(() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); });
     }
   }, [connectWithToken]);
@@ -265,23 +263,14 @@ export default function PerformancePage() {
     window.location.href = buildCtraderAuthUrl(getRedirectUri());
   };
 
-  const handleAccountIdSubmit = () => {
-    const id = Number(accountIdInput.trim());
-    if (!id || isNaN(id)) { setAccountIdError('Enter a valid numeric account ID.'); return; }
-    localStorage.setItem(ACC_KEY, String(id));
-    const acc: CTraderAccount = { ctidTraderAccountId: id };
-    setSelectedAcc(acc);
-    setAccountIdError('');
-  };
-
   const loadDeals = useCallback(async (acc: CTraderAccount, tok: string) => {
     setLoading(true);
     try {
       const now = Date.now();
-      const fromMs = subDays(new Date(), 180).getTime(); // fetch 6 months, filter by range in UI
-      const fetched = await fetchDealsFromCTrader(tok, acc, fromMs, now);
+      const fromMs = subDays(new Date(), 180).getTime();
+      const fetched = await fetchDealsViaWebSocket(tok, acc.ctidTraderAccountId, fromMs, now);
       setDeals(fetched);
-      toast.success(`Loaded ${fetched.length} deals.`);
+      toast.success(`Loaded ${fetched.length} deals`);
     } catch (e: any) {
       toast.error(e?.message ?? 'Failed to load deals');
     } finally {
@@ -289,13 +278,17 @@ export default function PerformancePage() {
     }
   }, []);
 
-  // Load deals when account is selected
+  const handleAccountSelect = (acc: CTraderAccount) => {
+    setSelectedAcc(acc);
+    if (token) loadDeals(acc, token);
+  };
+
   useEffect(() => {
-    if (selectedAcc && token && deals.length === 0) loadDeals(selectedAcc, token);
-  }, [selectedAcc, token, loadDeals, deals.length]);
+    if (selectedAcc && token && deals.length === 0 && !loading) loadDeals(selectedAcc, token);
+  }, [selectedAcc, token, deals.length, loading, loadDeals]);
 
   const handleRefresh = () => {
-    if (selectedAcc && token) loadDeals(selectedAcc, token);
+    if (selectedAcc && token) { setDeals([]); loadDeals(selectedAcc, token); }
   };
 
   // Filter by selected range
@@ -370,46 +363,39 @@ export default function PerformancePage() {
     );
   }
 
-  // ── Account ID entry (shown after OAuth, cTrader REST has no accounts list endpoint) ──
+  // ── Account picker ────────────────────────────────────────────────────────
   if (connState === 'connected' && !selectedAcc) {
     return (
-      <div style={{ maxWidth: 420, margin: '4rem auto' }}>
+      <div style={{ maxWidth: 480, margin: '4rem auto' }}>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f0f6fc', marginBottom: '0.3rem' }}>Enter your account ID</h2>
-        <p style={{ fontSize: '0.82rem', color: MUTED, marginBottom: '1.5rem', lineHeight: 1.6 }}>
-          Find it in cTrader → bottom-left account selector → the number shown (e.g. <span style={{ color: ACCENT, fontFamily: "'IBM Plex Mono',monospace" }}>12345678</span>).
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f0f6fc', marginBottom: '0.4rem' }}>Select account</h2>
+        <p style={{ fontSize: '0.82rem', color: MUTED, marginBottom: '1.5rem' }}>
+          {accounts.length > 1 ? 'Multiple accounts found. Choose one to analyze.' : 'Choose your account to analyze.'}
         </p>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <input
-            type="number"
-            value={accountIdInput}
-            onChange={e => setAccountIdInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAccountIdSubmit()}
-            placeholder="e.g. 12345678"
-            style={{
-              flex: 1, background: '#0D0D14', border: `1px solid ${accountIdError ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: 8, padding: '0.65rem 0.9rem', color: '#f0f6fc',
-              fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.9rem', outline: 'none',
-            }}
-          />
-          <button
-            onClick={handleAccountIdSubmit}
-            style={{
-              background: `linear-gradient(135deg, ${ACCENT} 0%, #0090b3 100%)`,
-              border: 'none', borderRadius: 8, padding: '0.65rem 1.25rem',
-              color: '#0A0A0F', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
-            }}
-          >
-            Load
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {accounts.map(acc => (
+            <button
+              key={acc.ctidTraderAccountId}
+              onClick={() => handleAccountSelect(acc)}
+              style={{ background: CARD_BG, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.9rem 1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s', textAlign: 'left' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${ACCENT}40`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+            >
+              <div>
+                <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f6fc' }}>
+                  {acc.brokerTitle ?? `Account ${acc.ctidTraderAccountId}`}
+                </p>
+                {acc.traderLogin && (
+                  <p style={{ fontSize: '0.72rem', color: MUTED, fontFamily: "'IBM Plex Mono',monospace", marginTop: '0.15rem' }}>Login: {acc.traderLogin}</p>
+                )}
+              </div>
+              <span style={{ fontSize: '0.68rem', padding: '0.2rem 0.55rem', borderRadius: 20, background: acc.isLive ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: acc.isLive ? GREEN : YELLOW, border: `1px solid ${acc.isLive ? GREEN : YELLOW}30`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {acc.isLive ? 'Live' : 'Demo'}
+              </span>
+            </button>
+          ))}
         </div>
-        {accountIdError && (
-          <p style={{ fontSize: '0.75rem', color: '#fca5a5', marginTop: '0.5rem', fontFamily: "'IBM Plex Mono',monospace" }}>{accountIdError}</p>
-        )}
-        <button
-          onClick={() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); setToken(null); }}
-          style={{ background: 'none', border: 'none', color: MUTED, fontSize: '0.72rem', cursor: 'pointer', marginTop: '1.5rem', fontFamily: "'IBM Plex Mono',monospace" }}
-        >
+        <button onClick={() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); setToken(null); setAccounts([]); }} style={{ background: 'none', border: 'none', color: MUTED, fontSize: '0.72rem', cursor: 'pointer', marginTop: '1.5rem', fontFamily: "'IBM Plex Mono',monospace" }}>
           disconnect
         </button>
       </div>
@@ -466,7 +452,7 @@ export default function PerformancePage() {
           </button>
 
           <button
-            onClick={() => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ACC_KEY); setConnState('idle'); setSelectedAcc(null); setDeals([]); setToken(null); }}
+            onClick={() => { localStorage.removeItem(TOKEN_KEY); setConnState('idle'); setSelectedAcc(null); setDeals([]); setToken(null); setAccounts([]); }}
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '0.4rem 0.75rem', color: 'rgba(240,246,252,0.3)', cursor: 'pointer', fontSize: '0.68rem', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.05em', transition: 'all 0.15s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(240,246,252,0.6)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.18)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(240,246,252,0.3)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
@@ -476,9 +462,13 @@ export default function PerformancePage() {
         </div>
       </div>
 
-      {loading && !filteredDeals.length ? (
+      {loading && deals.length === 0 ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem', color: MUTED, fontSize: '0.82rem', fontFamily: "'IBM Plex Mono',monospace", gap: '0.5rem', alignItems: 'center' }}>
           <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite', color: ACCENT }} /> Loading deals…
+        </div>
+      ) : deals.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '5rem 2rem', color: MUTED, fontSize: '0.85rem' }}>
+          No trades found for this account in the last 6 months.
         </div>
       ) : filteredDeals.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '5rem 2rem', color: MUTED, fontSize: '0.85rem' }}>
