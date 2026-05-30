@@ -1,12 +1,18 @@
-// Cloudflare Pages Function — WebSocket bridge for cTrader deal history
+// Cloudflare Pages Function — cTrader deal history via WebSocket bridge
 // POST { token, ctidTraderAccountId, clientId, clientSecret, from, to }
-// Returns { deals: TradeEntry[] }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+function jsonRes(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
 
 // ── Protobuf helpers ──────────────────────────────────────────────────────────
 
@@ -63,29 +69,25 @@ function decode(b) {
   return f;
 }
 
-const toArr   = (v) => v == null ? [] : Array.isArray(v) ? v : [v];
-const num     = (v) => v == null ? 0 : Number(typeof v === 'bigint' ? v : v);
-const signed  = (v) => { const n = typeof v === 'bigint' ? v : 0n; return n >= 9223372036854775808n ? n - 18446744073709551616n : n; };
-const str     = (v) => v instanceof Uint8Array ? new TextDecoder().decode(v) : String(v ?? '');
+const toArr  = (v) => v == null ? [] : Array.isArray(v) ? v : [v];
+const num    = (v) => v == null ? 0 : Number(typeof v === 'bigint' ? v : v);
+const signed = (v) => { const n = typeof v === 'bigint' ? v : 0n; return n >= 9223372036854775808n ? n - 18446744073709551616n : n; };
+const str    = (v) => v instanceof Uint8Array ? new TextDecoder().decode(v) : String(v ?? '');
 
-// ── Messages ──────────────────────────────────────────────────────────────────
-
-const msgAppAuth  = (id, sec)        => frame(2100, concat(sf(1, id), sf(2, sec)));
-const msgAccAuth  = (accId, token)   => frame(2102, concat(vf(1, accId), sf(2, token)));
-const msgSymbols  = (accId)          => frame(2115, vf(1, accId));
-const msgDeals    = (accId, f, t)    => frame(2155, concat(vf(1, accId), vf(3, BigInt(f)), vf(4, BigInt(t)), vf(5, 5000)));
-
-// ── Deal parser ───────────────────────────────────────────────────────────────
+const msgAppAuth = (id, sec)       => frame(2100, concat(sf(1, id), sf(2, sec)));
+const msgAccAuth = (aid, tok)      => frame(2102, concat(vf(1, aid), sf(2, tok)));
+const msgSymbols = (aid)           => frame(2115, vf(1, aid));
+const msgDeals   = (aid, f, t)     => frame(2155, concat(vf(1, aid), vf(3, BigInt(f)), vf(4, BigInt(t)), vf(5, 5000)));
 
 function parseDeal(bytes, symMap) {
   const d = decode(bytes);
   if (!d[10]) return null; // No closePositionDetail = opening deal, skip
 
-  const cp      = decode(d[10]);
-  const gross   = signed(cp[2] ?? 0n);
-  const swap    = signed(cp[3] ?? 0n);
-  const comm    = signed(cp[4] ?? 0n);
-  const pnl     = Number(gross + swap + comm) / 100;
+  const cp    = decode(d[10]);
+  const gross = signed(cp[2] ?? 0n);
+  const swap  = signed(cp[3] ?? 0n);
+  const comm  = signed(cp[4] ?? 0n);
+  const pnl   = Number(gross + swap + comm) / 100;
 
   const symbolId = num(d[6] ?? 0n);
   const closeMs  = num(d[8] ?? d[7] ?? 0n);
@@ -109,57 +111,60 @@ export async function onRequest(context) {
   const { request } = context;
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS });
+  if (request.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405);
 
   let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+  try { body = await request.json(); } catch { return jsonRes({ error: 'Invalid JSON' }, 400); }
 
   const { token, ctidTraderAccountId, clientId, clientSecret, from: fromMs = 0, to: toMs = Date.now() } = body;
   if (!token || !ctidTraderAccountId || !clientId || !clientSecret)
-    return json({ error: 'Missing: token, ctidTraderAccountId, clientId, clientSecret' }, 400);
-
-  const wsResp = await fetch('https://live.ctraderapi.com:5035/', {
-    headers: { Upgrade: 'websocket', Connection: 'Upgrade' },
-  }).catch(() => null);
-
-  if (!wsResp || wsResp.status !== 101)
-    return json({ error: `WebSocket connect failed: ${wsResp?.status ?? 'network error'}` }, 502);
-
-  const ws = wsResp.webSocket;
-  ws.accept();
-  ws.send(msgAppAuth(clientId, clientSecret));
+    return jsonRes({ error: 'Missing: token, ctidTraderAccountId, clientId, clientSecret' }, 400);
 
   return new Promise((resolve) => {
-    let state = 'app_auth';
-    const symMap = {};
     let done = false;
-
     const finish = (data, status = 200) => {
       if (done) return; done = true;
-      try { ws.close(1000); } catch {}
-      resolve(new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } }));
+      try { ws.close(); } catch {}
+      resolve(jsonRes(data, status));
     };
 
-    const timer = setTimeout(() => finish({ error: 'cTrader timeout' }, 504), 25_000);
+    let ws;
+    try {
+      ws = new WebSocket('wss://live.ctraderapi.com:5035');
+    } catch (e) {
+      return resolve(jsonRes({ error: 'WebSocket unavailable: ' + String(e) }, 502));
+    }
+
+    ws.binaryType = 'arraybuffer';
+    let state = 'app_auth';
+    const symMap = {};
+    const timer = setTimeout(() => finish({ error: 'cTrader timeout after 25s' }, 504), 25_000);
+
+    ws.addEventListener('open', () => {
+      const msg = msgAppAuth(clientId, clientSecret);
+      ws.send(msg.buffer);
+    });
 
     ws.addEventListener('message', (evt) => {
       try {
-        const raw = new Uint8Array(evt.data instanceof ArrayBuffer ? evt.data : evt.data.buffer);
+        const raw = new Uint8Array(evt.data);
         const msg = decode(raw.slice(4));
-        const pt = num(msg[1]);
+        const pt  = num(msg[1]);
         const payload = msg[2] instanceof Uint8Array ? msg[2] : new Uint8Array(0);
 
         if (pt === 50 || pt === 2142) {
           const e = decode(payload);
-          finish({ error: `cTrader: ${str(e[2])} (${str(e[1])})` }, 500); return;
+          clearTimeout(timer);
+          finish({ error: `cTrader error: ${str(e[2] ?? e[1])}` }, 500);
+          return;
         }
 
         if (state === 'app_auth' && pt === 2101) {
           state = 'acc_auth';
-          ws.send(msgAccAuth(ctidTraderAccountId, token));
+          ws.send(msgAccAuth(ctidTraderAccountId, token).buffer);
         } else if (state === 'acc_auth' && pt === 2103) {
           state = 'symbols';
-          ws.send(msgSymbols(ctidTraderAccountId));
+          ws.send(msgSymbols(ctidTraderAccountId).buffer);
         } else if (state === 'symbols' && pt === 2116) {
           const sr = decode(payload);
           for (const sb of toArr(sr[2])) {
@@ -167,21 +172,27 @@ export async function onRequest(context) {
             if (s[1] && s[2]) symMap[num(s[1])] = str(s[2]);
           }
           state = 'deals';
-          ws.send(msgDeals(ctidTraderAccountId, fromMs, toMs));
+          ws.send(msgDeals(ctidTraderAccountId, fromMs, toMs).buffer);
         } else if (state === 'deals' && pt === 2156) {
           clearTimeout(timer);
           const dr = decode(payload);
           const deals = toArr(dr[2]).map(b => parseDeal(b, symMap)).filter(Boolean);
           finish({ deals });
         }
-      } catch (e) { finish({ error: String(e) }, 500); }
+      } catch (e) {
+        clearTimeout(timer);
+        finish({ error: 'Parse error: ' + String(e) }, 500);
+      }
     });
 
-    ws.addEventListener('error', () => finish({ error: 'WebSocket error' }, 502));
-    ws.addEventListener('close', () => { if (!done) finish({ error: 'WebSocket closed unexpectedly' }, 502); });
-  });
-}
+    ws.addEventListener('error', (e) => {
+      clearTimeout(timer);
+      finish({ error: 'WebSocket error: ' + String(e?.message ?? e) }, 502);
+    });
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    ws.addEventListener('close', (e) => {
+      clearTimeout(timer);
+      if (!done) finish({ error: `WebSocket closed unexpectedly (code ${e.code})` }, 502);
+    });
+  });
 }

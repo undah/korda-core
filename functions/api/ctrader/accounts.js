@@ -1,12 +1,18 @@
-// Cloudflare Pages Function — WebSocket bridge for cTrader account list
+// Cloudflare Pages Function — cTrader account list via WebSocket bridge
 // POST { token, clientId, clientSecret }
-// Returns { accounts: [{ ctidTraderAccountId, isLive, traderLogin }] }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+function jsonRes(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
 
 // ── Protobuf helpers ──────────────────────────────────────────────────────────
 
@@ -64,10 +70,8 @@ function decode(b) {
 }
 
 const toArr = (v) => v == null ? [] : Array.isArray(v) ? v : [v];
-const num   = (v) => v == null ? 0 : Number(typeof v === 'bigint' ? v : BigInt.asIntN(64, v));
+const num   = (v) => v == null ? 0 : Number(typeof v === 'bigint' ? v : v);
 const str   = (v) => v instanceof Uint8Array ? new TextDecoder().decode(v) : String(v ?? '');
-
-// ── Messages ──────────────────────────────────────────────────────────────────
 
 const msgAppAuth     = (id, sec) => frame(2100, concat(sf(1, id), sf(2, sec)));
 const msgAccountList = (token)   => frame(2149, sf(1, token));
@@ -78,53 +82,57 @@ export async function onRequest(context) {
   const { request } = context;
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS });
+  if (request.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405);
 
   let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+  try { body = await request.json(); } catch { return jsonRes({ error: 'Invalid JSON' }, 400); }
 
   const { token, clientId, clientSecret } = body;
   if (!token || !clientId || !clientSecret)
-    return json({ error: 'Missing: token, clientId, clientSecret' }, 400);
-
-  const wsResp = await fetch('https://live.ctraderapi.com:5035/', {
-    headers: { Upgrade: 'websocket', Connection: 'Upgrade' },
-  }).catch(() => null);
-
-  if (!wsResp || wsResp.status !== 101)
-    return json({ error: `WebSocket connect failed: ${wsResp?.status ?? 'network error'}` }, 502);
-
-  const ws = wsResp.webSocket;
-  ws.accept();
-  ws.send(msgAppAuth(clientId, clientSecret));
+    return jsonRes({ error: 'Missing: token, clientId, clientSecret' }, 400);
 
   return new Promise((resolve) => {
-    let state = 'app_auth';
     let done = false;
-
     const finish = (data, status = 200) => {
       if (done) return; done = true;
-      try { ws.close(1000); } catch {}
-      resolve(new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } }));
+      try { ws.close(); } catch {}
+      resolve(jsonRes(data, status));
     };
 
-    const timer = setTimeout(() => finish({ error: 'cTrader timeout' }, 504), 20_000);
+    let ws;
+    try {
+      ws = new WebSocket('wss://live.ctraderapi.com:5035');
+    } catch (e) {
+      return resolve(jsonRes({ error: 'WebSocket unavailable: ' + String(e) }, 502));
+    }
+
+    ws.binaryType = 'arraybuffer';
+    let state = 'app_auth';
+    const timer = setTimeout(() => finish({ error: 'cTrader timeout after 20s' }, 504), 20_000);
+
+    ws.addEventListener('open', () => {
+      const msg = msgAppAuth(clientId, clientSecret);
+      ws.send(msg.buffer);
+    });
 
     ws.addEventListener('message', (evt) => {
       try {
-        const raw = new Uint8Array(evt.data instanceof ArrayBuffer ? evt.data : evt.data.buffer);
+        const raw = new Uint8Array(evt.data);
         const msg = decode(raw.slice(4));
-        const pt = num(msg[1]);
+        const pt  = num(msg[1]);
         const payload = msg[2] instanceof Uint8Array ? msg[2] : new Uint8Array(0);
 
         if (pt === 50 || pt === 2142) {
           const e = decode(payload);
-          finish({ error: `cTrader: ${str(e[2])} (${str(e[1])})` }, 500); return;
+          clearTimeout(timer);
+          finish({ error: `cTrader error: ${str(e[2] ?? e[1])}` }, 500);
+          return;
         }
 
         if (state === 'app_auth' && pt === 2101) {
           state = 'acc_list';
-          ws.send(msgAccountList(token));
+          const msg2 = msgAccountList(token);
+          ws.send(msg2.buffer);
         } else if (state === 'acc_list' && pt === 2150) {
           clearTimeout(timer);
           const res = decode(payload);
@@ -138,14 +146,20 @@ export async function onRequest(context) {
           });
           finish({ accounts });
         }
-      } catch (e) { finish({ error: String(e) }, 500); }
+      } catch (e) {
+        clearTimeout(timer);
+        finish({ error: 'Parse error: ' + String(e) }, 500);
+      }
     });
 
-    ws.addEventListener('error', () => finish({ error: 'WebSocket error' }, 502));
-    ws.addEventListener('close', () => { if (!done) finish({ error: 'WebSocket closed unexpectedly' }, 502); });
-  });
-}
+    ws.addEventListener('error', (e) => {
+      clearTimeout(timer);
+      finish({ error: 'WebSocket error: ' + String(e?.message ?? e) }, 502);
+    });
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    ws.addEventListener('close', (e) => {
+      clearTimeout(timer);
+      if (!done) finish({ error: `WebSocket closed unexpectedly (code ${e.code})` }, 502);
+    });
+  });
 }

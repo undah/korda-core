@@ -64,7 +64,7 @@ export async function saveScreenshotConfig(
 export async function fetchScreenshotLogs(limit = 50): Promise<ScreenshotLog[]> {
   const { data, error } = await supabase
     .from('screenshot_log')
-    .select('*')
+    .select('id, status, timestamp, image_base64, reason, created_at, ai_validation, ai_reasoning')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;

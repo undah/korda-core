@@ -156,13 +156,23 @@ export default function ScreenshotScheduler() {
             cursor: 'zoom-out',
           }}
         >
-          <div style={{ position: 'absolute', top: 20, right: 24, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <div style={{ position: 'absolute', top: 20, right: 24, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, maxWidth: 340 }}>
             <span style={{ fontSize: '0.75rem', color: 'rgba(240,246,252,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
               {lightboxLog.reason ?? ''}
             </span>
             <span style={{ fontSize: '0.7rem', color: 'rgba(240,246,252,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
               {format(new Date(lightboxLog.timestamp), 'MMM d, HH:mm:ss')} UTC
             </span>
+            {lightboxLog.ai_validation && (
+              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <AIValidationBadge validation={lightboxLog.ai_validation} />
+                {lightboxLog.ai_reasoning && (
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(240,246,252,0.4)', fontStyle: 'italic', lineHeight: 1.4, textAlign: 'right' }}>
+                    {lightboxLog.ai_reasoning}
+                  </p>
+                )}
+              </div>
+            )}
             <span style={{ fontSize: '0.65rem', color: 'rgba(240,246,252,0.2)', marginTop: 4 }}>ESC or click to close</span>
           </div>
           <img
@@ -366,9 +376,24 @@ export default function ScreenshotScheduler() {
       </div>
 
       {/* Run log */}
-      <div style={{ marginTop: '2.5rem', maxWidth: 860 }}>
+      <div style={{ marginTop: '2.5rem', maxWidth: 1000 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#f0f6fc', margin: 0, letterSpacing: '-0.02em' }}>Run Log</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#f0f6fc', margin: 0, letterSpacing: '-0.02em' }}>Run Log</h2>
+            {(() => {
+              const validated = logs.filter(l => l.ai_validation !== null);
+              if (!validated.length) return null;
+              const validCount   = validated.filter(l => l.ai_validation === 'valid').length;
+              const invalidCount = validated.filter(l => l.ai_validation === 'invalid').length;
+              return (
+                <span style={{ fontSize: '0.72rem', color: 'rgba(240,246,252,0.35)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span style={{ color: '#10b981' }}>✓ {validCount}</span>
+                  {' · '}
+                  <span style={{ color: '#f87171' }}>✗ {invalidCount}</span>
+                </span>
+              );
+            })()}
+          </div>
           <button
             onClick={async () => {
               setRefreshing(true);
@@ -391,46 +416,72 @@ export default function ScreenshotScheduler() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Status', 'Time', 'Reason', 'Screenshot'].map(h => (
+                  {['Status', 'Time', 'Reason', 'AI Verdict', 'Screenshot'].map(h => (
                     <th key={h} style={{ padding: '0.65rem 1rem', textAlign: 'left', fontWeight: 600, color: 'rgba(240,246,252,0.35)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log, i) => (
-                  <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                    <td style={{ padding: '0.65rem 1rem' }}><StatusBadge status={log.status} /></td>
-                    <td style={{ padding: '0.65rem 1rem', color: 'rgba(240,246,252,0.55)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.77rem', whiteSpace: 'nowrap' }}>
-                      {format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}
-                    </td>
-                    <td style={{ padding: '0.65rem 1rem', color: 'rgba(240,246,252,0.45)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {log.reason ?? '—'}
-                    </td>
-                    <td style={{ padding: '0.65rem 1rem', position: 'relative' }}>
-                      {log.image_base64 ? (
-                        <div
-                          onMouseEnter={() => setHoveredLog(log.id)}
-                          onMouseLeave={() => setHoveredLog(null)}
-                          onClick={() => setLightboxLog(log)}
-                          style={{ position: 'relative', display: 'inline-block' }}
-                        >
-                          <img
-                            src={imgSrc(log.image_base64)}
-                            alt="thumb"
-                            style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', cursor: 'zoom-in', display: 'block' }}
-                          />
-                          {hoveredLog === log.id && (
-                            <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, background: '#0A0A0F', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 6, boxShadow: '0 16px 64px rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
-                              <img src={imgSrc(log.image_base64)} alt="preview" style={{ width: 720, height: 450, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {logs.map((log, i) => {
+                  const rowBg = log.ai_validation === 'valid'
+                    ? 'rgba(16,185,129,0.03)'
+                    : log.ai_validation === 'invalid'
+                    ? 'rgba(248,113,113,0.03)'
+                    : 'transparent';
+                  return (
+                    <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', background: rowBg }}>
+                      <td style={{ padding: '0.65rem 1rem' }}><StatusBadge status={log.status} /></td>
+                      <td style={{ padding: '0.65rem 1rem', color: 'rgba(240,246,252,0.55)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.77rem', whiteSpace: 'nowrap' }}>
+                        {format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}
+                      </td>
+                      <td style={{ padding: '0.65rem 1rem', color: 'rgba(240,246,252,0.45)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.reason ?? '—'}
+                      </td>
+                      <td style={{ padding: '0.65rem 1rem', maxWidth: 240 }}>
+                        {log.ai_validation ? (
+                          <div>
+                            <AIValidationBadge validation={log.ai_validation} />
+                            {log.ai_reasoning && (
+                              <p style={{
+                                margin: '0.3rem 0 0', fontSize: '0.7rem', color: 'rgba(240,246,252,0.35)',
+                                fontStyle: 'italic', lineHeight: 1.4,
+                                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}>
+                                {log.ai_reasoning}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.65rem 1rem', position: 'relative' }}>
+                        {log.image_base64 ? (
+                          <div
+                            onMouseEnter={() => setHoveredLog(log.id)}
+                            onMouseLeave={() => setHoveredLog(null)}
+                            onClick={() => setLightboxLog(log)}
+                            style={{ position: 'relative', display: 'inline-block' }}
+                          >
+                            <img
+                              src={imgSrc(log.image_base64)}
+                              alt="thumb"
+                              style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', cursor: 'zoom-in', display: 'block' }}
+                            />
+                            {hoveredLog === log.id && (
+                              <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, background: '#0A0A0F', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 6, boxShadow: '0 16px 64px rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
+                                <img src={imgSrc(log.image_base64)} alt="preview" style={{ width: 720, height: 450, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'rgba(240,246,252,0.2)', fontSize: '0.75rem' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -489,6 +540,20 @@ function StatusBadge({ status }: { status: LogStatus }) {
   const { label, color, bg } = map[status] ?? map.skipped;
   return (
     <span style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600, color, background: bg }}>
+      {label}
+    </span>
+  );
+}
+
+function AIValidationBadge({ validation }: { validation: string }) {
+  const map: Record<string, { label: string; color: string; bg: string }> = {
+    valid:   { label: '✓ Valid',   color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+    invalid: { label: '✗ Invalid', color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+    error:   { label: 'Error',     color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  };
+  const { label, color, bg } = map[validation] ?? map.error;
+  return (
+    <span style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600, color, background: bg, whiteSpace: 'nowrap' }}>
       {label}
     </span>
   );
