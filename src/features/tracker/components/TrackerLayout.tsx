@@ -160,6 +160,15 @@ export default function TrackerLayout() {
       /* ── CHART ── */
       .kt-chart-wrap { height: 240px; }
 
+      /* ── PAGE TRANSITIONS ── */
+      @keyframes kt-page-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .kt-page-anim {
+        animation: kt-page-in 0.24s cubic-bezier(0.16,1,0.3,1) both;
+      }
+
       /* ── RESPONSIVE ── */
       .kt-mobile-only { display: none; }
       .kt-desktop-only { display: block; }
@@ -240,21 +249,32 @@ export default function TrackerLayout() {
 
       {/* Main content */}
       <main className="kt-main">
-        <Outlet />
+        <div key={pathname} className="kt-page-anim">
+          <Outlet />
+        </div>
       </main>
 
       {/* Mobile bottom nav */}
       <nav className="kt-bottom-nav">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`kt-bnav-item${pathname === item.path ? " active" : ""}`}
-          >
-            <item.icon size={17} strokeWidth={pathname === item.path ? 2 : 1.5} />
-            {item.label}
-          </Link>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`kt-bnav-item${active ? " active" : ""}`}
+            >
+              <span style={{
+                display: "block", height: 3, width: active ? 20 : 0,
+                background: "var(--kt-accent)", borderRadius: 2,
+                transition: "width 0.22s cubic-bezier(0.16,1,0.3,1)",
+                marginBottom: 2,
+              }} />
+              <item.icon size={17} strokeWidth={active ? 2 : 1.5} />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
