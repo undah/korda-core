@@ -360,7 +360,7 @@ export default function TrackerDashboard() {
                     <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis domain={[yMin, yMax]} tickFormatter={v => `${v}`} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} tickCount={5} width={32} />
                     <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
-                    {goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopRight", fill: "rgba(90,212,160,0.45)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
+                    {goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopLeft", fill: "rgba(90,212,160,0.55)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
                     <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />
                     <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.3)" strokeWidth={1} strokeDasharray="3 4"
                       dot={(props: any) => {
@@ -378,7 +378,27 @@ export default function TrackerDashboard() {
                     />
                     <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
                     {projectedPoints.length > 0 && (
-                      <Line type="monotone" dataKey="projected" stroke="rgba(90,212,160,0.7)" strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} connectNulls={false} />
+                      <Line type="monotone" dataKey="projected" stroke="rgba(90,212,160,0.7)" strokeWidth={1.5} strokeDasharray="5 4" activeDot={false} connectNulls={false}
+                        dot={(props: any) => {
+                          const { cx, cy, payload, index } = props;
+                          if (payload.projected == null || cx == null || cy == null) return <g key={`pd-${index}`} />;
+                          const isLast = index === combinedData.length - 1;
+                          // Show a small dot every ~8 projected steps and always at the end
+                          const projIdx = index - (combinedData.length - projectedPoints.length);
+                          const showLabel = isLast || projIdx % 8 === 3;
+                          return (
+                            <g key={`pd-${index}`}>
+                              {showLabel && <circle cx={cx} cy={cy} r={2.5} fill="rgba(90,212,160,0.8)" strokeWidth={0} />}
+                              {showLabel && (
+                                <text x={cx} y={cy - 7} textAnchor="middle" fill="rgba(90,212,160,0.75)"
+                                  fontFamily="'IBM Plex Mono',monospace" fontSize={8}>
+                                  {payload.projected} kg
+                                </text>
+                              )}
+                            </g>
+                          );
+                        }}
+                      />
                     )}
                   </ComposedChart>
                 </ResponsiveContainer>
@@ -415,119 +435,129 @@ export default function TrackerDashboard() {
           </div>
         </div>
 
-        {/* ── RIGHT PANEL: weekly pace + photo + quick actions ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {/* ── RIGHT PANEL: unified sidebar ── */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.35)", display: "flex", flexDirection: "column" }}>
 
           {/* AI weekly summary */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+          <div style={{ padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aiSummary ? "0.85rem" : "0.5rem" }}>
               <p className="kt-card-label" style={{ marginBottom: 0 }}>Weekly summary</p>
               <button onClick={generateSummary} disabled={aiLoading}
-                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.08em", padding: "0.3rem 0.7rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap" }}>
-                {aiLoading ? "..." : aiSummary ? "↺ Refresh" : "✦ Generate"}
+                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.56rem", letterSpacing: "0.08em", padding: "0.25rem 0.6rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap" }}>
+                {aiLoading ? "generating..." : aiSummary ? "↺" : "✦ Generate"}
               </button>
             </div>
-            {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.red }}>{aiError}</p>}
+            {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: C.red }}>{aiError}</p>}
             {aiSummary ? (
-              <p style={{ fontSize: "0.78rem", color: "rgba(232,240,244,0.6)", lineHeight: 1.7 }}>{aiSummary}</p>
+              <p style={{ fontSize: "0.76rem", color: "rgba(232,240,244,0.55)", lineHeight: 1.75 }}>{aiSummary}</p>
             ) : !aiLoading && (
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.2)", lineHeight: 1.6 }}>
-                Get a personalised AI coach recap of your last 7 days — weight trend, patterns, and one action for next week.
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(232,240,244,0.18)", lineHeight: 1.65 }}>
+                AI coach recap of your last 7 days — trend, patterns, one action.
               </p>
             )}
           </div>
 
+          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+
           {/* Weekly pace */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
-            <p className="kt-card-label" style={{ marginBottom: "0.85rem" }}>Weekly pace</p>
+          <div style={{ padding: "1.25rem" }}>
+            <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Weekly pace</p>
             {paceKgPerWeek !== null ? (
               <>
-                <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.75rem", fontWeight: 400, color: paceColor, marginBottom: "0.2rem", lineHeight: 1 }}>
-                  {paceKgPerWeek > 0 ? "+" : ""}{paceKgPerWeek}
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: C.muted, marginLeft: "0.3rem" }}>kg/wk</span>
-                </p>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                  <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.8rem", fontWeight: 400, color: paceColor, lineHeight: 1 }}>
+                    {paceKgPerWeek > 0 ? "+" : ""}{paceKgPerWeek}
+                  </span>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: C.muted }}>kg/wk</span>
+                </div>
                 {targetPace !== null && (
                   <>
-                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.dim, marginBottom: "0.65rem" }}>Target: {Math.abs(targetPace)} kg/wk</p>
                     <div style={{ background: "rgba(255,255,255,0.05)", height: 3, borderRadius: 2, overflow: "hidden", marginBottom: "0.5rem" }}>
                       <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: 2, transition: "width 0.6s ease" }} />
                     </div>
-                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: paceColor }}>
-                      {paceStatus === "ahead" ? "↑ Ahead of target" : paceStatus === "behind" ? "↓ Behind target" : "● On track"}
-                    </p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: paceColor }}>
+                        {paceStatus === "ahead" ? "↑ Ahead" : paceStatus === "behind" ? "↓ Behind" : "● On track"}
+                      </span>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: C.dim }}>target: −{Math.abs(targetPace)} kg/wk</span>
+                    </div>
                   </>
                 )}
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.52rem", color: "rgba(221,232,237,0.18)", marginTop: "0.5rem", letterSpacing: "0.06em" }}>30-day trend</p>
               </>
             ) : (
-              <p style={{ color: C.dim, fontSize: "0.78rem", fontFamily: "'IBM Plex Mono',monospace" }}>Not enough data</p>
+              <p style={{ color: C.dim, fontSize: "0.75rem", fontFamily: "'IBM Plex Mono',monospace" }}>Need more data</p>
             )}
           </div>
 
-          {/* Latest front photo */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem", display: "flex", flexDirection: "column" }}>
-            <p className="kt-card-label" style={{ marginBottom: "0.85rem" }}>Latest photo</p>
+          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+
+          {/* Latest photo */}
+          <div style={{ padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+              <p className="kt-card-label" style={{ marginBottom: 0 }}>Latest photo</p>
+              {latestFrontPhoto && <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.56rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.06em" }}>all photos →</Link>}
+            </div>
             {latestFrontPhoto ? (
               <>
-                <div style={{ overflow: "hidden", cursor: "pointer", marginBottom: "0.65rem", maxHeight: 260 }}
+                <div style={{ overflow: "hidden", cursor: "pointer", marginBottom: "0.6rem", borderRadius: 2 }}
                   onClick={() => setLightboxPhotos(photosByDate[latestFrontPhoto.log_date] ?? [latestFrontPhoto])}>
-                  <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+                  <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", maxHeight: 240, objectFit: "cover", objectPosition: "top", display: "block" }} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: C.dim }}>
-                    {format(parseISO(latestFrontPhoto.log_date), "d MMM yyyy")}{latestFrontPhoto.weight_at ? ` · ${latestFrontPhoto.weight_at} kg` : ""}
-                  </span>
-                  <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(90,180,212,0.4)", textDecoration: "none" }}>all →</Link>
-                </div>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: C.dim }}>
+                  {format(parseISO(latestFrontPhoto.log_date), "d MMM yyyy")}{latestFrontPhoto.weight_at ? ` · ${latestFrontPhoto.weight_at} kg` : ""}
+                </p>
               </>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", minHeight: 100 }}>
-                <p style={{ color: C.dim, fontSize: "0.78rem", fontFamily: "'IBM Plex Mono',monospace" }}>No photos yet</p>
-                <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.5)", textDecoration: "none" }}>Add photo →</Link>
-              </div>
+              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.5)", textDecoration: "none" }}>Add first photo →</Link>
             )}
           </div>
+
+          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
 
           {/* Personal records */}
           {records && (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
-              <p className="kt-card-label" style={{ marginBottom: "0.85rem" }}>Personal records</p>
-              {[
-                { label: "Lowest weight", value: `${records.lowestWeight} kg`, note: format(parseISO(records.lowestDate), "d MMM"), color: C.accent },
-                { label: "Best week",     value: records.bestWeek7 > 0 ? `−${records.bestWeek7} kg` : "—", color: records.bestWeek7 > 0 ? C.green : C.dim },
-                { label: "Best drop",     value: records.biggestDrop > 0 ? `−${records.biggestDrop} kg` : "—", color: records.biggestDrop > 0 ? C.green : C.dim },
-                { label: "Total logs",    value: `${sorted.length}`, color: C.text },
-              ].map(item => (
-                <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0", borderBottom: "1px solid rgba(90,180,212,0.05)" }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.dim }}>{item.label}</span>
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", fontWeight: 500, color: item.color }}>{item.value}</span>
-                    {'note' in item && item.note && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(221,232,237,0.2)", marginLeft: "0.4rem" }}>{item.note}</span>}
-                  </div>
+            <div style={{ padding: "1.25rem" }}>
+              <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Records</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <div>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>LOWEST</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: C.accent }}>{records.lowestWeight} kg</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.2)" }}>{format(parseISO(records.lowestDate), "d MMM")}</p>
                 </div>
-              ))}
+                <div>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST WEEK</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: records.bestWeek7 > 0 ? C.green : C.dim }}>{records.bestWeek7 > 0 ? `−${records.bestWeek7} kg` : "—"}</p>
+                </div>
+                <div>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST DROP</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: records.biggestDrop > 0 ? C.green : C.dim }}>{records.biggestDrop > 0 ? `−${records.biggestDrop} kg` : "—"}</p>
+                </div>
+                <div>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>TOTAL LOGS</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: C.text }}>{sorted.length}</p>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Quick actions */}
-          {[
-            { to: "/tracker/progress", label: "Log check-in",    sub: "Record weight & measurements" },
-            { to: "/tracker/journal",  label: "Daily journal",   sub: "Mood, energy, wins & struggles" },
-            { to: "/tracker/photos",   label: "Progress photos", sub: "Front, side, or back" },
-            { to: "/tracker/analysis", label: "Deep analysis",   sub: "Trends, projections & insights" },
-          ].map(item => (
-            <Link key={item.to} to={item.to} style={{ textDecoration: "none" }}>
-              <div className="kt-card" style={{ cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.9rem 1.1rem" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderTopColor = "rgba(0,200,255,0.35)"; (e.currentTarget as HTMLElement).style.background = "#11121e"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderTopColor = "rgba(0,200,255,0.18)"; (e.currentTarget as HTMLElement).style.background = C.card; }}>
-                <div>
-                  <p style={{ fontSize: "0.82rem", fontWeight: 500, color: C.text, marginBottom: "0.1rem" }}>{item.label}</p>
-                  <p style={{ fontSize: "0.67rem", color: "rgba(221,232,237,0.28)" }}>{item.sub}</p>
-                </div>
-                <span style={{ color: "rgba(90,180,212,0.3)", fontSize: "0.9rem", flexShrink: 0 }}>→</span>
-              </div>
-            </Link>
-          ))}
+          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+
+          {/* Quick nav */}
+          <div style={{ padding: "0.5rem 0" }}>
+            {[
+              { to: "/tracker/progress", label: "Log check-in" },
+              { to: "/tracker/journal",  label: "Daily journal" },
+              { to: "/tracker/photos",   label: "Progress photos" },
+              { to: "/tracker/analysis", label: "Deep analysis" },
+            ].map((item, i, arr) => (
+              <Link key={item.to} to={item.to} style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 1.25rem", borderBottom: i < arr.length - 1 ? "1px solid rgba(0,200,255,0.04)" : "none", transition: "background 0.12s" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(0,200,255,0.04)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                <span style={{ fontSize: "0.8rem", color: "rgba(232,240,244,0.55)", fontWeight: 400 }}>{item.label}</span>
+                <span style={{ color: "rgba(90,180,212,0.3)", fontSize: "0.75rem" }}>→</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>
