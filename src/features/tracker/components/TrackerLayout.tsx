@@ -107,7 +107,7 @@ export default function TrackerLayout() {
       .kt-topbar-btn:hover { color: var(--kt-text); background: var(--kt-hover); }
 
       /* ── BOTTOM NAV ── */
-      .kt-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; background: var(--kt-sidebar-bg); border-top: 1px solid var(--kt-sidebar-b); align-items: stretch; justify-content: space-around; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+      .kt-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; background: var(--kt-sidebar-bg); border-top: 1px solid var(--kt-sidebar-b); align-items: stretch; justify-content: space-around; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); }
       .kt-bnav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 56px; text-decoration: none; color: var(--kt-dim); font-size: 0.5rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.12s; -webkit-tap-highlight-color: transparent; padding: 6px 2px 4px; }
       .kt-bnav-item.active { color: var(--kt-accent); }
       .kt-bnav-item svg { flex-shrink: 0; }
@@ -182,7 +182,7 @@ export default function TrackerLayout() {
           margin-left: 0;
           padding: 0.85rem;
           padding-top: calc(52px + 0.85rem);
-          padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px + 0.5rem);
+          padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 22px + 0.5rem);
         }
         .kt-card { padding: 1rem; }
         .kt-grid-4 { grid-template-columns: repeat(2,1fr); gap: 10px; }
