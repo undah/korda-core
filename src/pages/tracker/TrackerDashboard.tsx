@@ -246,301 +246,170 @@ export default function TrackerDashboard() {
         </Link>
       </div>
 
-      {/* Stats row */}
-      <div className="kt-grid-4" style={{ marginBottom: 2 }}>
-        <StatCard
-          label="Current weight"
-          value={latest ? `${latest.weight} kg` : "—"}
-          sub={avg7 ? `7d avg: ${avg7} kg` : undefined}
-        />
-        <StatCard
-          label="Total lost"
-          value={stats ? `${stats.totalLost > 0 ? "-" : "+"}${Math.abs(stats.totalLost)} kg` : "—"}
-          sub={goal?.goal_weight ? `Goal: ${goal.goal_weight} kg` : undefined}
-          color={stats && stats.totalLost > 0 ? C.green : C.red}
-        />
-        <StatCard
-          label="Goal progress"
-          value={stats ? `${stats.percentToGoal}%` : "—"}
-          sub={stats?.daysToGoal ? `~${stats.daysToGoal} days left` : undefined}
-        />
-        <StatCard
-          label="Streak"
-          value={stats ? `${stats.currentStreak}d` : "—"}
-          sub={weekChg !== null ? `${weekChg > 0 ? "+" : ""}${weekChg} kg this week` : `${checkins.length} total`}
-          color={C.text}
-        />
-      </div>
+      {/* 2-column dashboard: main content left, panel right */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 2, alignItems: "start" }}>
 
-      {/* Interactive weight chart */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem", marginBottom: 2, borderRadius: 2 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", gap: "1rem", flexWrap: "wrap" }}>
-          <div>
-            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
-            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: C.dim }}>
-              {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg  ·  ` : ""}Raw + 7-day avg
-              {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? "  ·  cyan dots = photos" : ""}
-            </p>
-          </div>
-
-          {/* Range selector */}
-          <div style={{ display: "flex", background: "#080810", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
-            {RANGES.map(r => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                style={{
-                  fontFamily: "'IBM Plex Mono',monospace",
-                  fontSize: "0.65rem",
-                  letterSpacing: "0.06em",
-                  padding: "0.4rem 0.8rem",
-                  background: range === r ? "#00C8FF" : "transparent",
-                  color: range === r ? "#080810" : "rgba(221,232,237,0.3)",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: range === r ? 600 : 400,
-                  transition: "all 0.15s",
-                }}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {filteredData.length < 2 ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: C.muted, fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem" }}>
-            Not enough data for this range.
-          </div>
-        ) : (
-          <div className="kt-chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={filteredData}
-                margin={{ top: 8, right: 12, bottom: 0, left: -8 }}
-                onClick={(data: any) => {
-                  if (!data?.activePayload?.[0]) return;
-                  const date = data.activePayload[0].payload?.date;
-                  if (!date) return;
-                  const dayPhotos = photosByDate[date] ?? [];
-                  if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos);
-                }}
-                style={{ cursor: "default" }}
-              >
-                <defs>
-                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#5ab4d4" stopOpacity={0.18} />
-                    <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }}
-                  tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  domain={[yMin, yMax]}
-                  tickFormatter={v => `${v}`}
-                  tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickCount={5}
-                  width={32}
-                />
-                <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
-
-                {goal?.goal_weight && (
-                  <ReferenceLine
-                    y={goal.goal_weight}
-                    stroke="rgba(90,212,160,0.3)"
-                    strokeDasharray="6 4"
-                    strokeWidth={1}
-                    label={{
-                      value: `goal: ${goal.goal_weight} kg`,
-                      position: "insideTopRight",
-                      fill: "rgba(90,212,160,0.45)",
-                      fontFamily: "'IBM Plex Mono',monospace",
-                      fontSize: 9,
-                    }}
-                  />
-                )}
-
-                {/* Area fill under the avg line */}
-                <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />
-
-                {/* Raw weight — dashed, photo dots highlighted */}
-                <Line
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="rgba(90,180,212,0.3)"
-                  strokeWidth={1}
-                  strokeDasharray="3 4"
-                  dot={(props: any) => {
-                    const { cx, cy, payload } = props;
-                    if (cx == null || cy == null) return <g key={`dot-${payload.date}`} />;
-                    const hasPhotos = (photosByDate[payload.date]?.length ?? 0) > 0;
-                    return hasPhotos ? (
-                      <g key={`dot-${payload.date}`} style={{ cursor: "pointer" }}>
-                        <circle cx={cx} cy={cy} r={8} fill="rgba(0,200,255,0.1)" strokeWidth={0} />
-                        <circle cx={cx} cy={cy} r={4} fill="#00C8FF" strokeWidth={1.5} stroke="rgba(0,200,255,0.5)" />
-                      </g>
-                    ) : (
-                      <circle key={`dot-${payload.date}`} cx={cx} cy={cy} r={2.5} fill="rgba(90,180,212,0.55)" strokeWidth={0} />
-                    );
-                  }}
-                  activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
-                />
-
-                {/* 7-day rolling avg — solid */}
-                <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Legend */}
-        <div style={{ display: "flex", gap: "1.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(0,200,255,0.05)", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-            <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,180,212,0.4)" strokeWidth="1.5" strokeDasharray="3 3" /></svg>
-            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Raw</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-            <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg>
-            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>7d avg</span>
-          </div>
-          {goal?.goal_weight && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.4)" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Goal</span>
-            </div>
-          )}
-          {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Photos</span>
-            </div>
-          )}
-          {photos.length > 0 && !filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && (
-            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(221,232,237,0.18)", letterSpacing: "0.06em" }}>no photos in this range</span>
-          )}
-        </div>
-      </div>
-
-      {/* Weekly pace + Latest photo */}
-      <div className="kt-grid-2" style={{ marginBottom: 2 }}>
-
-        {/* Weekly pace */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem" }}>
-          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "1rem" }}>Weekly pace</p>
-          {paceKgPerWeek !== null ? (
-            <>
-              <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "2rem", fontWeight: 400, color: paceColor, marginBottom: "0.2rem", lineHeight: 1 }}>
-                {paceKgPerWeek > 0 ? "+" : ""}{paceKgPerWeek}
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.85rem", color: C.muted, marginLeft: "0.35rem" }}>kg/wk</span>
-              </p>
-              {targetPace !== null && (
-                <>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: C.dim, marginBottom: "0.75rem" }}>
-                    Target: {Math.abs(targetPace)} kg/wk
-                  </p>
-                  <div style={{ background: "rgba(255,255,255,0.05)", height: 4, borderRadius: 2, overflow: "hidden", marginBottom: "0.6rem" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: 2, transition: "width 0.6s ease" }} />
-                  </div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: paceColor }}>
-                    {paceStatus === "ahead" ? "↑ Ahead of target" : paceStatus === "behind" ? "↓ Behind target" : "● On track"}
-                  </p>
-                </>
-              )}
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(221,232,237,0.18)", marginTop: "0.6rem", letterSpacing: "0.06em" }}>based on 30-day trend</p>
-            </>
-          ) : (
-            <p style={{ color: C.dim, fontSize: "0.82rem", fontFamily: "'IBM Plex Mono',monospace" }}>Not enough data yet</p>
-          )}
-        </div>
-
-        {/* Latest front photo */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem", display: "flex", flexDirection: "column" }}>
-          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "1rem" }}>Latest photo</p>
-          {latestFrontPhoto ? (
-            <>
-              <div style={{ flex: 1, overflow: "hidden", cursor: "pointer", marginBottom: "0.75rem", maxHeight: 200 }}
-                onClick={() => setLightboxPhotos(photosByDate[latestFrontPhoto.log_date] ?? [latestFrontPhoto])}>
-                <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.dim }}>
-                  {format(parseISO(latestFrontPhoto.log_date), "d MMM yyyy")}
-                  {latestFrontPhoto.weight_at ? ` · ${latestFrontPhoto.weight_at} kg` : ""}
-                </span>
-                <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.08em" }}>
-                  all →
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", minHeight: 120 }}>
-              <p style={{ color: C.dim, fontSize: "0.8rem", fontFamily: "'IBM Plex Mono',monospace" }}>No photos yet</p>
-              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: "rgba(90,180,212,0.5)", textDecoration: "none" }}>Add photo →</Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Bottom: recent check-ins + quick actions */}
-      <div className="kt-grid-2">
-        {/* Recent */}
-        <div className="kt-card">
-          <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Recent check-ins</p>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {sorted.slice(-6).reverse().map((c, i, arr) => {
-              const prev = arr[i + 1];
-              const delta = prev ? +(c.weight - prev.weight).toFixed(1) : null;
-              return (
-                <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0", borderBottom: "1px solid rgba(90,180,212,0.06)" }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.3)", fontSize: "0.68rem" }}>
-                    {format(parseISO(c.log_date), "EEE, MMM d")}
-                  </span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-                    {delta !== null && (
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: delta <= 0 ? C.green : C.red }}>
-                        {delta > 0 ? "+" : ""}{delta}
-                      </span>
-                    )}
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: C.accent, fontWeight: 500, fontSize: "0.82rem" }}>
-                      {c.weight} kg
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <Link to="/tracker/progress" style={{ display: "block", marginTop: "1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.1em" }}>
-            View all →
-          </Link>
-        </div>
-
-        {/* Quick actions */}
+        {/* ── LEFT: stats + chart + recent check-ins ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+
+          {/* Stats row */}
+          <div className="kt-grid-4">
+            <StatCard label="Current weight" value={latest ? `${latest.weight} kg` : "—"} sub={avg7 ? `7d avg: ${avg7} kg` : undefined} />
+            <StatCard label="Total lost" value={stats ? `${stats.totalLost > 0 ? "-" : "+"}${Math.abs(stats.totalLost)} kg` : "—"} sub={goal?.goal_weight ? `Goal: ${goal.goal_weight} kg` : undefined} color={stats && stats.totalLost > 0 ? C.green : C.red} />
+            <StatCard label="Goal progress" value={stats ? `${stats.percentToGoal}%` : "—"} sub={stats?.daysToGoal ? `~${stats.daysToGoal} days left` : undefined} />
+            <StatCard label="Streak" value={stats ? `${stats.currentStreak}d` : "—"} sub={weekChg !== null ? `${weekChg > 0 ? "+" : ""}${weekChg} kg this week` : `${checkins.length} total`} color={C.text} />
+          </div>
+
+          {/* Chart */}
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem", borderRadius: 2 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", gap: "1rem", flexWrap: "wrap" }}>
+              <div>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: C.dim }}>
+                  {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg  ·  ` : ""}Raw + 7-day avg
+                  {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? "  ·  cyan dots = photos" : ""}
+                </p>
+              </div>
+              <div style={{ display: "flex", background: "#080810", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                {RANGES.map(r => (
+                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "#00C8FF" : "transparent", color: range === r ? "#080810" : "rgba(221,232,237,0.3)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
+                ))}
+              </div>
+            </div>
+            {filteredData.length < 2 ? (
+              <div style={{ textAlign: "center", padding: "3rem", color: C.muted, fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem" }}>Not enough data for this range.</div>
+            ) : (
+              <div className="kt-chart-wrap">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={filteredData} margin={{ top: 8, right: 12, bottom: 0, left: -8 }} onClick={(data: any) => { if (!data?.activePayload?.[0]) return; const date = data.activePayload[0].payload?.date; if (!date) return; const dayPhotos = photosByDate[date] ?? []; if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos); }} style={{ cursor: "default" }}>
+                    <defs>
+                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#5ab4d4" stopOpacity={0.18} />
+                        <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis domain={[yMin, yMax]} tickFormatter={v => `${v}`} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} tickCount={5} width={32} />
+                    <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
+                    {goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopRight", fill: "rgba(90,212,160,0.45)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
+                    <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />
+                    <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.3)" strokeWidth={1} strokeDasharray="3 4"
+                      dot={(props: any) => {
+                        const { cx, cy, payload } = props;
+                        if (cx == null || cy == null) return <g key={`dot-${payload.date}`} />;
+                        const hasPhotos = (photosByDate[payload.date]?.length ?? 0) > 0;
+                        return hasPhotos ? (
+                          <g key={`dot-${payload.date}`} style={{ cursor: "pointer" }}>
+                            <circle cx={cx} cy={cy} r={8} fill="rgba(0,200,255,0.1)" strokeWidth={0} />
+                            <circle cx={cx} cy={cy} r={4} fill="#00C8FF" strokeWidth={1.5} stroke="rgba(0,200,255,0.5)" />
+                          </g>
+                        ) : <circle key={`dot-${payload.date}`} cx={cx} cy={cy} r={2.5} fill="rgba(90,180,212,0.55)" strokeWidth={0} />;
+                      }}
+                      activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
+                    />
+                    <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "1.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(0,200,255,0.05)", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,180,212,0.4)" strokeWidth="1.5" strokeDasharray="3 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Raw</span></div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>7d avg</span></div>
+              {goal?.goal_weight && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.4)" strokeWidth="1.5" strokeDasharray="5 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Goal</span></div>}
+              {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Photos</span></div>}
+            </div>
+          </div>
+
+          {/* Recent check-ins */}
+          <div className="kt-card">
+            <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Recent check-ins</p>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {sorted.slice(-6).reverse().map((c, i, arr) => {
+                const prev = arr[i + 1];
+                const delta = prev ? +(c.weight - prev.weight).toFixed(1) : null;
+                return (
+                  <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0", borderBottom: "1px solid rgba(90,180,212,0.06)" }}>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.3)", fontSize: "0.68rem" }}>{format(parseISO(c.log_date), "EEE, MMM d")}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
+                      {delta !== null && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: delta <= 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta}</span>}
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: C.accent, fontWeight: 500, fontSize: "0.82rem" }}>{c.weight} kg</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <Link to="/tracker/progress" style={{ display: "block", marginTop: "1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.1em" }}>View all →</Link>
+          </div>
+        </div>
+
+        {/* ── RIGHT PANEL: weekly pace + photo + quick actions ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+
+          {/* Weekly pace */}
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
+            <p className="kt-card-label" style={{ marginBottom: "0.85rem" }}>Weekly pace</p>
+            {paceKgPerWeek !== null ? (
+              <>
+                <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.75rem", fontWeight: 400, color: paceColor, marginBottom: "0.2rem", lineHeight: 1 }}>
+                  {paceKgPerWeek > 0 ? "+" : ""}{paceKgPerWeek}
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: C.muted, marginLeft: "0.3rem" }}>kg/wk</span>
+                </p>
+                {targetPace !== null && (
+                  <>
+                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.dim, marginBottom: "0.65rem" }}>Target: {Math.abs(targetPace)} kg/wk</p>
+                    <div style={{ background: "rgba(255,255,255,0.05)", height: 3, borderRadius: 2, overflow: "hidden", marginBottom: "0.5rem" }}>
+                      <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: 2, transition: "width 0.6s ease" }} />
+                    </div>
+                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: paceColor }}>
+                      {paceStatus === "ahead" ? "↑ Ahead of target" : paceStatus === "behind" ? "↓ Behind target" : "● On track"}
+                    </p>
+                  </>
+                )}
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.52rem", color: "rgba(221,232,237,0.18)", marginTop: "0.5rem", letterSpacing: "0.06em" }}>30-day trend</p>
+              </>
+            ) : (
+              <p style={{ color: C.dim, fontSize: "0.78rem", fontFamily: "'IBM Plex Mono',monospace" }}>Not enough data</p>
+            )}
+          </div>
+
+          {/* Latest front photo */}
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem", display: "flex", flexDirection: "column" }}>
+            <p className="kt-card-label" style={{ marginBottom: "0.85rem" }}>Latest photo</p>
+            {latestFrontPhoto ? (
+              <>
+                <div style={{ overflow: "hidden", cursor: "pointer", marginBottom: "0.65rem", maxHeight: 260 }}
+                  onClick={() => setLightboxPhotos(photosByDate[latestFrontPhoto.log_date] ?? [latestFrontPhoto])}>
+                  <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: C.dim }}>
+                    {format(parseISO(latestFrontPhoto.log_date), "d MMM yyyy")}{latestFrontPhoto.weight_at ? ` · ${latestFrontPhoto.weight_at} kg` : ""}
+                  </span>
+                  <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(90,180,212,0.4)", textDecoration: "none" }}>all →</Link>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", minHeight: 100 }}>
+                <p style={{ color: C.dim, fontSize: "0.78rem", fontFamily: "'IBM Plex Mono',monospace" }}>No photos yet</p>
+                <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.5)", textDecoration: "none" }}>Add photo →</Link>
+              </div>
+            )}
+          </div>
+
+          {/* Quick actions */}
           {[
             { to: "/tracker/progress", label: "Log check-in",    sub: "Record weight & measurements" },
             { to: "/tracker/journal",  label: "Daily journal",   sub: "Mood, energy, wins & struggles" },
             { to: "/tracker/photos",   label: "Progress photos", sub: "Front, side, or back" },
             { to: "/tracker/analysis", label: "Deep analysis",   sub: "Trends, projections & insights" },
           ].map(item => (
-            <Link key={item.to} to={item.to} style={{ textDecoration: "none", flex: 1 }}>
-              <div
-                className="kt-card"
-                style={{ cursor: "pointer", transition: "all 0.15s", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+            <Link key={item.to} to={item.to} style={{ textDecoration: "none" }}>
+              <div className="kt-card" style={{ cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.9rem 1.1rem" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderTopColor = "rgba(0,200,255,0.35)"; (e.currentTarget as HTMLElement).style.background = "#11121e"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderTopColor = "rgba(0,200,255,0.18)"; (e.currentTarget as HTMLElement).style.background = C.card; }}
-              >
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderTopColor = "rgba(0,200,255,0.18)"; (e.currentTarget as HTMLElement).style.background = C.card; }}>
                 <div>
-                  <p style={{ fontSize: "0.84rem", fontWeight: 500, color: C.text, marginBottom: "0.15rem" }}>{item.label}</p>
-                  <p style={{ fontSize: "0.7rem", color: "rgba(221,232,237,0.28)" }}>{item.sub}</p>
+                  <p style={{ fontSize: "0.82rem", fontWeight: 500, color: C.text, marginBottom: "0.1rem" }}>{item.label}</p>
+                  <p style={{ fontSize: "0.67rem", color: "rgba(221,232,237,0.28)" }}>{item.sub}</p>
                 </div>
                 <span style={{ color: "rgba(90,180,212,0.3)", fontSize: "0.9rem", flexShrink: 0 }}>→</span>
               </div>
