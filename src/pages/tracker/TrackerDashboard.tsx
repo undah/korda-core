@@ -15,14 +15,14 @@ const RANGE_DAYS: Record<Range, number | null> = { "1W": 7, "1M": 30, "3M": 90, 
 
 const C = {
   accent:  "#00C8FF",
-  line:    "#5ab4d4",
-  green:   "#5ad4a0",
-  red:     "#d4705a",
-  text:    "#e8f0f4",
-  muted:   "rgba(232,240,244,0.55)",
-  dim:     "rgba(232,240,244,0.32)",
-  card:    "#0D0D16",
-  border:  "rgba(0,200,255,0.07)",
+  line:    "#0EA5E9",
+  green:   "#22C55E",
+  red:     "#EF4444",
+  text:    "#E8E8F0",
+  muted:   "rgba(232,232,240,0.55)",
+  dim:     "rgba(232,232,240,0.35)",
+  card:    "#15151E",
+  border:  "rgba(255,255,255,0.07)",
 };
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -316,10 +316,10 @@ export default function TrackerDashboard() {
       </div>
 
       {/* 2-column dashboard: main content left, panel right */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 2, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "1rem", alignItems: "start" }}>
 
         {/* ── LEFT: stats + chart + recent check-ins ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
 
           {/* Stats row */}
           <div className="kt-grid-4">
@@ -330,7 +330,7 @@ export default function TrackerDashboard() {
           </div>
 
           {/* Chart */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem", borderRadius: 2 }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: "1.5rem", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", gap: "1rem", flexWrap: "wrap" }}>
               <div>
                 <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
@@ -436,7 +436,7 @@ export default function TrackerDashboard() {
         </div>
 
         {/* ── RIGHT PANEL: unified sidebar ── */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.35)", display: "flex", flexDirection: "column" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* AI weekly summary */}
           <div style={{ padding: "1.25rem" }}>

@@ -11,12 +11,12 @@ import type { TrackerPhoto } from "@/features/tracker/types";
 
 const C = {
   accent: "#00C8FF",
-  line:   "#5ab4d4",
-  green:  "#5ad4a0",
-  red:    "#d4705a",
-  text:   "#e8f0f4",
-  muted:  "rgba(232,240,244,0.55)",
-  dim:    "rgba(232,240,244,0.32)",
+  line:   "#0EA5E9",
+  green:  "#22C55E",
+  red:    "#EF4444",
+  text:   "#E8E8F0",
+  muted:  "rgba(232,232,240,0.55)",
+  dim:    "rgba(232,232,240,0.35)",
 };
 
 // ── Tooltip factory ────────────────────────────────────────────────────────────
