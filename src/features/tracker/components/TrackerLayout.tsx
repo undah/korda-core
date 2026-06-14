@@ -50,7 +50,7 @@ export default function TrackerLayout() {
       .kt-back-link:hover { color: rgba(221,232,237,0.45); }
 
       /* ── MAIN ── */
-      .kt-main { margin-left: 224px; flex: 1; padding: 2.5rem 3rem; max-width: 1100px; overflow-x: hidden; }
+      .kt-main { margin-left: 224px; flex: 1; padding: 2.5rem 3rem; overflow-x: hidden; }
 
       /* ── MOBILE TOPBAR ── */
       .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 52px; background: #080810; border-bottom: 1px solid rgba(0,200,255,0.07); align-items: center; justify-content: space-between; padding: 0 1.25rem; }
