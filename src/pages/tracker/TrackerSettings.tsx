@@ -25,6 +25,17 @@ const ACTIVITY_LEVELS = [
   { value: "1.9",   label: "Extra active (athlete / physical job)" },
 ];
 
+const C = {
+  accent: "var(--kt-accent)",
+  green:  "var(--kt-green)",
+  red:    "var(--kt-red)",
+  text:   "var(--kt-text)",
+  muted:  "var(--kt-muted)",
+  dim:    "var(--kt-dim)",
+  card:   "var(--kt-surface)",
+  border: "var(--kt-border)",
+};
+
 function calcTDEE(weight: number, heightCm: number, age: number, gender: string, activityFactor: number): number {
   const bmr = 10 * weight + 6.25 * heightCm - 5 * age + (gender === "female" ? -161 : 5);
   return Math.round(bmr * activityFactor);
@@ -34,10 +45,10 @@ function Section({ title, eyebrow, children }: { title: string; eyebrow: string;
   return (
     <div style={{ marginBottom: "2rem" }}>
       <div style={{ marginBottom: "1.25rem" }}>
-        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(0,200,255,0.4)", marginBottom: "0.35rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <span style={{ color: "rgba(232,232,240,0.2)" }}>//</span>{eyebrow}
+        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", letterSpacing: "0.25em", textTransform: "uppercase", color: C.accent, opacity: 0.55, marginBottom: "0.35rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <span style={{ color: C.dim }}>//</span>{eyebrow}
         </p>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", fontWeight: 400, color: "#E8E8F0" }}>{title}</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", fontWeight: 400, color: C.text }}>{title}</h2>
       </div>
       {children}
     </div>
@@ -200,7 +211,7 @@ export default function TrackerSettings() {
     : null;
 
   if (profileLoading) return (
-    <div style={{ color: "rgba(232,232,240,0.3)", fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
+    <div style={{ color: C.dim, fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
       loading...
     </div>
   );
@@ -216,9 +227,9 @@ export default function TrackerSettings() {
       <Section eyebrow="Profile" title="Your profile">
         <div className="kt-card">
           {userEmail && (
-            <div style={{ marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: `1px solid ${C.border}` }}>
               <p className="kt-card-label">Signed in as</p>
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", color: "#00C8FF" }}>{userEmail}</p>
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", color: C.accent }}>{userEmail}</p>
             </div>
           )}
 
@@ -247,7 +258,7 @@ export default function TrackerSettings() {
               <input className="kt-input" type="number" placeholder="2000" value={profileForm.tdee} onChange={setP("tdee")} />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label className="kt-label">Activity level <span style={{ color: "rgba(0,200,255,0.45)", fontStyle: "normal" }}>— auto-fills TDEE</span></label>
+              <label className="kt-label">Activity level <span style={{ color: C.accent, opacity: 0.55, fontStyle: "normal" }}>— auto-fills TDEE</span></label>
               <select className="kt-input" value={profileForm.activity_level} onChange={setP("activity_level")}>
                 {ACTIVITY_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
               </select>
@@ -256,12 +267,12 @@ export default function TrackerSettings() {
 
           {/* BMI display */}
           {bmi && (
-            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "rgba(0,200,255,0.05)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10, display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10, display: "flex", alignItems: "center", gap: "1rem" }}>
               <div>
-                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: "rgba(232,232,240,0.25)", marginBottom: "0.2rem" }}>Current BMI</p>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.2rem", fontWeight: 500, color: "#00C8FF" }}>{bmi}</p>
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: C.dim, marginBottom: "0.2rem" }}>Current BMI</p>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.2rem", fontWeight: 500, color: C.accent }}>{bmi}</p>
               </div>
-              <p style={{ fontSize: "0.75rem", color: "rgba(232,232,240,0.35)" }}>
+              <p style={{ fontSize: "0.75rem", color: C.muted }}>
                 {parseFloat(bmi) < 18.5 ? "Underweight" : parseFloat(bmi) < 25 ? "Healthy weight" : parseFloat(bmi) < 30 ? "Overweight" : "Obese"}
               </p>
             </div>
@@ -288,7 +299,7 @@ export default function TrackerSettings() {
           </div>
 
           {goalForm.goal_weight && goalForm.weekly_target && checkins.length > 0 && (
-            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "rgba(0,200,255,0.05)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10 }}>
+            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10 }}>
               {(() => {
                 const latest = [...checkins].sort((a,b) => b.log_date.localeCompare(a.log_date))[0];
                 const remaining = latest.weight - parseFloat(goalForm.goal_weight);
@@ -298,13 +309,13 @@ export default function TrackerSettings() {
                 return (
                   <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
                     <div>
-                      <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: "rgba(232,232,240,0.25)", marginBottom: "0.2rem" }}>Remaining</p>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: remaining > 0 ? "#E8E8F0" : "#22C55E" }}>{remaining > 0 ? `${remaining.toFixed(1)} kg` : "Goal reached! 🎯"}</p>
+                      <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: C.dim, marginBottom: "0.2rem" }}>Remaining</p>
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: remaining > 0 ? C.text : C.green }}>{remaining > 0 ? `${remaining.toFixed(1)} kg` : "Goal reached! 🎯"}</p>
                     </div>
                     {remaining > 0 && (
                       <div>
-                        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: "rgba(232,232,240,0.25)", marginBottom: "0.2rem" }}>Estimated arrival</p>
-                        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: "#00C8FF" }}>
+                        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: C.dim, marginBottom: "0.2rem" }}>Estimated arrival</p>
+                        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: C.accent }}>
                           {eta.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                         </p>
                       </div>
@@ -326,16 +337,16 @@ export default function TrackerSettings() {
         <div className="kt-card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: notifForm.enabled ? "1.25rem" : 0 }}>
             <div>
-              <p style={{ fontSize: "0.88rem", fontWeight: 500, color: "#E8E8F0", marginBottom: "0.2rem" }}>Check-in reminder</p>
-              <p style={{ fontSize: "0.75rem", color: "rgba(232,232,240,0.35)", lineHeight: 1.5 }}>Get a daily notification to log your weight</p>
+              <p style={{ fontSize: "0.88rem", fontWeight: 500, color: C.text, marginBottom: "0.2rem" }}>Check-in reminder</p>
+              <p style={{ fontSize: "0.75rem", color: C.muted, lineHeight: 1.5 }}>Get a daily notification to log your weight</p>
             </div>
             {/* Toggle */}
             <button
               onClick={handleToggleNotif}
-              style={{ width: 46, height: 26, background: notifForm.enabled ? "#00C8FF" : "rgba(232,232,240,0.1)", border: "none", borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
+              style={{ width: 46, height: 26, background: notifForm.enabled ? C.accent : "rgba(232,232,240,0.1)", border: "none", borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
               aria-label="Toggle reminder"
             >
-              <span style={{ position: "absolute", top: 3, left: notifForm.enabled ? 23 : 3, width: 20, height: 20, background: notifForm.enabled ? "#15151E" : "rgba(232,232,240,0.4)", borderRadius: "50%", transition: "left 0.2s", display: "block" }} />
+              <span style={{ position: "absolute", top: 3, left: notifForm.enabled ? 23 : 3, width: 20, height: 20, background: notifForm.enabled ? C.card : "rgba(232,232,240,0.4)", borderRadius: "50%", transition: "left 0.2s", display: "block" }} />
             </button>
           </div>
 
@@ -366,10 +377,10 @@ export default function TrackerSettings() {
           <div className="kt-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
               <div>
-                <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#E8E8F0", marginBottom: "0.3rem" }}>Export data as CSV</p>
-                <p style={{ fontSize: "0.78rem", color: "rgba(232,232,240,0.35)", lineHeight: 1.6 }}>
+                <p style={{ fontSize: "0.9rem", fontWeight: 500, color: C.text, marginBottom: "0.3rem" }}>Export data as CSV</p>
+                <p style={{ fontSize: "0.78rem", color: C.muted, lineHeight: 1.6 }}>
                   Download all your check-ins and calorie logs as a CSV file.
-                  {checkins.length > 0 && <span style={{ color: "rgba(0,200,255,0.6)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}> {checkins.length} check-ins · {calories.length} calorie logs</span>}
+                  {checkins.length > 0 && <span style={{ color: C.accent, fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}> {checkins.length} check-ins · {calories.length} calorie logs</span>}
                 </p>
               </div>
               <button className="kt-btn kt-btn-outline" onClick={handleExport}>
@@ -380,8 +391,8 @@ export default function TrackerSettings() {
 
           {/* delete */}
           <div className="kt-card" style={{ borderTop: "1px solid rgba(239,68,68,0.3)" }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#EF4444", marginBottom: "0.3rem" }}>Delete all data</p>
-            <p style={{ fontSize: "0.78rem", color: "rgba(232,232,240,0.35)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: C.red, marginBottom: "0.3rem" }}>Delete all data</p>
+            <p style={{ fontSize: "0.78rem", color: C.muted, lineHeight: 1.6, marginBottom: "1.5rem" }}>
               Permanently delete all your check-ins, journals, calorie logs, photos, and profile. This cannot be undone.
             </p>
 
@@ -396,8 +407,8 @@ export default function TrackerSettings() {
               </button>
             ) : (
               <div>
-                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", color: "rgba(239,68,68,0.7)", marginBottom: "0.75rem" }}>
-                  Type <strong style={{ color: "#EF4444" }}>DELETE</strong> to confirm:
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", color: C.red, opacity: 0.8, marginBottom: "0.75rem" }}>
+                  Type <strong style={{ color: C.red }}>DELETE</strong> to confirm:
                 </p>
                 <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                   <input

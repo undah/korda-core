@@ -9,6 +9,17 @@ import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 const today = () => new Date().toISOString().split("T")[0];
 const MOODS   = ["great","good","okay","low","bad"] as const;
 
+const C = {
+  accent: "var(--kt-accent)",
+  green:  "var(--kt-green)",
+  red:    "var(--kt-red)",
+  text:   "var(--kt-text)",
+  muted:  "var(--kt-muted)",
+  dim:    "var(--kt-dim)",
+  card:   "var(--kt-surface)",
+  border: "var(--kt-border)",
+};
+
 function AutoTextarea({ value, onChange, placeholder, minRows = 3 }: {
   value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string; minRows?: number;
@@ -118,7 +129,7 @@ export default function TrackerJournal() {
           <div style={{ display: "flex", gap: "0.5rem" }}>
             {ENERGYS.map(e => (
               <button key={e} onClick={() => setForm(f => ({ ...f, energy: e }))}
-                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", textTransform: "capitalize", padding: "0.4rem 1rem", cursor: "pointer", border: "1px solid", background: form.energy === e ? "rgba(0,200,255,0.12)" : "transparent", borderColor: form.energy === e ? "rgba(0,200,255,0.5)" : "rgba(232,232,240,0.1)", color: form.energy === e ? "#00C8FF" : "rgba(232,232,240,0.3)", transition: "all 0.15s" }}>
+                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", textTransform: "capitalize", padding: "0.4rem 1rem", cursor: "pointer", border: "1px solid", background: form.energy === e ? "var(--kt-accent-bg)" : "transparent", borderColor: form.energy === e ? "rgba(0,200,255,0.5)" : "rgba(232,232,240,0.1)", color: form.energy === e ? C.accent : C.dim, transition: "all 0.15s" }}>
                 {e}
               </button>
             ))}
@@ -148,9 +159,9 @@ export default function TrackerJournal() {
       <div>
         <p className="kt-card-label" style={{ marginBottom: "1rem" }}>Past entries</p>
         {isLoading ? (
-          <p style={{ color: "rgba(232,232,240,0.2)", fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem" }}>Loading...</p>
+          <p style={{ color: C.dim, fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem" }}>Loading...</p>
         ) : sorted.length === 0 ? (
-          <p style={{ color: "rgba(232,232,240,0.3)", fontSize: "0.85rem" }}>No journal entries yet.</p>
+          <p style={{ color: C.dim, fontSize: "0.85rem" }}>No journal entries yet.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {sorted.map((entry) => (
@@ -181,15 +192,15 @@ function JournalCard({ entry, onDelete }: { entry: TrackerJournal; onDelete: (id
             onMouseLeave={e => (e.currentTarget.style.color = "rgba(239,68,68,0.35)")}>
             delete
           </button>
-          <span style={{ color: "rgba(0,200,255,0.3)", fontSize: "0.8rem", display: "inline-block", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>→</span>
+          <span style={{ color: C.accent, opacity: 0.4, fontSize: "0.8rem", display: "inline-block", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>→</span>
         </div>
       </div>
       {open && (
-        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          {entry.notes && <p style={{ fontSize: "0.85rem", color: "rgba(232,232,240,0.6)", lineHeight: 1.7, marginBottom: "1rem" }}>{entry.notes}</p>}
+        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: `1px solid ${C.border}` }}>
+          {entry.notes && <p style={{ fontSize: "0.85rem", color: C.muted, lineHeight: 1.7, marginBottom: "1rem" }}>{entry.notes}</p>}
           <div className="kt-grid-2" style={{ gap: "1rem" }}>
-            {entry.wins && <div><p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", color: "#22C55E", textTransform: "uppercase", marginBottom: "0.4rem" }}>Wins</p><p style={{ fontSize: "0.82rem", color: "rgba(232,232,240,0.5)", lineHeight: 1.6 }}>{entry.wins}</p></div>}
-            {entry.struggles && <div><p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", color: "#EF4444", textTransform: "uppercase", marginBottom: "0.4rem" }}>Struggles</p><p style={{ fontSize: "0.82rem", color: "rgba(232,232,240,0.5)", lineHeight: 1.6 }}>{entry.struggles}</p></div>}
+            {entry.wins && <div><p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", color: C.green, textTransform: "uppercase", marginBottom: "0.4rem" }}>Wins</p><p style={{ fontSize: "0.82rem", color: C.muted, lineHeight: 1.6 }}>{entry.wins}</p></div>}
+            {entry.struggles && <div><p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", color: C.red, textTransform: "uppercase", marginBottom: "0.4rem" }}>Struggles</p><p style={{ fontSize: "0.82rem", color: C.muted, lineHeight: 1.6 }}>{entry.struggles}</p></div>}
           </div>
         </div>
       )}
