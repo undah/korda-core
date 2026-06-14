@@ -14,15 +14,15 @@ const RANGES: Range[] = ["1W", "1M", "3M", "All"];
 const RANGE_DAYS: Record<Range, number | null> = { "1W": 7, "1M": 30, "3M": 90, "All": null };
 
 const C = {
-  accent:  "#00C8FF",
-  line:    "#0EA5E9",
-  green:   "#22C55E",
-  red:     "#EF4444",
-  text:    "#E8E8F0",
-  muted:   "rgba(232,232,240,0.55)",
-  dim:     "rgba(232,232,240,0.35)",
-  card:    "#15151E",
-  border:  "rgba(255,255,255,0.07)",
+  accent:  "var(--kt-accent)",
+  line:    "var(--kt-accent)",
+  green:   "var(--kt-green)",
+  red:     "var(--kt-red)",
+  text:    "var(--kt-text)",
+  muted:   "var(--kt-muted)",
+  dim:     "var(--kt-dim)",
+  card:    "var(--kt-surface)",
+  border:  "var(--kt-border)",
 };
 
 // ── Stat card ─────────────────────────────────────────────────────────────────

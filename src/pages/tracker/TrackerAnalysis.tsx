@@ -10,13 +10,13 @@ import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 const C = {
-  accent: "#00C8FF",
-  line:   "#0EA5E9",
-  green:  "#22C55E",
-  red:    "#EF4444",
-  text:   "#E8E8F0",
-  muted:  "rgba(232,232,240,0.55)",
-  dim:    "rgba(232,232,240,0.35)",
+  accent: "var(--kt-accent)",
+  line:   "var(--kt-accent)",
+  green:  "var(--kt-green)",
+  red:    "var(--kt-red)",
+  text:   "var(--kt-text)",
+  muted:  "var(--kt-muted)",
+  dim:    "var(--kt-dim)",
 };
 
 // ── Tooltip factory ────────────────────────────────────────────────────────────
