@@ -100,6 +100,7 @@ export default function TrackerPhotos() {
   const [dateB, setDateB] = useState("");
   const [compareSelections, setCompareSelections] = useState<string[]>([]);
   const [lightboxCompareDate, setLightboxCompareDate] = useState("");
+  const [sliderMode, setSliderMode] = useState(false);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -463,21 +464,66 @@ export default function TrackerPhotos() {
 
               {dateA && dateB ? (
                 <>
-                  {/* Drag slider */}
-                  <div style={{ maxWidth: 480, margin: "0 auto 1.5rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{dateA}</span>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#5ab4d4" }}>{dateB}</span>
-                    </div>
-                    {photoA && photoB ? (
-                      <CompareSlider urlA={photoA.url} urlB={photoB.url} />
-                    ) : (
-                      <div style={{ aspectRatio: "3/4", maxHeight: "clamp(320px, 65vw, 540px)", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
-                        {!photoA && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo for {dateA}</p>}
-                        {!photoB && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo for {dateB}</p>}
-                      </div>
-                    )}
+                  {/* View mode toggle */}
+                  <div style={{ display: "flex", gap: 2, marginBottom: "1.5rem" }}>
+                    {([["side", "Side by side"], ["slider", "Slider"]] as const).map(([mode, label]) => {
+                      const active = mode === "slider" ? sliderMode : !sliderMode;
+                      return (
+                        <button key={mode} onClick={() => setSliderMode(mode === "slider")}
+                          style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.45rem 1rem", cursor: "pointer", border: "none", background: active ? "#0c1217" : "transparent", color: active ? "#5ab4d4" : "rgba(221,232,237,0.25)", borderBottom: active ? "1px solid rgba(90,180,212,0.5)" : "1px solid rgba(90,180,212,0.08)", transition: "all 0.15s" }}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                    <div style={{ flex: 1, borderBottom: "1px solid rgba(90,180,212,0.08)" }} />
                   </div>
+
+                  {sliderMode ? (
+                    /* Drag slider */
+                    <div style={{ maxWidth: 480, margin: "0 auto 1.5rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{dateA}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#5ab4d4" }}>{dateB}</span>
+                      </div>
+                      {photoA && photoB ? (
+                        <CompareSlider urlA={photoA.url} urlB={photoB.url} />
+                      ) : (
+                        <div style={{ aspectRatio: "3/4", maxHeight: "clamp(320px, 65vw, 540px)", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
+                          {!photoA && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo for {dateA}</p>}
+                          {!photoB && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo for {dateB}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Side by side */
+                    <div className="kt-grid-2" style={{ gap: 2, marginBottom: "1.5rem" }}>
+                      {([{ date: dateA, photo: photoA, label: "Before", checkin: checkinA }, { date: dateB, photo: photoB, label: "After", checkin: checkinB }] as const).map(({ date, photo, label, checkin }) => (
+                        <div key={date} style={{ background: "#0c1217", padding: "1.25rem", borderTop: `1px solid ${label === "Before" ? "rgba(221,232,237,0.1)" : "rgba(90,180,212,0.4)"}` }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: label === "Before" ? "rgba(221,232,237,0.3)" : "#5ab4d4" }}>// {label}</p>
+                            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{date}</span>
+                          </div>
+                          {photo ? (
+                            <div style={{ aspectRatio: "3/4", overflow: "hidden", marginBottom: "0.75rem", cursor: "pointer", maxHeight: "clamp(240px, 45vw, 400px)" }} onClick={() => setLightbox(photo)}>
+                              <img src={photo.url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            </div>
+                          ) : (
+                            <div style={{ aspectRatio: "3/4", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: "clamp(240px, 45vw, 400px)" }}>
+                              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo</p>
+                            </div>
+                          )}
+                          {checkin && (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.25rem" }}>
+                              {checkin.weight   && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>Weight</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: label === "After" ? "#5ab4d4" : "#dde8ed" }}>{checkin.weight} kg</span></div>}
+                              {checkin.waist    && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>Waist</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.6)" }}>{checkin.waist}cm</span></div>}
+                              {checkin.chest    && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>Chest</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.6)" }}>{checkin.chest}cm</span></div>}
+                              {checkin.body_fat && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>BF</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.6)" }}>{checkin.body_fat}%</span></div>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Stats breakdown */}
                   {(checkinA || checkinB) && (
