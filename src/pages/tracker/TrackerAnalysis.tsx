@@ -2,8 +2,9 @@ import React, { useState, useMemo } from "react";
 import {
   ComposedChart, LineChart, Line, Area, XAxis, YAxis,
   Tooltip, ResponsiveContainer, ReferenceLine, Legend,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerPhoto } from "@/features/tracker/types";
@@ -155,6 +156,45 @@ export default function TrackerAnalysis() {
   );
 
   const hasBf = measureData.filter(d => d.body_fat != null).length >= 2;
+
+  // Radar chart: start vs current for each body measurement
+  const radarData = useMemo(() => {
+    const first = sorted[0];
+    const latest = sorted[sorted.length - 1];
+    if (!first || !latest) return [];
+    return (["waist", "chest", "hips", "arms", "thighs"] as const)
+      .filter(k => first[k] != null && latest[k] != null)
+      .map(k => ({ measure: M_LABELS[k], start: first[k]!, current: latest[k]! }));
+  }, [sorted]);
+
+  // Streak heatmap: last 26 weeks
+  const heatmapGrid = useMemo(() => {
+    const checkinMap: Record<string, { weight: number; delta: number | null }> = {};
+    for (let i = 0; i < sorted.length; i++) {
+      checkinMap[sorted[i].log_date] = {
+        weight: sorted[i].weight,
+        delta: i > 0 ? +(sorted[i].weight - sorted[i - 1].weight).toFixed(1) : null,
+      };
+    }
+    // Build 26 cols × 7 rows grid, ending today
+    const today = new Date();
+    // Align to Sunday of current week
+    const dayOfWeek = today.getDay();
+    const endSunday = new Date(today);
+    endSunday.setDate(today.getDate() + (6 - dayOfWeek));
+    const weeks: { date: string; data: typeof checkinMap[string] | null }[][] = [];
+    for (let w = 25; w >= 0; w--) {
+      const col: typeof weeks[0] = [];
+      for (let d = 0; d < 7; d++) {
+        const dt = new Date(endSunday);
+        dt.setDate(endSunday.getDate() - w * 7 - (6 - d));
+        const dateStr = dt.toISOString().split("T")[0];
+        col.push({ date: dateStr, data: checkinMap[dateStr] ?? null });
+      }
+      weeks.push(col);
+    }
+    return weeks;
+  }, [sorted]);
 
   // Y domain for measurement chart (cm only)
   const measureVals = activeMeasures.flatMap(k => measureData.map(d => d[k]).filter(Boolean) as number[]);
@@ -498,6 +538,77 @@ export default function TrackerAnalysis() {
         </div>
       )}
 
+
+      {/* Body measurement radar */}
+      {radarData.length >= 3 && (
+        <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
+          <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Body shape</p>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "rgba(232,240,244,0.32)", marginBottom: "1rem" }}>
+            Start vs now — smaller shape = more progress
+          </p>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <RadarChart width={320} height={260} data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+              <PolarGrid stroke="rgba(0,200,255,0.08)" />
+              <PolarAngleAxis dataKey="measure" tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(232,240,244,0.45)" }} />
+              <PolarRadiusAxis tick={false} axisLine={false} />
+              <Radar name="Start" dataKey="start" stroke="rgba(90,180,212,0.45)" fill="rgba(90,180,212,0.08)" strokeWidth={1.5} />
+              <Radar name="Now" dataKey="current" stroke="#00C8FF" fill="rgba(0,200,255,0.12)" strokeWidth={2} />
+            </RadarChart>
+          </div>
+          <div style={{ display: "flex", gap: "1.5rem", justifyContent: "center", marginTop: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ width: 16, height: 2, background: "rgba(90,180,212,0.5)", display: "inline-block", borderRadius: 2 }} />
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(232,240,244,0.3)" }}>Start</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ width: 16, height: 2, background: "#00C8FF", display: "inline-block", borderRadius: 2 }} />
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(232,240,244,0.3)" }}>Now</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Streak heatmap */}
+      <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
+        <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Check-in heatmap</p>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "rgba(232,240,244,0.32)", marginBottom: "1rem" }}>
+          Last 26 weeks · green = lost · red = gained · empty = no log
+        </p>
+        <div style={{ overflowX: "auto" }}>
+          <div style={{ display: "flex", gap: 3, minWidth: "fit-content" }}>
+            {heatmapGrid.map((week, wi) => (
+              <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {week.map(({ date, data }) => {
+                  const isToday = date === new Date().toISOString().split("T")[0];
+                  let bg = "rgba(0,200,255,0.05)";
+                  if (data) {
+                    if (data.delta === null) bg = "rgba(0,200,255,0.2)";
+                    else if (data.delta <= -1)   bg = "#5ad4a0";
+                    else if (data.delta <= -0.3) bg = "rgba(90,212,160,0.65)";
+                    else if (data.delta < 0)     bg = "rgba(90,212,160,0.35)";
+                    else if (data.delta === 0)   bg = "rgba(245,158,11,0.45)";
+                    else if (data.delta <= 0.5)  bg = "rgba(212,112,90,0.4)";
+                    else                          bg = "rgba(212,112,90,0.8)";
+                  }
+                  return (
+                    <div key={date} title={data ? `${date}: ${data.weight} kg${data.delta !== null ? ` (${data.delta > 0 ? "+" : ""}${data.delta})` : ""}` : date}
+                      style={{ width: 12, height: 12, background: bg, borderRadius: 2, outline: isToday ? "1px solid rgba(0,200,255,0.6)" : "none", outlineOffset: 1, cursor: data ? "pointer" : "default" }}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+          {[["Lost ≥1 kg", "#5ad4a0"], ["Lost <1 kg", "rgba(90,212,160,0.5)"], ["Gained", "rgba(212,112,90,0.7)"], ["First log", "rgba(0,200,255,0.25)"], ["No log", "rgba(0,200,255,0.05)"]].map(([label, color]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <div style={{ width: 10, height: 10, background: color as string, borderRadius: 2 }} />
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(232,240,244,0.3)" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Insights */}
       <div className="kt-card">

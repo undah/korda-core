@@ -9,7 +9,7 @@ import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 
 const today = () => new Date().toISOString().split("T")[0];
 const ANGLES = ["front", "side", "back", "face"] as const;
-type Tab = "timeline" | "compare";
+type Tab = "timeline" | "compare" | "flipbook";
 type Angle = typeof ANGLES[number];
 
 function StatDiff({ label, from, to, unit = "", invert = false }: { label: string; from?: number | null; to?: number | null; unit?: string; invert?: boolean }) {
@@ -101,6 +101,10 @@ export default function TrackerPhotos() {
   const [compareSelections, setCompareSelections] = useState<string[]>([]);
   const [lightboxCompareDate, setLightboxCompareDate] = useState("");
   const [sliderMode, setSliderMode] = useState(false);
+  const [flipAngle, setFlipAngle] = useState<Angle>("front");
+  const [flipIdx, setFlipIdx] = useState(0);
+  const [flipPlaying, setFlipPlaying] = useState(false);
+  const flipTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -171,6 +175,20 @@ export default function TrackerPhotos() {
     }
     setTab("compare");
   };
+
+  const flipPhotos = photos
+    .filter(p => p.angle === flipAngle)
+    .sort((a, b) => a.log_date.localeCompare(b.log_date));
+  const safeFlipIdx = Math.min(flipIdx, Math.max(0, flipPhotos.length - 1));
+
+  useEffect(() => {
+    if (flipTimer.current) clearInterval(flipTimer.current);
+    if (!flipPlaying || flipPhotos.length === 0) return;
+    flipTimer.current = setInterval(() => {
+      setFlipIdx(i => (i >= flipPhotos.length - 1 ? 0 : i + 1));
+    }, 1200);
+    return () => { if (flipTimer.current) clearInterval(flipTimer.current); };
+  }, [flipPlaying, flipPhotos.length]);
 
   return (
     <div>
@@ -268,7 +286,7 @@ export default function TrackerPhotos() {
 
       {/* TABS */}
       <div style={{ display: "flex", gap: 2, marginBottom: "2rem" }}>
-        {([["timeline", "Timeline"], ["compare", "Compare"]] as [Tab, string][]).map(([t, label]) => (
+        {([["timeline", "Timeline"], ["compare", "Compare"], ["flipbook", "Flipbook"]] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => t === "compare" ? handleTabCompare() : setTab(t)}
             style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", padding: "0.6rem 1.2rem", cursor: "pointer", border: "none", background: tab === t ? "#0c1217" : "transparent", color: tab === t ? "#5ab4d4" : "rgba(221,232,237,0.3)", borderBottom: tab === t ? "1px solid rgba(90,180,212,0.5)" : "1px solid rgba(90,180,212,0.08)", transition: "all 0.15s" }}>
             {label}
@@ -419,6 +437,68 @@ export default function TrackerPhotos() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── FLIPBOOK TAB ── */}
+      {tab === "flipbook" && (
+        <div>
+          {/* Angle selector */}
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+            {ANGLES.map(a => (
+              <button key={a} onClick={() => { setFlipAngle(a); setFlipIdx(0); setFlipPlaying(false); }}
+                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", textTransform: "capitalize", padding: "0.5rem 1rem", cursor: "pointer", border: "1px solid", background: flipAngle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: flipAngle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: flipAngle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", flex: 1, transition: "all 0.15s" }}>
+                {a}
+              </button>
+            ))}
+          </div>
+
+          {flipPhotos.length === 0 ? (
+            <div className="kt-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
+              <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", marginBottom: "0.75rem" }}>No {flipAngle} photos yet.</p>
+              <p style={{ color: "rgba(221,232,237,0.4)", fontSize: "0.88rem" }}>Upload {flipAngle} photos to use the flipbook.</p>
+            </div>
+          ) : (
+            <>
+              {/* Current photo */}
+              <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
+                <img
+                  src={flipPhotos[safeFlipIdx].url}
+                  alt={flipAngle}
+                  style={{ maxHeight: "55vh", maxWidth: "100%", objectFit: "contain", display: "block", margin: "0 auto" }}
+                />
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)", marginTop: "0.75rem" }}>
+                  {format(parseISO(flipPhotos[safeFlipIdx].log_date), "d MMM yyyy")}
+                  {flipPhotos[safeFlipIdx].weight_at ? ` · ${flipPhotos[safeFlipIdx].weight_at} kg` : ""}
+                </p>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(221,232,237,0.2)", marginTop: "0.2rem" }}>
+                  {safeFlipIdx + 1} / {flipPhotos.length}
+                </p>
+              </div>
+
+              {/* Scrubber */}
+              <input type="range" min={0} max={flipPhotos.length - 1} value={safeFlipIdx}
+                onChange={e => { setFlipPlaying(false); setFlipIdx(+e.target.value); }}
+                style={{ width: "100%", accentColor: "#5ab4d4", marginBottom: "1.25rem", cursor: "pointer" }}
+              />
+
+              {/* Controls */}
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+                <button onClick={() => { setFlipPlaying(false); setFlipIdx(0); }} disabled={safeFlipIdx === 0}
+                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 0.85rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>⏮</button>
+                <button onClick={() => { setFlipPlaying(false); setFlipIdx(i => Math.max(0, i - 1)); }} disabled={safeFlipIdx === 0}
+                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 1rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>‹ Prev</button>
+                <button onClick={() => setFlipPlaying(p => !p)}
+                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 1.5rem", border: "1px solid rgba(90,180,212,0.35)", background: flipPlaying ? "rgba(90,180,212,0.1)" : "transparent", color: "#5ab4d4", cursor: "pointer" }}>
+                  {flipPlaying ? "⏸ Pause" : "▶ Play"}
+                </button>
+                <button onClick={() => { setFlipPlaying(false); setFlipIdx(i => Math.min(flipPhotos.length - 1, i + 1)); }} disabled={safeFlipIdx === flipPhotos.length - 1}
+                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 1rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>Next ›</button>
+                <button onClick={() => { setFlipPlaying(false); setFlipIdx(flipPhotos.length - 1); }} disabled={safeFlipIdx === flipPhotos.length - 1}
+                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 0.85rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>⏭</button>
+              </div>
+            </>
+          )}
+        </div>
       )}
 
       {/* ── COMPARE TAB ── */}

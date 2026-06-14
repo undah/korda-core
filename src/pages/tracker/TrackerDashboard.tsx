@@ -4,9 +4,9 @@ import {
   ComposedChart, Line, Area, XAxis, YAxis,
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { format, parseISO, subDays } from "date-fns";
+import { format, parseISO, subDays, addDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
-import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
+import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 type Range = "1W" | "1M" | "3M" | "All";
@@ -104,8 +104,33 @@ export default function TrackerDashboard() {
   const { data: goal } = useTrackerGoal();
   const stats = useProgressStats();
   const { data: photos = [] } = useTrackerPhotos();
+  const { data: journalEntries = [] } = useTrackerJournal(7);
   const [range, setRange] = useState<Range>("3M");
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
+  const [aiSummary, setAiSummary] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const generateSummary = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const cutoff7 = subDays(new Date(), 7).toISOString().split("T")[0];
+      const recentCheckins = checkins.filter(c => c.log_date >= cutoff7);
+      const res = await fetch("/api/tracker/weekly-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkins: recentCheckins, journal: journalEntries, goal }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { summary } = await res.json();
+      setAiSummary(summary);
+    } catch (e: any) {
+      setAiError(e?.message ?? "Failed to generate summary");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const sorted = useMemo(() =>
     [...checkins].sort((a, b) => a.log_date.localeCompare(b.log_date)),
@@ -128,6 +153,38 @@ export default function TrackerDashboard() {
     [photos]
   );
 
+  const projectedPoints = useMemo(() => {
+    if (!paceKgPerWeek || paceKgPerWeek >= 0 || !latest || !goal?.goal_weight) return [];
+    const out: { date: string; projected: number }[] = [];
+    let w = latest.weight;
+    const goalW = goal.goal_weight;
+    for (let i = 1; i <= 53; i++) {
+      const d = addDays(new Date(latest.log_date), i * 7).toISOString().split("T")[0];
+      w = +(w + paceKgPerWeek).toFixed(2);
+      if (w <= goalW) { out.push({ date: d, projected: goalW }); break; }
+      out.push({ date: d, projected: w });
+    }
+    return out;
+  }, [paceKgPerWeek, latest, goal]);
+
+  const records = useMemo(() => {
+    if (sorted.length < 2) return null;
+    const lowestWeight = Math.min(...sorted.map(c => c.weight));
+    const lowestDate = sorted.find(c => c.weight === lowestWeight)?.log_date ?? "";
+    let biggestDrop = 0;
+    for (let i = 1; i < sorted.length; i++) {
+      const drop = +(sorted[i - 1].weight - sorted[i].weight).toFixed(1);
+      if (drop > biggestDrop) biggestDrop = drop;
+    }
+    let bestWeek7 = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      const cutStr = addDays(new Date(sorted[i].log_date), 7).toISOString().split("T")[0];
+      const end = sorted.filter(c => c.log_date > sorted[i].log_date && c.log_date <= cutStr).slice(-1)[0];
+      if (end) bestWeek7 = Math.max(bestWeek7, +(sorted[i].weight - end.weight).toFixed(1));
+    }
+    return { lowestWeight: +lowestWeight.toFixed(1), lowestDate, biggestDrop: +biggestDrop.toFixed(1), bestWeek7: +bestWeek7.toFixed(1) };
+  }, [sorted]);
+
   const startWeight = sorted[0]?.weight ?? null;
 
   // Build chart data with 7d rolling avg
@@ -147,6 +204,18 @@ export default function TrackerDashboard() {
     const cutoff = subDays(new Date(), days).toISOString().split("T")[0];
     return chartData.filter(d => d.date >= cutoff);
   }, [chartData, range]);
+
+  const combinedData = useMemo(() => {
+    const hist = filteredData.map((d, i) => ({
+      ...d,
+      projected: i === filteredData.length - 1 && projectedPoints.length ? (d.weight as number | undefined) : undefined,
+    }));
+    if (!projectedPoints.length) return hist;
+    return [...hist, ...projectedPoints.map(p => ({
+      date: p.date, weight: undefined as number | undefined,
+      avg7: undefined as number | undefined, projected: p.projected,
+    }))];
+  }, [filteredData, projectedPoints]);
 
   const weights = filteredData.map(d => d.weight);
   const yMin = weights.length ? Math.floor(Math.min(...weights) - 1.5) : 0;
@@ -281,7 +350,7 @@ export default function TrackerDashboard() {
             ) : (
               <div className="kt-chart-wrap">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={filteredData} margin={{ top: 8, right: 12, bottom: 0, left: -8 }} onClick={(data: any) => { if (!data?.activePayload?.[0]) return; const date = data.activePayload[0].payload?.date; if (!date) return; const dayPhotos = photosByDate[date] ?? []; if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos); }} style={{ cursor: "default" }}>
+                  <ComposedChart data={combinedData} margin={{ top: 8, right: 12, bottom: 0, left: -8 }} onClick={(data: any) => { if (!data?.activePayload?.[0]) return; const date = data.activePayload[0].payload?.date; if (!date) return; const dayPhotos = photosByDate[date] ?? []; if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos); }} style={{ cursor: "default" }}>
                     <defs>
                       <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#5ab4d4" stopOpacity={0.18} />
@@ -308,6 +377,9 @@ export default function TrackerDashboard() {
                       activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
                     />
                     <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
+                    {projectedPoints.length > 0 && (
+                      <Line type="monotone" dataKey="projected" stroke="rgba(90,212,160,0.7)" strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} connectNulls={false} />
+                    )}
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -317,6 +389,7 @@ export default function TrackerDashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>7d avg</span></div>
               {goal?.goal_weight && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.4)" strokeWidth="1.5" strokeDasharray="5 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Goal</span></div>}
               {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Photos</span></div>}
+              {projectedPoints.length > 0 && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.7)" strokeWidth="1.5" strokeDasharray="4 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Projected</span></div>}
             </div>
           </div>
 
@@ -344,6 +417,25 @@ export default function TrackerDashboard() {
 
         {/* ── RIGHT PANEL: weekly pace + photo + quick actions ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+
+          {/* AI weekly summary */}
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+              <p className="kt-card-label" style={{ marginBottom: 0 }}>Weekly summary</p>
+              <button onClick={generateSummary} disabled={aiLoading}
+                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.08em", padding: "0.3rem 0.7rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap" }}>
+                {aiLoading ? "..." : aiSummary ? "↺ Refresh" : "✦ Generate"}
+              </button>
+            </div>
+            {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.red }}>{aiError}</p>}
+            {aiSummary ? (
+              <p style={{ fontSize: "0.78rem", color: "rgba(232,240,244,0.6)", lineHeight: 1.7 }}>{aiSummary}</p>
+            ) : !aiLoading && (
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.2)", lineHeight: 1.6 }}>
+                Get a personalised AI coach recap of your last 7 days — weight trend, patterns, and one action for next week.
+              </p>
+            )}
+          </div>
 
           {/* Weekly pace */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
@@ -395,6 +487,27 @@ export default function TrackerDashboard() {
               </div>
             )}
           </div>
+
+          {/* Personal records */}
+          {records && (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.25rem" }}>
+              <p className="kt-card-label" style={{ marginBottom: "0.85rem" }}>Personal records</p>
+              {[
+                { label: "Lowest weight", value: `${records.lowestWeight} kg`, note: format(parseISO(records.lowestDate), "d MMM"), color: C.accent },
+                { label: "Best week",     value: records.bestWeek7 > 0 ? `−${records.bestWeek7} kg` : "—", color: records.bestWeek7 > 0 ? C.green : C.dim },
+                { label: "Best drop",     value: records.biggestDrop > 0 ? `−${records.biggestDrop} kg` : "—", color: records.biggestDrop > 0 ? C.green : C.dim },
+                { label: "Total logs",    value: `${sorted.length}`, color: C.text },
+              ].map(item => (
+                <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0", borderBottom: "1px solid rgba(90,180,212,0.05)" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.dim }}>{item.label}</span>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", fontWeight: 500, color: item.color }}>{item.value}</span>
+                    {'note' in item && item.note && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(221,232,237,0.2)", marginLeft: "0.4rem" }}>{item.note}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Quick actions */}
           {[
