@@ -121,6 +121,13 @@ export default function TrackerDashboard() {
     [photos]
   );
 
+  const latestFrontPhoto = useMemo(() =>
+    photos.filter(p => p.angle === "front").sort((a, b) => b.log_date.localeCompare(a.log_date))[0]
+    ?? [...photos].sort((a, b) => b.log_date.localeCompare(a.log_date))[0]
+    ?? null,
+    [photos]
+  );
+
   const startWeight = sorted[0]?.weight ?? null;
 
   // Build chart data with 7d rolling avg
@@ -153,6 +160,24 @@ export default function TrackerDashboard() {
   const avg7    = last7.length ? +(last7.reduce((s, c) => s + c.weight, 0) / last7.length).toFixed(1) : null;
   const avgPrev = prev7.length ? +(prev7.reduce((s, c) => s + c.weight, 0) / prev7.length).toFixed(1) : null;
   const weekChg = avg7 && avgPrev ? +(+avg7 - +avgPrev).toFixed(1) : null;
+
+  // 30-day weekly pace
+  const cutoff30 = subDays(new Date(), 30).toISOString().split("T")[0];
+  const last30 = sorted.filter(c => c.log_date >= cutoff30);
+  const paceKgPerWeek: number | null = last30.length >= 2
+    ? +((last30[last30.length - 1].weight - last30[0].weight) /
+        ((new Date(last30[last30.length - 1].log_date).getTime() -
+          new Date(last30[0].log_date).getTime()) / (7 * 24 * 60 * 60 * 1000))
+      ).toFixed(2)
+    : null;
+  const targetPace = goal?.weekly_target ? -Math.abs(goal.weekly_target) : null;
+  const paceStatus: "ahead" | "on track" | "behind" | null =
+    paceKgPerWeek !== null && targetPace !== null
+      ? paceKgPerWeek < targetPace * 1.2 ? "ahead"
+        : paceKgPerWeek < targetPace * 0.8 ? "on track"
+        : "behind"
+      : null;
+  const paceColor = paceStatus === "ahead" ? C.green : paceStatus === "behind" ? C.red : C.accent;
 
   const TooltipContent = useMemo(
     () => makeTooltip(photosByDate, startWeight),
@@ -401,6 +426,66 @@ export default function TrackerDashboard() {
           )}
           {photos.length > 0 && !filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && (
             <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(221,232,237,0.18)", letterSpacing: "0.06em" }}>no photos in this range</span>
+          )}
+        </div>
+      </div>
+
+      {/* Weekly pace + Latest photo */}
+      <div className="kt-grid-2" style={{ marginBottom: 2 }}>
+
+        {/* Weekly pace */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem" }}>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "1rem" }}>Weekly pace</p>
+          {paceKgPerWeek !== null ? (
+            <>
+              <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "2rem", fontWeight: 400, color: paceColor, marginBottom: "0.2rem", lineHeight: 1 }}>
+                {paceKgPerWeek > 0 ? "+" : ""}{paceKgPerWeek}
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.85rem", color: C.muted, marginLeft: "0.35rem" }}>kg/wk</span>
+              </p>
+              {targetPace !== null && (
+                <>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: C.dim, marginBottom: "0.75rem" }}>
+                    Target: {Math.abs(targetPace)} kg/wk
+                  </p>
+                  <div style={{ background: "rgba(255,255,255,0.05)", height: 4, borderRadius: 2, overflow: "hidden", marginBottom: "0.6rem" }}>
+                    <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: 2, transition: "width 0.6s ease" }} />
+                  </div>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: paceColor }}>
+                    {paceStatus === "ahead" ? "↑ Ahead of target" : paceStatus === "behind" ? "↓ Behind target" : "● On track"}
+                  </p>
+                </>
+              )}
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(221,232,237,0.18)", marginTop: "0.6rem", letterSpacing: "0.06em" }}>based on 30-day trend</p>
+            </>
+          ) : (
+            <p style={{ color: C.dim, fontSize: "0.82rem", fontFamily: "'IBM Plex Mono',monospace" }}>Not enough data yet</p>
+          )}
+        </div>
+
+        {/* Latest front photo */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderTop: "2px solid rgba(0,200,255,0.18)", padding: "1.5rem", display: "flex", flexDirection: "column" }}>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "1rem" }}>Latest photo</p>
+          {latestFrontPhoto ? (
+            <>
+              <div style={{ flex: 1, overflow: "hidden", cursor: "pointer", marginBottom: "0.75rem", maxHeight: 200 }}
+                onClick={() => setLightboxPhotos(photosByDate[latestFrontPhoto.log_date] ?? [latestFrontPhoto])}>
+                <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: C.dim }}>
+                  {format(parseISO(latestFrontPhoto.log_date), "d MMM yyyy")}
+                  {latestFrontPhoto.weight_at ? ` · ${latestFrontPhoto.weight_at} kg` : ""}
+                </span>
+                <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.08em" }}>
+                  all →
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", minHeight: 120 }}>
+              <p style={{ color: C.dim, fontSize: "0.8rem", fontFamily: "'IBM Plex Mono',monospace" }}>No photos yet</p>
+              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: "rgba(90,180,212,0.5)", textDecoration: "none" }}>Add photo →</Link>
+            </div>
           )}
         </div>
       </div>
