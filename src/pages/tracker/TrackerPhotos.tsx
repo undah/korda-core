@@ -436,24 +436,16 @@ export default function TrackerPhotos() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
                   <div>
                     <label className="kt-label">Before</label>
-                    <select className="kt-input" value={dateA} onChange={e => {
-                      const v = e.target.value;
-                      if (dateB && v > dateB) { setDateA(dateB); setDateB(v); }
-                      else setDateA(v);
-                    }}>
+                    <select className="kt-input" value={dateA} onChange={e => { setDateA(e.target.value); if (dateB && e.target.value >= dateB) setDateB(""); }}>
                       <option value="">Select</option>
-                      {dates.map(d => <option key={d} value={d}>{d}</option>)}
+                      {dates.filter(d => !dateB || d < dateB).map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="kt-label">After</label>
-                    <select className="kt-input" value={dateB} onChange={e => {
-                      const v = e.target.value;
-                      if (dateA && v < dateA) { setDateB(dateA); setDateA(v); }
-                      else setDateB(v);
-                    }}>
+                    <select className="kt-input" value={dateB} onChange={e => { setDateB(e.target.value); if (dateA && e.target.value <= dateA) setDateA(""); }}>
                       <option value="">Select</option>
-                      {dates.map(d => <option key={d} value={d}>{d}</option>)}
+                      {dates.filter(d => !dateA || d > dateA).map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div style={{ gridColumn: "1 / -1" }}>
@@ -504,9 +496,9 @@ export default function TrackerPhotos() {
                     </div>
                   ) : (
                     /* Side by side */
-                    <div className="kt-grid-2" style={{ gap: 2, marginBottom: "1.5rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, marginBottom: "1.5rem" }}>
                       {([{ date: dateA, photo: photoA, label: "Before", checkin: checkinA }, { date: dateB, photo: photoB, label: "After", checkin: checkinB }] as const).map(({ date, photo, label, checkin }) => (
-                        <div key={date} style={{ background: "#0c1217", padding: "1.25rem", borderTop: `1px solid ${label === "Before" ? "rgba(221,232,237,0.1)" : "rgba(90,180,212,0.4)"}` }}>
+                        <div key={label} style={{ background: "#0c1217", padding: "1.25rem", borderTop: `1px solid ${label === "Before" ? "rgba(221,232,237,0.1)" : "rgba(90,180,212,0.4)"}` }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: label === "Before" ? "rgba(221,232,237,0.3)" : "#5ab4d4" }}>// {label}</p>
                             <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{date}</span>
