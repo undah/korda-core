@@ -34,10 +34,10 @@ function Section({ title, eyebrow, children }: { title: string; eyebrow: string;
   return (
     <div style={{ marginBottom: "2rem" }}>
       <div style={{ marginBottom: "1.25rem" }}>
-        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(90,180,212,0.4)", marginBottom: "0.35rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <span style={{ color: "rgba(221,232,237,0.2)" }}>//</span>{eyebrow}
+        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(0,200,255,0.4)", marginBottom: "0.35rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <span style={{ color: "rgba(232,232,240,0.2)" }}>//</span>{eyebrow}
         </p>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", fontWeight: 400, color: "#dde8ed" }}>{title}</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", fontWeight: 400, color: "#E8E8F0" }}>{title}</h2>
       </div>
       {children}
     </div>
@@ -200,7 +200,7 @@ export default function TrackerSettings() {
     : null;
 
   if (profileLoading) return (
-    <div style={{ color: "rgba(221,232,237,0.3)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
+    <div style={{ color: "rgba(232,232,240,0.3)", fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
       loading...
     </div>
   );
@@ -216,9 +216,9 @@ export default function TrackerSettings() {
       <Section eyebrow="Profile" title="Your profile">
         <div className="kt-card">
           {userEmail && (
-            <div style={{ marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid rgba(90,180,212,0.07)" }}>
+            <div style={{ marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
               <p className="kt-card-label">Signed in as</p>
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", color: "#5ab4d4" }}>{userEmail}</p>
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", color: "#00C8FF" }}>{userEmail}</p>
             </div>
           )}
 
@@ -247,7 +247,7 @@ export default function TrackerSettings() {
               <input className="kt-input" type="number" placeholder="2000" value={profileForm.tdee} onChange={setP("tdee")} />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label className="kt-label">Activity level <span style={{ color: "rgba(90,180,212,0.45)", fontStyle: "normal" }}>— auto-fills TDEE</span></label>
+              <label className="kt-label">Activity level <span style={{ color: "rgba(0,200,255,0.45)", fontStyle: "normal" }}>— auto-fills TDEE</span></label>
               <select className="kt-input" value={profileForm.activity_level} onChange={setP("activity_level")}>
                 {ACTIVITY_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
               </select>
@@ -256,12 +256,12 @@ export default function TrackerSettings() {
 
           {/* BMI display */}
           {bmi && (
-            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "rgba(90,180,212,0.05)", border: "1px solid rgba(90,180,212,0.1)", display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "rgba(0,200,255,0.05)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10, display: "flex", alignItems: "center", gap: "1rem" }}>
               <div>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", marginBottom: "0.2rem" }}>Current BMI</p>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.2rem", fontWeight: 500, color: "#5ab4d4" }}>{bmi}</p>
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: "rgba(232,232,240,0.25)", marginBottom: "0.2rem" }}>Current BMI</p>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.2rem", fontWeight: 500, color: "#00C8FF" }}>{bmi}</p>
               </div>
-              <p style={{ fontSize: "0.75rem", color: "rgba(221,232,237,0.35)" }}>
+              <p style={{ fontSize: "0.75rem", color: "rgba(232,232,240,0.35)" }}>
                 {parseFloat(bmi) < 18.5 ? "Underweight" : parseFloat(bmi) < 25 ? "Healthy weight" : parseFloat(bmi) < 30 ? "Overweight" : "Obese"}
               </p>
             </div>
@@ -288,7 +288,7 @@ export default function TrackerSettings() {
           </div>
 
           {goalForm.goal_weight && goalForm.weekly_target && checkins.length > 0 && (
-            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "rgba(90,180,212,0.05)", border: "1px solid rgba(90,180,212,0.1)" }}>
+            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "rgba(0,200,255,0.05)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10 }}>
               {(() => {
                 const latest = [...checkins].sort((a,b) => b.log_date.localeCompare(a.log_date))[0];
                 const remaining = latest.weight - parseFloat(goalForm.goal_weight);
@@ -298,13 +298,13 @@ export default function TrackerSettings() {
                 return (
                   <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
                     <div>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", marginBottom: "0.2rem" }}>Remaining</p>
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: remaining > 0 ? "#dde8ed" : "#5ad4a0" }}>{remaining > 0 ? `${remaining.toFixed(1)} kg` : "Goal reached! 🎯"}</p>
+                      <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: "rgba(232,232,240,0.25)", marginBottom: "0.2rem" }}>Remaining</p>
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: remaining > 0 ? "#E8E8F0" : "#22C55E" }}>{remaining > 0 ? `${remaining.toFixed(1)} kg` : "Goal reached! 🎯"}</p>
                     </div>
                     {remaining > 0 && (
                       <div>
-                        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", marginBottom: "0.2rem" }}>Estimated arrival</p>
-                        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: "#5ab4d4" }}>
+                        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "uppercase", color: "rgba(232,232,240,0.25)", marginBottom: "0.2rem" }}>Estimated arrival</p>
+                        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: "#00C8FF" }}>
                           {eta.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                         </p>
                       </div>
@@ -326,16 +326,16 @@ export default function TrackerSettings() {
         <div className="kt-card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: notifForm.enabled ? "1.25rem" : 0 }}>
             <div>
-              <p style={{ fontSize: "0.88rem", fontWeight: 500, color: "#dde8ed", marginBottom: "0.2rem" }}>Check-in reminder</p>
-              <p style={{ fontSize: "0.75rem", color: "rgba(221,232,237,0.35)", lineHeight: 1.5 }}>Get a daily notification to log your weight</p>
+              <p style={{ fontSize: "0.88rem", fontWeight: 500, color: "#E8E8F0", marginBottom: "0.2rem" }}>Check-in reminder</p>
+              <p style={{ fontSize: "0.75rem", color: "rgba(232,232,240,0.35)", lineHeight: 1.5 }}>Get a daily notification to log your weight</p>
             </div>
             {/* Toggle */}
             <button
               onClick={handleToggleNotif}
-              style={{ width: 46, height: 26, background: notifForm.enabled ? "#00C8FF" : "rgba(221,232,237,0.1)", border: "none", borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
+              style={{ width: 46, height: 26, background: notifForm.enabled ? "#00C8FF" : "rgba(232,232,240,0.1)", border: "none", borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
               aria-label="Toggle reminder"
             >
-              <span style={{ position: "absolute", top: 3, left: notifForm.enabled ? 23 : 3, width: 20, height: 20, background: notifForm.enabled ? "#080810" : "rgba(221,232,237,0.4)", borderRadius: "50%", transition: "left 0.2s", display: "block" }} />
+              <span style={{ position: "absolute", top: 3, left: notifForm.enabled ? 23 : 3, width: 20, height: 20, background: notifForm.enabled ? "#15151E" : "rgba(232,232,240,0.4)", borderRadius: "50%", transition: "left 0.2s", display: "block" }} />
             </button>
           </div>
 
@@ -360,16 +360,16 @@ export default function TrackerSettings() {
 
       {/* ── DATA MANAGEMENT ── */}
       <Section eyebrow="Data" title="Data management">
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* export */}
           <div className="kt-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
               <div>
-                <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#dde8ed", marginBottom: "0.3rem" }}>Export data as CSV</p>
-                <p style={{ fontSize: "0.78rem", color: "rgba(221,232,237,0.35)", lineHeight: 1.6 }}>
+                <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#E8E8F0", marginBottom: "0.3rem" }}>Export data as CSV</p>
+                <p style={{ fontSize: "0.78rem", color: "rgba(232,232,240,0.35)", lineHeight: 1.6 }}>
                   Download all your check-ins and calorie logs as a CSV file.
-                  {checkins.length > 0 && <span style={{ color: "rgba(90,180,212,0.6)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}> {checkins.length} check-ins · {calories.length} calorie logs</span>}
+                  {checkins.length > 0 && <span style={{ color: "rgba(0,200,255,0.6)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}> {checkins.length} check-ins · {calories.length} calorie logs</span>}
                 </p>
               </div>
               <button className="kt-btn kt-btn-outline" onClick={handleExport}>
@@ -379,25 +379,25 @@ export default function TrackerSettings() {
           </div>
 
           {/* delete */}
-          <div className="kt-card" style={{ borderTop: "1px solid rgba(212,112,90,0.3)" }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#d4705a", marginBottom: "0.3rem" }}>Delete all data</p>
-            <p style={{ fontSize: "0.78rem", color: "rgba(221,232,237,0.35)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+          <div className="kt-card" style={{ borderTop: "1px solid rgba(239,68,68,0.3)" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#EF4444", marginBottom: "0.3rem" }}>Delete all data</p>
+            <p style={{ fontSize: "0.78rem", color: "rgba(232,232,240,0.35)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
               Permanently delete all your check-ins, journals, calorie logs, photos, and profile. This cannot be undone.
             </p>
 
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", letterSpacing: "0.08em", background: "rgba(212,112,90,0.08)", border: "1px solid rgba(212,112,90,0.3)", color: "#d4705a", padding: "0.7rem 1.4rem", cursor: "pointer", transition: "all 0.2s" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(212,112,90,0.14)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "rgba(212,112,90,0.08)")}
+                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "#EF4444", padding: "0.7rem 1.4rem", cursor: "pointer", transition: "all 0.2s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.14)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}
               >
                 Delete all data
               </button>
             ) : (
               <div>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(212,112,90,0.7)", marginBottom: "0.75rem" }}>
-                  Type <strong style={{ color: "#d4705a" }}>DELETE</strong> to confirm:
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", color: "rgba(239,68,68,0.7)", marginBottom: "0.75rem" }}>
+                  Type <strong style={{ color: "#EF4444" }}>DELETE</strong> to confirm:
                 </p>
                 <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                   <input
@@ -406,12 +406,12 @@ export default function TrackerSettings() {
                     placeholder="DELETE"
                     value={deleteInput}
                     onChange={e => setDeleteInput(e.target.value)}
-                    style={{ maxWidth: 200, borderColor: "rgba(212,112,90,0.3)" }}
+                    style={{ maxWidth: 200, borderColor: "rgba(239,68,68,0.3)" }}
                   />
                   <button
                     onClick={handleDeleteAll}
                     disabled={deleteInput !== "DELETE" || deleteAll.isPending}
-                    style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", letterSpacing: "0.08em", background: deleteInput === "DELETE" ? "rgba(212,112,90,0.15)" : "transparent", border: "1px solid rgba(212,112,90,0.3)", color: "#d4705a", padding: "0.7rem 1.4rem", cursor: deleteInput === "DELETE" ? "pointer" : "not-allowed", opacity: deleteInput === "DELETE" ? 1 : 0.5, transition: "all 0.2s" }}
+                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", background: deleteInput === "DELETE" ? "rgba(239,68,68,0.15)" : "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "#EF4444", padding: "0.7rem 1.4rem", cursor: deleteInput === "DELETE" ? "pointer" : "not-allowed", opacity: deleteInput === "DELETE" ? 1 : 0.5, transition: "all 0.2s" }}
                   >
                     {deleteAll.isPending ? "Deleting..." : "Confirm delete"}
                   </button>

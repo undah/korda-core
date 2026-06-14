@@ -17,18 +17,18 @@ function StatDiff({ label, from, to, unit = "", invert = false }: { label: strin
   const diff = +(to - from).toFixed(1);
   const pct = Math.min(100, Math.abs(Math.round((diff / from) * 100)));
   const improved = invert ? diff < 0 : diff > 0;
-  const color = diff === 0 ? "rgba(221,232,237,0.3)" : improved ? "#5ad4a0" : "#d4705a";
+  const color = diff === 0 ? "rgba(232,232,240,0.3)" : improved ? "#22C55E" : "#EF4444";
   return (
     <div style={{ marginBottom: "1.25rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.4rem", flexWrap: "wrap", gap: "0.25rem" }}>
-        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.3)" }}>{label}</span>
+        <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.62rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,232,240,0.3)" }}>{label}</span>
         <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)" }}>{from}{unit} → {to}{unit}</span>
+          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(232,232,240,0.4)" }}>{from}{unit} → {to}{unit}</span>
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 500, color }}>{diff > 0 ? "+" : ""}{diff}{unit}</span>
         </div>
       </div>
-      <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 0.6s ease" }} />
+      <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 10, transition: "width 0.6s ease" }} />
       </div>
     </div>
   );
@@ -69,14 +69,14 @@ function CompareSlider({ urlA, urlB }: { urlA: string; urlB: string }) {
       {/* Before — clipped to left */}
       <img src={urlA} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", clipPath: `polygon(0 0, ${pos}% 0, ${pos}% 100%, 0 100%)`, pointerEvents: "none", display: "block" }} />
       {/* Divider line */}
-      <div style={{ position: "absolute", top: 0, bottom: 0, left: `${pos}%`, width: 2, background: "rgba(90,180,212,0.9)", transform: "translateX(-50%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: 0, bottom: 0, left: `${pos}%`, width: 2, background: "rgba(0,200,255,0.9)", transform: "translateX(-50%)", pointerEvents: "none" }} />
       {/* Handle */}
-      <div style={{ position: "absolute", top: "50%", left: `${pos}%`, transform: "translate(-50%, -50%)", width: 38, height: 38, borderRadius: "50%", background: "#0a0e12", border: "2px solid #5ab4d4", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", boxShadow: "0 0 16px rgba(90,180,212,0.35)" }}>
-        <span style={{ color: "#5ab4d4", fontSize: "0.85rem" }}>⇔</span>
+      <div style={{ position: "absolute", top: "50%", left: `${pos}%`, transform: "translate(-50%, -50%)", width: 38, height: 38, borderRadius: "50%", background: "#15151E", border: "2px solid #00C8FF", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", boxShadow: "0 0 16px rgba(0,200,255,0.35)" }}>
+        <span style={{ color: "#00C8FF", fontSize: "0.85rem" }}>⇔</span>
       </div>
       {/* Corner labels */}
-      <div style={{ position: "absolute", top: "0.6rem", left: "0.6rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", color: "rgba(221,232,237,0.7)", background: "rgba(7,9,11,0.65)", padding: "0.2rem 0.45rem", pointerEvents: "none" }}>BEFORE</div>
-      <div style={{ position: "absolute", top: "0.6rem", right: "0.6rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", color: "#5ab4d4", background: "rgba(7,9,11,0.65)", padding: "0.2rem 0.45rem", pointerEvents: "none" }}>AFTER</div>
+      <div style={{ position: "absolute", top: "0.6rem", left: "0.6rem", fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", letterSpacing: "0.15em", color: "rgba(232,232,240,0.7)", background: "rgba(21,21,30,0.65)", padding: "0.2rem 0.45rem", pointerEvents: "none" }}>BEFORE</div>
+      <div style={{ position: "absolute", top: "0.6rem", right: "0.6rem", fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", letterSpacing: "0.15em", color: "#00C8FF", background: "rgba(21,21,30,0.65)", padding: "0.2rem 0.45rem", pointerEvents: "none" }}>AFTER</div>
     </div>
   );
 }
@@ -194,13 +194,13 @@ export default function TrackerPhotos() {
     <div>
       {/* PHOTO CONFLICT */}
       {showPhotoConflict && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(7,9,11,0.88)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", padding: "1rem" }}>
-          <div style={{ background: "#0c1217", border: "1px solid rgba(90,180,212,0.15)", borderTop: "1px solid rgba(90,180,212,0.5)", padding: "2rem", maxWidth: 420, width: "100%" }}>
-            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(90,180,212,0.5)", marginBottom: "1rem" }}>// conflict detected</p>
-            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", fontWeight: 400, color: "#dde8ed", marginBottom: "0.75rem" }}>Photo already exists</h3>
-            <p style={{ fontSize: "0.85rem", color: "rgba(221,232,237,0.45)", lineHeight: 1.75, marginBottom: "2rem" }}>
-              You already have a <strong style={{ color: "#dde8ed", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", textTransform: "capitalize" }}>{form.angle}</strong> photo for{" "}
-              <strong style={{ color: "#dde8ed", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem" }}>{form.log_date}</strong>. Replace it with your new photo, or cancel?
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(21,21,30,0.88)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", padding: "1rem" }}>
+          <div style={{ background: "#15151E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "2rem", maxWidth: 420, width: "100%" }}>
+            <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(0,200,255,0.5)", marginBottom: "1rem" }}>// conflict detected</p>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", fontWeight: 400, color: "#E8E8F0", marginBottom: "0.75rem" }}>Photo already exists</h3>
+            <p style={{ fontSize: "0.85rem", color: "rgba(232,232,240,0.45)", lineHeight: 1.75, marginBottom: "2rem" }}>
+              You already have a <strong style={{ color: "#E8E8F0", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", textTransform: "capitalize" }}>{form.angle}</strong> photo for{" "}
+              <strong style={{ color: "#E8E8F0", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem" }}>{form.log_date}</strong>. Replace it with your new photo, or cancel?
             </p>
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button className="kt-btn kt-btn-blue" onClick={doUpload} disabled={uploadPhoto.isPending} style={{ flex: 1 }}>{uploadPhoto.isPending ? "Uploading..." : "Replace →"}</button>
@@ -220,9 +220,9 @@ export default function TrackerPhotos() {
         const dual = !!lightboxCompareDate;
         const closeLightbox = () => { setLightbox(null); setLightboxCompareDate(""); };
         return (
-          <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(7,9,11,0.96)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "1rem" }}>
+          <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(21,21,30,0.96)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "1rem" }}>
             <div onClick={e => e.stopPropagation()} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", cursor: "default", maxWidth: "95vw" }}>
-              <button onClick={closeLightbox} style={{ position: "absolute", top: -36, right: 0, background: "none", border: "none", color: "rgba(221,232,237,0.4)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", cursor: "pointer" }}>
+              <button onClick={closeLightbox} style={{ position: "absolute", top: -36, right: 0, background: "none", border: "none", color: "rgba(232,232,240,0.4)", fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem", cursor: "pointer" }}>
                 close ×
               </button>
 
@@ -231,7 +231,7 @@ export default function TrackerPhotos() {
                 {/* Primary */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem" }}>
                   <img src={lightbox.url} alt={lightbox.angle} style={{ maxHeight: "72vh", maxWidth: dual ? "44vw" : "85vw", objectFit: "contain", display: "block" }} />
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.35)", textTransform: "capitalize" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(232,232,240,0.35)", textTransform: "capitalize" }}>
                     {lightbox.angle} · {lightbox.log_date}{lightbox.weight_at ? ` · ${lightbox.weight_at} kg` : ""}
                   </span>
                 </div>
@@ -241,13 +241,13 @@ export default function TrackerPhotos() {
                     {cPhoto ? (
                       <img src={cPhoto.url} alt={lightbox.angle} style={{ maxHeight: "72vh", maxWidth: "44vw", objectFit: "contain", display: "block" }} />
                     ) : (
-                      <div style={{ width: "44vw", height: "50vh", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "rgba(221,232,237,0.15)", textAlign: "center", lineHeight: 1.8 }}>
+                      <div style={{ width: "44vw", height: "50vh", background: "#1A1A26", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.68rem", color: "rgba(232,232,240,0.15)", textAlign: "center", lineHeight: 1.8 }}>
                           no {lightbox.angle}<br />photo for<br />{lightboxCompareDate}
                         </p>
                       </div>
                     )}
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#5ab4d4" }}>{lightboxCompareDate}{cPhoto?.weight_at ? ` · ${cPhoto.weight_at} kg` : ""}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#00C8FF" }}>{lightboxCompareDate}{cPhoto?.weight_at ? ` · ${cPhoto.weight_at} kg` : ""}</span>
                   </div>
                 )}
               </div>
@@ -255,22 +255,22 @@ export default function TrackerPhotos() {
               {/* Controls */}
               <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.12em", color: "rgba(221,232,237,0.25)" }}>COMPARE WITH</span>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", letterSpacing: "0.12em", color: "rgba(232,232,240,0.25)" }}>COMPARE WITH</span>
                   <select
                     value={lightboxCompareDate}
                     onChange={e => setLightboxCompareDate(e.target.value)}
-                    style={{ background: "#0c1217", border: "1px solid rgba(90,180,212,0.2)", color: "#dde8ed", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", padding: "0.3rem 0.5rem", cursor: "pointer" }}>
+                    style={{ background: "#15151E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, color: "#E8E8F0", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", padding: "0.3rem 0.5rem", cursor: "pointer" }}>
                     <option value="">— select date —</option>
                     {dates.filter(d => d !== lightbox.log_date).map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
                   {dual && (
-                    <button onClick={() => setLightboxCompareDate("")} style={{ background: "none", border: "none", color: "rgba(221,232,237,0.3)", cursor: "pointer", fontSize: "0.9rem", lineHeight: 1 }}>×</button>
+                    <button onClick={() => setLightboxCompareDate("")} style={{ background: "none", border: "none", color: "rgba(232,232,240,0.3)", cursor: "pointer", fontSize: "0.9rem", lineHeight: 1 }}>×</button>
                   )}
                 </div>
                 <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(lightbox.id); }}
-                  style={{ background: "none", border: "1px solid rgba(212,112,90,0.3)", color: "rgba(212,112,90,0.6)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", padding: "0.3rem 0.8rem" }}>
+                  style={{ background: "none", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "rgba(239,68,68,0.6)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "0.65rem", padding: "0.3rem 0.8rem" }}>
                   delete
                 </button>
               </div>
@@ -288,11 +288,11 @@ export default function TrackerPhotos() {
       <div style={{ display: "flex", gap: 2, marginBottom: "2rem" }}>
         {([["timeline", "Timeline"], ["compare", "Compare"], ["flipbook", "Flipbook"]] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => t === "compare" ? handleTabCompare() : setTab(t)}
-            style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", padding: "0.6rem 1.2rem", cursor: "pointer", border: "none", background: tab === t ? "#0c1217" : "transparent", color: tab === t ? "#5ab4d4" : "rgba(221,232,237,0.3)", borderBottom: tab === t ? "1px solid rgba(90,180,212,0.5)" : "1px solid rgba(90,180,212,0.08)", transition: "all 0.15s" }}>
+            style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", padding: "0.6rem 1.2rem", cursor: "pointer", border: "none", background: tab === t ? "#15151E" : "transparent", color: tab === t ? "#00C8FF" : "rgba(232,232,240,0.3)", borderBottom: tab === t ? "1px solid rgba(0,200,255,0.5)" : "1px solid rgba(255,255,255,0.07)", transition: "all 0.15s" }}>
             {label}
           </button>
         ))}
-        <div style={{ flex: 1, borderBottom: "1px solid rgba(90,180,212,0.08)" }} />
+        <div style={{ flex: 1, borderBottom: "1px solid rgba(255,255,255,0.07)" }} />
       </div>
 
       {/* ── TIMELINE TAB ── */}
@@ -331,7 +331,7 @@ export default function TrackerPhotos() {
                       setFileKey(k => k + 1);
                     }
                   }}
-                    style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: form.angle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: form.angle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", transition: "all 0.15s", flex: 1 }}>
+                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "rgba(0,200,255,0.1)" : "transparent", borderColor: form.angle === a ? "rgba(0,200,255,0.5)" : "rgba(232,232,240,0.1)", color: form.angle === a ? "#00C8FF" : "rgba(232,232,240,0.3)", transition: "all 0.15s", flex: 1, borderRadius: 8 }}>
                     {a}
                   </button>
                 ))}
@@ -339,15 +339,15 @@ export default function TrackerPhotos() {
             </div>
 
             <div onClick={() => fileRef.current?.click()}
-              style={{ border: "1px dashed rgba(90,180,212,0.2)", padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(90,180,212,0.02)" }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(90,180,212,0.4)")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(90,180,212,0.2)")}>
+              style={{ border: "1px dashed rgba(0,200,255,0.2)", borderRadius: 10, padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(0,200,255,0.02)" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.4)")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.2)")}>
               {preview ? (
                 <img src={preview} alt="preview" style={{ maxHeight: 200, maxWidth: "100%", objectFit: "contain", display: "block", margin: "0 auto" }} />
               ) : (
                 <>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.75rem", color: "rgba(90,180,212,0.5)", marginBottom: "0.4rem" }}>tap to select photo</p>
-                  <p style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.2)" }}>JPG, PNG, WEBP</p>
+                  <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.75rem", color: "rgba(0,200,255,0.5)", marginBottom: "0.4rem" }}>tap to select photo</p>
+                  <p style={{ fontSize: "0.72rem", color: "rgba(232,232,240,0.2)" }}>JPG, PNG, WEBP</p>
                 </>
               )}
             </div>
@@ -358,13 +358,13 @@ export default function TrackerPhotos() {
           </div>
 
           {isLoading ? (
-            <p style={{ color: "rgba(221,232,237,0.2)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem" }}>Loading...</p>
+            <p style={{ color: "rgba(232,232,240,0.2)", fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem" }}>Loading...</p>
           ) : dates.length === 0 ? (
-            <p style={{ color: "rgba(221,232,237,0.3)", fontSize: "0.85rem" }}>No photos yet.</p>
+            <p style={{ color: "rgba(232,232,240,0.3)", fontSize: "0.85rem" }}>No photos yet.</p>
           ) : (
             <>
               {dates.length >= 2 && (
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", letterSpacing: "0.12em", color: "rgba(221,232,237,0.2)", marginBottom: "1rem" }}>
+                <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.62rem", letterSpacing: "0.12em", color: "rgba(232,232,240,0.2)", marginBottom: "1rem" }}>
                   // tap the circle next to a date to select it for comparison
                 </p>
               )}
@@ -372,37 +372,37 @@ export default function TrackerPhotos() {
                 {dates.map(date => {
                   const selected = compareSelections.includes(date);
                   return (
-                    <div key={date} style={{ borderLeft: selected ? "2px solid rgba(90,180,212,0.5)" : "2px solid transparent", paddingLeft: selected ? "0.75rem" : "0", transition: "all 0.2s" }}>
+                    <div key={date} style={{ borderLeft: selected ? "2px solid rgba(0,200,255,0.5)" : "2px solid transparent", paddingLeft: selected ? "0.75rem" : "0", transition: "all 0.2s" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
                         {/* Selection circle */}
                         <button
                           onClick={() => toggleCompareSelection(date)}
                           title={selected ? "Deselect" : "Select for compare"}
-                          style={{ width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${selected ? "#5ab4d4" : "rgba(90,180,212,0.25)"}`, background: selected ? "rgba(90,180,212,0.18)" : "transparent", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "all 0.15s" }}>
-                          {selected && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#5ab4d4" }} />}
+                          style={{ width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${selected ? "#00C8FF" : "rgba(0,200,255,0.25)"}`, background: selected ? "rgba(0,200,255,0.18)" : "transparent", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "all 0.15s" }}>
+                          {selected && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#00C8FF" }} />}
                         </button>
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: selected ? "#5ab4d4" : "rgba(221,232,237,0.4)" }}>{date}</span>
-                        {byDate[date][0]?.weight_at && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: "#5ab4d4" }}>{byDate[date][0].weight_at} kg</span>}
-                        <div style={{ flex: 1, height: 1, background: "rgba(90,180,212,0.06)" }} />
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: selected ? "#00C8FF" : "rgba(232,232,240,0.4)" }}>{date}</span>
+                        {byDate[date][0]?.weight_at && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: "#00C8FF" }}>{byDate[date][0].weight_at} kg</span>}
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.5rem" }}>
                         {ANGLES.map(angle => {
                           const photo = byDate[date].find(p => p.angle === angle);
                           return (
-                            <div key={angle} style={{ position: "relative", aspectRatio: "3/4", background: "#0c1217", border: "1px solid rgba(90,180,212,0.08)", overflow: "hidden", flexShrink: 0 }}>
+                            <div key={angle} style={{ position: "relative", aspectRatio: "3/4", background: "#1A1A26", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
                               {photo ? (
                                 <>
                                   <img src={photo.url} alt={angle} onClick={() => setLightbox(photo)}
                                     style={{ width: "100%", height: "100%", objectFit: "cover", cursor: "pointer", display: "block" }} />
-                                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.4rem 0.5rem", background: "linear-gradient(transparent,rgba(7,9,11,0.85))", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.1em", textTransform: "capitalize", color: "rgba(221,232,237,0.5)" }}>{angle}</span>
+                                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.4rem 0.5rem", background: "linear-gradient(transparent,rgba(21,21,30,0.85))", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", letterSpacing: "0.1em", textTransform: "capitalize", color: "rgba(232,232,240,0.5)" }}>{angle}</span>
                                     <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(photo.id); }}
-                                      style={{ background: "none", border: "none", color: "rgba(212,112,90,0.6)", cursor: "pointer", fontSize: "0.75rem", lineHeight: 1, padding: "2px" }}>×</button>
+                                      style={{ background: "none", border: "none", color: "rgba(239,68,68,0.6)", cursor: "pointer", fontSize: "0.75rem", lineHeight: 1, padding: "2px" }}>×</button>
                                   </div>
                                 </>
                               ) : (
                                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.3rem" }}>
-                                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", textTransform: "capitalize", color: "rgba(221,232,237,0.12)" }}>{angle}</span>
+                                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.58rem", textTransform: "capitalize", color: "rgba(232,232,240,0.12)" }}>{angle}</span>
                                 </div>
                               )}
                             </div>
@@ -418,22 +418,22 @@ export default function TrackerPhotos() {
 
           {/* Floating compare bar */}
           {compareSelections.length > 0 && (
-            <div style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", background: "#0c1217", border: "1px solid rgba(90,180,212,0.4)", padding: "0.75rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", zIndex: 100, boxShadow: "0 4px 32px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
+            <div style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", background: "#15151E", border: "1px solid rgba(0,200,255,0.4)", borderRadius: 10, padding: "0.75rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", zIndex: 100, boxShadow: "0 4px 32px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
               {compareSelections.length === 1 ? (
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.45)" }}>
-                  <span style={{ color: "#5ab4d4" }}>{compareSelections[0]}</span> — select one more date
+                <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", color: "rgba(232,232,240,0.45)" }}>
+                  <span style={{ color: "#00C8FF" }}>{compareSelections[0]}</span> — select one more date
                 </span>
               ) : (
                 <>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.45)" }}>
-                    {compareSelections[0]} <span style={{ color: "#5ab4d4" }}>vs</span> {compareSelections[1]}
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", color: "rgba(232,232,240,0.45)" }}>
+                    {compareSelections[0]} <span style={{ color: "#00C8FF" }}>vs</span> {compareSelections[1]}
                   </span>
                   <button className="kt-btn kt-btn-blue" style={{ padding: "0.4rem 1rem", fontSize: "0.7rem" }} onClick={goCompare}>
                     Compare →
                   </button>
                 </>
               )}
-              <button onClick={() => setCompareSelections([])} style={{ background: "none", border: "none", color: "rgba(221,232,237,0.3)", cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "2px 4px" }}>×</button>
+              <button onClick={() => setCompareSelections([])} style={{ background: "none", border: "none", color: "rgba(232,232,240,0.3)", cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "2px 4px" }}>×</button>
             </div>
           )}
         </>
@@ -446,7 +446,7 @@ export default function TrackerPhotos() {
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
             {ANGLES.map(a => (
               <button key={a} onClick={() => { setFlipAngle(a); setFlipIdx(0); setFlipPlaying(false); }}
-                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", textTransform: "capitalize", padding: "0.5rem 1rem", cursor: "pointer", border: "1px solid", background: flipAngle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: flipAngle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: flipAngle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", flex: 1, transition: "all 0.15s" }}>
+                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", textTransform: "capitalize", padding: "0.5rem 1rem", cursor: "pointer", border: "1px solid", background: flipAngle === a ? "rgba(0,200,255,0.1)" : "transparent", borderColor: flipAngle === a ? "rgba(0,200,255,0.5)" : "rgba(232,232,240,0.1)", color: flipAngle === a ? "#00C8FF" : "rgba(232,232,240,0.3)", flex: 1, transition: "all 0.15s", borderRadius: 8 }}>
                 {a}
               </button>
             ))}
@@ -455,7 +455,7 @@ export default function TrackerPhotos() {
           {flipPhotos.length === 0 ? (
             <div className="kt-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
               <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", marginBottom: "0.75rem" }}>No {flipAngle} photos yet.</p>
-              <p style={{ color: "rgba(221,232,237,0.4)", fontSize: "0.88rem" }}>Upload {flipAngle} photos to use the flipbook.</p>
+              <p style={{ color: "rgba(232,232,240,0.4)", fontSize: "0.88rem" }}>Upload {flipAngle} photos to use the flipbook.</p>
             </div>
           ) : (
             <>
@@ -466,11 +466,11 @@ export default function TrackerPhotos() {
                   alt={flipAngle}
                   style={{ maxHeight: "55vh", maxWidth: "100%", objectFit: "contain", display: "block", margin: "0 auto" }}
                 />
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)", marginTop: "0.75rem" }}>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(232,232,240,0.4)", marginTop: "0.75rem" }}>
                   {format(parseISO(flipPhotos[safeFlipIdx].log_date), "d MMM yyyy")}
                   {flipPhotos[safeFlipIdx].weight_at ? ` · ${flipPhotos[safeFlipIdx].weight_at} kg` : ""}
                 </p>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(221,232,237,0.2)", marginTop: "0.2rem" }}>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(232,232,240,0.2)", marginTop: "0.2rem" }}>
                   {safeFlipIdx + 1} / {flipPhotos.length}
                 </p>
               </div>
@@ -478,23 +478,23 @@ export default function TrackerPhotos() {
               {/* Scrubber */}
               <input type="range" min={0} max={flipPhotos.length - 1} value={safeFlipIdx}
                 onChange={e => { setFlipPlaying(false); setFlipIdx(+e.target.value); }}
-                style={{ width: "100%", accentColor: "#5ab4d4", marginBottom: "1.25rem", cursor: "pointer" }}
+                style={{ width: "100%", accentColor: "#00C8FF", marginBottom: "1.25rem", cursor: "pointer" }}
               />
 
               {/* Controls */}
               <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(0); }} disabled={safeFlipIdx === 0}
-                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 0.85rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>⏮</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", padding: "0.5rem 0.85rem", border: "1px solid rgba(232,232,240,0.1)", borderRadius: 8, background: "transparent", color: "rgba(232,232,240,0.4)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>⏮</button>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(i => Math.max(0, i - 1)); }} disabled={safeFlipIdx === 0}
-                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 1rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>‹ Prev</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", padding: "0.5rem 1rem", border: "1px solid rgba(232,232,240,0.1)", borderRadius: 8, background: "transparent", color: "rgba(232,232,240,0.4)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>‹ Prev</button>
                 <button onClick={() => setFlipPlaying(p => !p)}
-                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 1.5rem", border: "1px solid rgba(90,180,212,0.35)", background: flipPlaying ? "rgba(90,180,212,0.1)" : "transparent", color: "#5ab4d4", cursor: "pointer" }}>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", padding: "0.5rem 1.5rem", border: "1px solid rgba(0,200,255,0.35)", borderRadius: 8, background: flipPlaying ? "rgba(0,200,255,0.1)" : "transparent", color: "#00C8FF", cursor: "pointer" }}>
                   {flipPlaying ? "⏸ Pause" : "▶ Play"}
                 </button>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(i => Math.min(flipPhotos.length - 1, i + 1)); }} disabled={safeFlipIdx === flipPhotos.length - 1}
-                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 1rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>Next ›</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", padding: "0.5rem 1rem", border: "1px solid rgba(232,232,240,0.1)", borderRadius: 8, background: "transparent", color: "rgba(232,232,240,0.4)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>Next ›</button>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(flipPhotos.length - 1); }} disabled={safeFlipIdx === flipPhotos.length - 1}
-                  style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", padding: "0.5rem 0.85rem", border: "1px solid rgba(221,232,237,0.1)", background: "transparent", color: "rgba(221,232,237,0.4)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>⏭</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", padding: "0.5rem 0.85rem", border: "1px solid rgba(232,232,240,0.1)", borderRadius: 8, background: "transparent", color: "rgba(232,232,240,0.4)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>⏭</button>
               </div>
             </>
           )}
@@ -507,7 +507,7 @@ export default function TrackerPhotos() {
           {dates.length < 2 ? (
             <div className="kt-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
               <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", marginBottom: "0.75rem" }}>Not enough photos.</p>
-              <p style={{ color: "rgba(221,232,237,0.4)", fontSize: "0.88rem" }}>Need photos from at least 2 different dates.</p>
+              <p style={{ color: "rgba(232,232,240,0.4)", fontSize: "0.88rem" }}>Need photos from at least 2 different dates.</p>
             </div>
           ) : (
             <>
@@ -533,7 +533,7 @@ export default function TrackerPhotos() {
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       {ANGLES.map(a => (
                         <button key={a} onClick={() => setCompareAngle(a)}
-                          style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", textTransform: "capitalize", padding: "0.45rem 0.75rem", cursor: "pointer", border: "1px solid", background: compareAngle === a ? "rgba(90,180,212,0.1)" : "transparent", borderColor: compareAngle === a ? "rgba(90,180,212,0.5)" : "rgba(221,232,237,0.1)", color: compareAngle === a ? "#5ab4d4" : "rgba(221,232,237,0.3)", transition: "all 0.15s", flex: 1 }}>
+                          style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.68rem", textTransform: "capitalize", padding: "0.45rem 0.75rem", cursor: "pointer", border: "1px solid", background: compareAngle === a ? "rgba(0,200,255,0.1)" : "transparent", borderColor: compareAngle === a ? "rgba(0,200,255,0.5)" : "rgba(232,232,240,0.1)", color: compareAngle === a ? "#00C8FF" : "rgba(232,232,240,0.3)", transition: "all 0.15s", flex: 1, borderRadius: 8 }}>
                           {a}
                         </button>
                       ))}
@@ -550,54 +550,54 @@ export default function TrackerPhotos() {
                       const active = mode === "slider" ? sliderMode : !sliderMode;
                       return (
                         <button key={mode} onClick={() => setSliderMode(mode === "slider")}
-                          style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.45rem 1rem", cursor: "pointer", border: "none", background: active ? "#0c1217" : "transparent", color: active ? "#5ab4d4" : "rgba(221,232,237,0.25)", borderBottom: active ? "1px solid rgba(90,180,212,0.5)" : "1px solid rgba(90,180,212,0.08)", transition: "all 0.15s" }}>
+                          style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.45rem 1rem", cursor: "pointer", border: "none", background: active ? "#15151E" : "transparent", color: active ? "#00C8FF" : "rgba(232,232,240,0.25)", borderBottom: active ? "1px solid rgba(0,200,255,0.5)" : "1px solid rgba(255,255,255,0.07)", transition: "all 0.15s" }}>
                           {label}
                         </button>
                       );
                     })}
-                    <div style={{ flex: 1, borderBottom: "1px solid rgba(90,180,212,0.08)" }} />
+                    <div style={{ flex: 1, borderBottom: "1px solid rgba(255,255,255,0.07)" }} />
                   </div>
 
                   {sliderMode ? (
                     /* Drag slider */
                     <div style={{ maxWidth: 480, margin: "0 auto 1.5rem" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{dateA}</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#5ab4d4" }}>{dateB}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(232,232,240,0.3)" }}>{dateA}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#00C8FF" }}>{dateB}</span>
                       </div>
                       {photoA && photoB ? (
                         <CompareSlider urlA={photoA.url} urlB={photoB.url} />
                       ) : (
-                        <div style={{ aspectRatio: "3/4", maxHeight: "clamp(320px, 65vw, 540px)", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
-                          {!photoA && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo for {dateA}</p>}
-                          {!photoB && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo for {dateB}</p>}
+                        <div style={{ aspectRatio: "3/4", maxHeight: "clamp(320px, 65vw, 540px)", background: "#1A1A26", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
+                          {!photoA && <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", color: "rgba(232,232,240,0.15)" }}>no {compareAngle} photo for {dateA}</p>}
+                          {!photoB && <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", color: "rgba(232,232,240,0.15)" }}>no {compareAngle} photo for {dateB}</p>}
                         </div>
                       )}
                     </div>
                   ) : (
                     /* Side by side */
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, marginBottom: "1.5rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "1.5rem" }}>
                       {([{ date: dateA, photo: photoA, label: "Before", checkin: checkinA }, { date: dateB, photo: photoB, label: "After", checkin: checkinB }] as const).map(({ date, photo, label, checkin }) => (
-                        <div key={label} style={{ background: "#0c1217", padding: "1.25rem", borderTop: `1px solid ${label === "Before" ? "rgba(221,232,237,0.1)" : "rgba(90,180,212,0.4)"}` }}>
+                        <div key={label} style={{ background: "#15151E", padding: "1.25rem", borderRadius: 12, borderTop: `1px solid ${label === "Before" ? "rgba(232,232,240,0.1)" : "rgba(0,200,255,0.4)"}` }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: label === "Before" ? "rgba(221,232,237,0.3)" : "#5ab4d4" }}>// {label}</p>
-                            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)" }}>{date}</span>
+                            <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: label === "Before" ? "rgba(232,232,240,0.3)" : "#00C8FF" }}>// {label}</p>
+                            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(232,232,240,0.3)" }}>{date}</span>
                           </div>
                           {photo ? (
                             <div style={{ aspectRatio: "3/4", overflow: "hidden", marginBottom: "0.75rem", cursor: "pointer", maxHeight: "clamp(240px, 45vw, 400px)" }} onClick={() => setLightbox(photo)}>
                               <img src={photo.url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                             </div>
                           ) : (
-                            <div style={{ aspectRatio: "3/4", background: "#0a0e12", border: "1px dashed rgba(90,180,212,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: "clamp(240px, 45vw, 400px)" }}>
-                              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.15)" }}>no {compareAngle} photo</p>
+                            <div style={{ aspectRatio: "3/4", background: "#1A1A26", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: "clamp(240px, 45vw, 400px)" }}>
+                              <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.7rem", color: "rgba(232,232,240,0.15)" }}>no {compareAngle} photo</p>
                             </div>
                           )}
                           {checkin && (
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.25rem" }}>
-                              {checkin.weight   && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>Weight</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: label === "After" ? "#5ab4d4" : "#dde8ed" }}>{checkin.weight} kg</span></div>}
-                              {checkin.waist    && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>Waist</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.6)" }}>{checkin.waist}cm</span></div>}
-                              {checkin.chest    && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>Chest</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.6)" }}>{checkin.chest}cm</span></div>}
-                              {checkin.body_fat && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(221,232,237,0.3)" }}>BF</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.6)" }}>{checkin.body_fat}%</span></div>}
+                              {checkin.weight   && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(232,232,240,0.3)" }}>Weight</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: label === "After" ? "#00C8FF" : "#E8E8F0" }}>{checkin.weight} kg</span></div>}
+                              {checkin.waist    && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(232,232,240,0.3)" }}>Waist</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(232,232,240,0.6)" }}>{checkin.waist}cm</span></div>}
+                              {checkin.chest    && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(232,232,240,0.3)" }}>Chest</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(232,232,240,0.6)" }}>{checkin.chest}cm</span></div>}
+                              {checkin.body_fat && <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.2rem 0" }}><span style={{ color: "rgba(232,232,240,0.3)" }}>BF</span><span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(232,232,240,0.6)" }}>{checkin.body_fat}%</span></div>}
                             </div>
                           )}
                         </div>
@@ -618,22 +618,22 @@ export default function TrackerPhotos() {
                       <StatDiff label="Body fat" from={checkinA?.body_fat} to={checkinB?.body_fat} unit="%" invert />
 
                       {checkinA?.weight && checkinB?.weight && (
-                        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(90,180,212,0.07)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
+                        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.07)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
                           <div>
                             <p className="kt-card-label">Total change</p>
-                            <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", fontWeight: 400, color: checkinB.weight < checkinA.weight ? "#5ad4a0" : "#d4705a" }}>
+                            <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", fontWeight: 400, color: checkinB.weight < checkinA.weight ? "#22C55E" : "#EF4444" }}>
                               {checkinB.weight < checkinA.weight ? "−" : "+"}{Math.abs(+(checkinB.weight - checkinA.weight).toFixed(1))} kg
                             </p>
                           </div>
                           <div>
                             <p className="kt-card-label">Time period</p>
-                            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#dde8ed" }}>
+                            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#E8E8F0" }}>
                               {Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000)} days
                             </p>
                           </div>
                           <div style={{ gridColumn: "1 / -1" }}>
                             <p className="kt-card-label">Avg per week</p>
-                            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#dde8ed" }}>
+                            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#E8E8F0" }}>
                               {(Math.abs(checkinB.weight - checkinA.weight) / (Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000) / 7)).toFixed(2)} kg
                             </p>
                           </div>
@@ -644,7 +644,7 @@ export default function TrackerPhotos() {
                 </>
               ) : (
                 <div className="kt-card" style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
-                  <p style={{ color: "rgba(221,232,237,0.3)", fontSize: "0.88rem" }}>Select two dates above to compare.</p>
+                  <p style={{ color: "rgba(232,232,240,0.3)", fontSize: "0.88rem" }}>Select two dates above to compare.</p>
                 </div>
               )}
             </>
