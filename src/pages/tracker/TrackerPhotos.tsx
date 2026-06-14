@@ -229,7 +229,7 @@ export default function TrackerPhotos() {
                         </p>
                       </div>
                     )}
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#5ab4d4" }}>{lightboxCompareDate}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "#5ab4d4" }}>{lightboxCompareDate}{cPhoto?.weight_at ? ` · ${cPhoto.weight_at} kg` : ""}</span>
                   </div>
                 )}
               </div>
