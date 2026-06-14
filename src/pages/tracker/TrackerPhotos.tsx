@@ -436,14 +436,22 @@ export default function TrackerPhotos() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
                   <div>
                     <label className="kt-label">Before</label>
-                    <select className="kt-input" value={dateA} onChange={e => setDateA(e.target.value)}>
+                    <select className="kt-input" value={dateA} onChange={e => {
+                      const v = e.target.value;
+                      if (dateB && v > dateB) { setDateA(dateB); setDateB(v); }
+                      else setDateA(v);
+                    }}>
                       <option value="">Select</option>
                       {dates.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="kt-label">After</label>
-                    <select className="kt-input" value={dateB} onChange={e => setDateB(e.target.value)}>
+                    <select className="kt-input" value={dateB} onChange={e => {
+                      const v = e.target.value;
+                      if (dateA && v < dateA) { setDateB(dateA); setDateA(v); }
+                      else setDateB(v);
+                    }}>
                       <option value="">Select</option>
                       {dates.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
