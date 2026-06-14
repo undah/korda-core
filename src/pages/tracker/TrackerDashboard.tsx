@@ -153,20 +153,6 @@ export default function TrackerDashboard() {
     [photos]
   );
 
-  const projectedPoints = useMemo(() => {
-    if (!paceKgPerWeek || paceKgPerWeek >= 0 || !latest || !goal?.goal_weight) return [];
-    const out: { date: string; projected: number }[] = [];
-    let w = latest.weight;
-    const goalW = goal.goal_weight;
-    for (let i = 1; i <= 53; i++) {
-      const d = addDays(new Date(latest.log_date), i * 7).toISOString().split("T")[0];
-      w = +(w + paceKgPerWeek).toFixed(2);
-      if (w <= goalW) { out.push({ date: d, projected: goalW }); break; }
-      out.push({ date: d, projected: w });
-    }
-    return out;
-  }, [paceKgPerWeek, latest, goal]);
-
   const records = useMemo(() => {
     if (sorted.length < 2) return null;
     const lowestWeight = Math.min(...sorted.map(c => c.weight));
@@ -205,18 +191,6 @@ export default function TrackerDashboard() {
     return chartData.filter(d => d.date >= cutoff);
   }, [chartData, range]);
 
-  const combinedData = useMemo(() => {
-    const hist = filteredData.map((d, i) => ({
-      ...d,
-      projected: i === filteredData.length - 1 && projectedPoints.length ? (d.weight as number | undefined) : undefined,
-    }));
-    if (!projectedPoints.length) return hist;
-    return [...hist, ...projectedPoints.map(p => ({
-      date: p.date, weight: undefined as number | undefined,
-      avg7: undefined as number | undefined, projected: p.projected,
-    }))];
-  }, [filteredData, projectedPoints]);
-
   const weights = filteredData.map(d => d.weight);
   const yMin = weights.length ? Math.floor(Math.min(...weights) - 1.5) : 0;
   const yMax = weights.length ? Math.ceil(Math.max(...weights) + 1.5) : 100;
@@ -247,6 +221,32 @@ export default function TrackerDashboard() {
         : "behind"
       : null;
   const paceColor = paceStatus === "ahead" ? C.green : paceStatus === "behind" ? C.red : C.accent;
+
+  const projectedPoints = useMemo(() => {
+    if (!paceKgPerWeek || paceKgPerWeek >= 0 || !latest || !goal?.goal_weight) return [];
+    const out: { date: string; projected: number }[] = [];
+    let w = latest.weight;
+    const goalW = goal.goal_weight;
+    for (let i = 1; i <= 53; i++) {
+      const d = addDays(new Date(latest.log_date), i * 7).toISOString().split("T")[0];
+      w = +(w + paceKgPerWeek).toFixed(2);
+      if (w <= goalW) { out.push({ date: d, projected: goalW }); break; }
+      out.push({ date: d, projected: w });
+    }
+    return out;
+  }, [paceKgPerWeek, latest, goal]);
+
+  const combinedData = useMemo(() => {
+    const hist = filteredData.map((d, i) => ({
+      ...d,
+      projected: i === filteredData.length - 1 && projectedPoints.length ? (d.weight as number | undefined) : undefined,
+    }));
+    if (!projectedPoints.length) return hist;
+    return [...hist, ...projectedPoints.map(p => ({
+      date: p.date, weight: undefined as number | undefined,
+      avg7: undefined as number | undefined, projected: p.projected,
+    }))];
+  }, [filteredData, projectedPoints]);
 
   const TooltipContent = useMemo(
     () => makeTooltip(photosByDate, startWeight),
