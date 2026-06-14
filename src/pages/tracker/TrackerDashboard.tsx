@@ -74,17 +74,17 @@ function makeTooltip(
             {pctLoss > 0 ? "−" : "+"}{Math.abs(pctLoss)}% from start
           </p>
         )}
-        {a && <p style={{ color: "rgba(90,180,212,0.55)", marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
+        {a && <p style={{ color: "var(--kt-muted)", marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
         {dayPhotos.length > 0 && (
-          <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid rgba(0,200,255,0.1)" }}>
-            <p style={{ fontSize: "0.52rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(221,232,237,0.22)", marginBottom: "0.45rem" }}>
+          <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid var(--kt-border)" }}>
+            <p style={{ fontSize: "0.52rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.45rem" }}>
               photos · click dot to open
             </p>
             <div style={{ display: "flex", gap: "0.3rem" }}>
               {dayPhotos.map(photo => (
                 <div key={photo.id} style={{ position: "relative", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
                   <img src={photo.url} alt={photo.angle} style={{ width: 54, height: 72, objectFit: "cover", display: "block" }} />
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "0.46rem", textTransform: "capitalize", color: "rgba(221,232,237,0.7)" }}>
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "0.46rem", textTransform: "capitalize", color: "var(--kt-text)" }}>
                     {photo.angle}
                   </div>
                 </div>
@@ -109,7 +109,6 @@ export default function TrackerDashboard() {
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
   const [showRaw, setShowRaw]             = useState(true);
   const [showAvg, setShowAvg]             = useState(true);
-  const [showGoal, setShowGoal]           = useState(true);
   const [showProjected, setShowProjected] = useState(true);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -258,7 +257,7 @@ export default function TrackerDashboard() {
   );
 
   if (isLoading) return (
-    <div style={{ color: "rgba(221,232,237,0.3)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
+    <div style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
       loading data...
     </div>
   );
@@ -271,7 +270,7 @@ export default function TrackerDashboard() {
       </div>
       <div className="kt-card" style={{ textAlign: "center", padding: "4rem 2rem" }}>
         <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.5rem", marginBottom: "1rem" }}>No data yet.</p>
-        <p style={{ color: "rgba(221,232,237,0.4)", fontSize: "0.9rem", marginBottom: "2rem" }}>Log your first check-in to start tracking your progress.</p>
+        <p style={{ color: "var(--kt-muted)", fontSize: "0.9rem", marginBottom: "2rem" }}>Log your first check-in to start tracking your progress.</p>
         <Link to="/tracker/progress" className="kt-btn kt-btn-blue" style={{ textDecoration: "none", display: "inline-block" }}>
           Log first check-in →
         </Link>
@@ -288,20 +287,20 @@ export default function TrackerDashboard() {
           style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(7,9,11,0.96)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "1.5rem" }}
         >
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto" }}>
-            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(90,180,212,0.5)", marginBottom: "1rem", textAlign: "center" }}>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--kt-accent)", opacity: 0.6, marginBottom: "1rem", textAlign: "center" }}>
               {lightboxPhotos[0]?.log_date}{lightboxPhotos[0]?.weight_at ? ` · ${lightboxPhotos[0].weight_at} kg` : ""}
             </p>
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
               {lightboxPhotos.map(photo => (
                 <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
                   <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", textTransform: "capitalize", color: "rgba(221,232,237,0.35)", textAlign: "center", marginTop: "0.4rem" }}>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
                     {photo.angle}
                   </p>
                 </div>
               ))}
             </div>
-            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid rgba(221,232,237,0.15)", color: "rgba(221,232,237,0.35)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
+            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid var(--kt-border)", color: "var(--kt-dim)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
               close ×
             </button>
           </div>
@@ -343,9 +342,9 @@ export default function TrackerDashboard() {
                   {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? "  ·  cyan dots = photos" : ""}
                 </p>
               </div>
-              <div style={{ display: "flex", background: "#080810", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
                 {RANGES.map(r => (
-                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "#00C8FF" : "transparent", color: range === r ? "#080810" : "rgba(221,232,237,0.3)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
+                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "#00C8FF" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
                 ))}
               </div>
             </div>
@@ -361,10 +360,10 @@ export default function TrackerDashboard() {
                         <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(combinedData.length / 7) - 1)} />
-                    <YAxis domain={[yMin, yMax]} tickFormatter={v => `${v}`} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} tickCount={5} width={32} />
+                    <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#9090A0" }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(combinedData.length / 7) - 1)} />
+                    <YAxis domain={[yMin, yMax]} tickFormatter={v => `${v}`} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#9090A0" }} axisLine={false} tickLine={false} tickCount={5} width={32} />
                     <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
-                    {showGoal && goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopLeft", fill: "rgba(90,212,160,0.55)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
+                    {goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopLeft", fill: "rgba(90,212,160,0.55)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
                     {showAvg && <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />}
                     {showRaw && <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.3)" strokeWidth={1} strokeDasharray="3 4"
                       dot={(props: any) => {
@@ -412,7 +411,6 @@ export default function TrackerDashboard() {
               {[
                 { key: "raw",       label: "Raw",       active: showRaw,       set: setShowRaw,       icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,180,212,0.7)" strokeWidth="1.5" strokeDasharray="3 3" /></svg> },
                 { key: "avg",       label: "7d avg",    active: showAvg,       set: setShowAvg,       icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg> },
-                ...(goal?.goal_weight ? [{ key: "goal", label: "Goal", active: showGoal, set: setShowGoal, icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.5)" strokeWidth="1.5" strokeDasharray="5 3" /></svg> }] : []),
                 ...(projectedPoints.length > 0 ? [{ key: "proj", label: "Projected", active: showProjected, set: setShowProjected, icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.7)" strokeWidth="1.5" strokeDasharray="4 3" /></svg> }] : []),
                 ...(filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? [{ key: "photos", label: "Photos", active: true, set: () => {}, icon: <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg> }] : []),
               ].map(item => (
@@ -433,8 +431,8 @@ export default function TrackerDashboard() {
                 const prev = arr[i + 1];
                 const delta = prev ? +(c.weight - prev.weight).toFixed(1) : null;
                 return (
-                  <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0", borderBottom: "1px solid rgba(90,180,212,0.06)" }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "rgba(221,232,237,0.3)", fontSize: "0.68rem" }}>{format(parseISO(c.log_date), "EEE, MMM d")}</span>
+                  <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0", borderBottom: "1px solid var(--kt-border2)" }}>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "var(--kt-dim)", fontSize: "0.68rem" }}>{format(parseISO(c.log_date), "EEE, MMM d")}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
                       {delta !== null && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: delta <= 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta}</span>}
                       <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: C.accent, fontWeight: 500, fontSize: "0.82rem" }}>{c.weight} kg</span>
@@ -443,7 +441,7 @@ export default function TrackerDashboard() {
                 );
               })}
             </div>
-            <Link to="/tracker/progress" style={{ display: "block", marginTop: "1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.1em" }}>View all →</Link>
+            <Link to="/tracker/progress" style={{ display: "block", marginTop: "1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none", letterSpacing: "0.1em" }}>View all →</Link>
           </div>
         </div>
 
@@ -461,15 +459,15 @@ export default function TrackerDashboard() {
             </div>
             {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: C.red }}>{aiError}</p>}
             {aiSummary ? (
-              <p style={{ fontSize: "0.76rem", color: "rgba(232,240,244,0.55)", lineHeight: 1.75 }}>{aiSummary}</p>
+              <p style={{ fontSize: "0.76rem", color: "var(--kt-muted)", lineHeight: 1.75 }}>{aiSummary}</p>
             ) : !aiLoading && (
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "rgba(232,240,244,0.18)", lineHeight: 1.65 }}>
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "var(--kt-dim)", lineHeight: 1.65 }}>
                 AI coach recap of your last 7 days — trend, patterns, one action.
               </p>
             )}
           </div>
 
-          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+          <div style={{ height: 1, background: "var(--kt-border)", margin: "0 1.25rem" }} />
 
           {/* Weekly pace */}
           <div style={{ padding: "1.25rem" }}>
@@ -501,13 +499,13 @@ export default function TrackerDashboard() {
             )}
           </div>
 
-          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+          <div style={{ height: 1, background: "var(--kt-border)", margin: "0 1.25rem" }} />
 
           {/* Latest photo */}
           <div style={{ padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <p className="kt-card-label" style={{ marginBottom: 0 }}>Latest photo</p>
-              {latestFrontPhoto && <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.56rem", color: "rgba(90,180,212,0.4)", textDecoration: "none", letterSpacing: "0.06em" }}>all photos →</Link>}
+              {latestFrontPhoto && <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.56rem", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none", letterSpacing: "0.06em" }}>all photos →</Link>}
             </div>
             {latestFrontPhoto ? (
               <>
@@ -520,11 +518,11 @@ export default function TrackerDashboard() {
                 </p>
               </>
             ) : (
-              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(90,180,212,0.5)", textDecoration: "none" }}>Add first photo →</Link>
+              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none" }}>Add first photo →</Link>
             )}
           </div>
 
-          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+          <div style={{ height: 1, background: "var(--kt-border)", margin: "0 1.25rem" }} />
 
           {/* Personal records */}
           {records && (
@@ -532,27 +530,27 @@ export default function TrackerDashboard() {
               <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Records</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>LOWEST</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>LOWEST</p>
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: C.accent }}>{records.lowestWeight} kg</p>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.2)" }}>{format(parseISO(records.lowestDate), "d MMM")}</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)" }}>{format(parseISO(records.lowestDate), "d MMM")}</p>
                 </div>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST WEEK</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST WEEK</p>
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: records.bestWeek7 > 0 ? C.green : C.dim }}>{records.bestWeek7 > 0 ? `−${records.bestWeek7} kg` : "—"}</p>
                 </div>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST DROP</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST DROP</p>
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: records.biggestDrop > 0 ? C.green : C.dim }}>{records.biggestDrop > 0 ? `−${records.biggestDrop} kg` : "—"}</p>
                 </div>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>TOTAL LOGS</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>TOTAL LOGS</p>
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: C.text }}>{sorted.length}</p>
                 </div>
               </div>
             </div>
           )}
 
-          <div style={{ height: 1, background: "rgba(0,200,255,0.06)", margin: "0 1.25rem" }} />
+          <div style={{ height: 1, background: "var(--kt-border)", margin: "0 1.25rem" }} />
 
           {/* Quick nav */}
           <div style={{ padding: "0.5rem 0" }}>
@@ -562,11 +560,11 @@ export default function TrackerDashboard() {
               { to: "/tracker/photos",   label: "Progress photos" },
               { to: "/tracker/analysis", label: "Deep analysis" },
             ].map((item, i, arr) => (
-              <Link key={item.to} to={item.to} style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 1.25rem", borderBottom: i < arr.length - 1 ? "1px solid rgba(0,200,255,0.04)" : "none", transition: "background 0.12s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(0,200,255,0.04)"}
+              <Link key={item.to} to={item.to} style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 1.25rem", borderBottom: i < arr.length - 1 ? "1px solid var(--kt-border)" : "none", transition: "background 0.12s" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--kt-hover)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                <span style={{ fontSize: "0.8rem", color: "rgba(232,240,244,0.55)", fontWeight: 400 }}>{item.label}</span>
-                <span style={{ color: "rgba(90,180,212,0.3)", fontSize: "0.75rem" }}>→</span>
+                <span style={{ fontSize: "0.8rem", color: "var(--kt-muted)", fontWeight: 400 }}>{item.label}</span>
+                <span style={{ color: "var(--kt-accent)", opacity: 0.5, fontSize: "0.75rem" }}>→</span>
               </Link>
             ))}
           </div>
