@@ -107,6 +107,10 @@ export default function TrackerDashboard() {
   const { data: journalEntries = [] } = useTrackerJournal(7);
   const [range, setRange] = useState<Range>("3M");
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
+  const [showRaw, setShowRaw]             = useState(true);
+  const [showAvg, setShowAvg]             = useState(true);
+  const [showGoal, setShowGoal]           = useState(true);
+  const [showProjected, setShowProjected] = useState(true);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -357,12 +361,12 @@ export default function TrackerDashboard() {
                         <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(combinedData.length / 7) - 1)} />
                     <YAxis domain={[yMin, yMax]} tickFormatter={v => `${v}`} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "rgba(221,232,237,0.22)" }} axisLine={false} tickLine={false} tickCount={5} width={32} />
                     <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
-                    {goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopLeft", fill: "rgba(90,212,160,0.55)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
-                    <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />
-                    <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.3)" strokeWidth={1} strokeDasharray="3 4"
+                    {showGoal && goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopLeft", fill: "rgba(90,212,160,0.55)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
+                    {showAvg && <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />}
+                    {showRaw && <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.3)" strokeWidth={1} strokeDasharray="3 4"
                       dot={(props: any) => {
                         const { cx, cy, payload } = props;
                         if (cx == null || cy == null) return <g key={`dot-${payload.date}`} />;
@@ -375,9 +379,9 @@ export default function TrackerDashboard() {
                         ) : <circle key={`dot-${payload.date}`} cx={cx} cy={cy} r={2.5} fill="rgba(90,180,212,0.55)" strokeWidth={0} />;
                       }}
                       activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
-                    />
-                    <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
-                    {projectedPoints.length > 0 && (
+                    />}
+                    {showAvg && <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />}
+                    {showProjected && projectedPoints.length > 0 && (
                       <Line type="monotone" dataKey="projected" stroke="rgba(90,212,160,0.7)" strokeWidth={1.5} strokeDasharray="5 4" activeDot={false} connectNulls={false}
                         dot={(props: any) => {
                           const { cx, cy, payload, index } = props;
@@ -404,12 +408,20 @@ export default function TrackerDashboard() {
                 </ResponsiveContainer>
               </div>
             )}
-            <div style={{ display: "flex", gap: "1.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(0,200,255,0.05)", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,180,212,0.4)" strokeWidth="1.5" strokeDasharray="3 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Raw</span></div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>7d avg</span></div>
-              {goal?.goal_weight && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.4)" strokeWidth="1.5" strokeDasharray="5 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Goal</span></div>}
-              {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Photos</span></div>}
-              {projectedPoints.length > 0 && <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.7)" strokeWidth="1.5" strokeDasharray="4 3" /></svg><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "rgba(221,232,237,0.3)", letterSpacing: "0.05em" }}>Projected</span></div>}
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid var(--kt-border)", flexWrap: "wrap" }}>
+              {[
+                { key: "raw",       label: "Raw",       active: showRaw,       set: setShowRaw,       icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,180,212,0.7)" strokeWidth="1.5" strokeDasharray="3 3" /></svg> },
+                { key: "avg",       label: "7d avg",    active: showAvg,       set: setShowAvg,       icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg> },
+                ...(goal?.goal_weight ? [{ key: "goal", label: "Goal", active: showGoal, set: setShowGoal, icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.5)" strokeWidth="1.5" strokeDasharray="5 3" /></svg> }] : []),
+                ...(projectedPoints.length > 0 ? [{ key: "proj", label: "Projected", active: showProjected, set: setShowProjected, icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.7)" strokeWidth="1.5" strokeDasharray="4 3" /></svg> }] : []),
+                ...(filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? [{ key: "photos", label: "Photos", active: true, set: () => {}, icon: <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg> }] : []),
+              ].map(item => (
+                <button key={item.key} onClick={() => item.set((v: boolean) => !v)}
+                  style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "none", border: "1px solid", borderColor: item.active ? "var(--kt-border)" : "transparent", borderRadius: 6, padding: "0.2rem 0.55rem", cursor: "pointer", opacity: item.active ? 1 : 0.35, transition: "all 0.15s" }}>
+                  {item.icon}
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-muted)", textDecoration: item.active ? "none" : "line-through" }}>{item.label}</span>
+                </button>
+              ))}
             </div>
           </div>
 
