@@ -319,7 +319,7 @@ export default function TrackerDashboard() {
       </div>
 
       {/* 2-column dashboard: main content left, panel right */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "1rem", alignItems: "start" }}>
+      <div className="kt-dashboard-grid">
 
         {/* ── LEFT: stats + chart + recent check-ins ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>

@@ -217,7 +217,7 @@ export default function TrackerProgress() {
       )}
 
       {/* 2-column: form + history */}
-      <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: "1.25rem", alignItems: "start" }}>
+      <div className="kt-progress-grid">
 
         {/* ── FORM ── */}
         <div className="kt-card" style={{ borderColor: editingId ? "rgba(0,200,255,0.2)" : C.border }}>

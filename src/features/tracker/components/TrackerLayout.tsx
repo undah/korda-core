@@ -14,19 +14,11 @@ const NAV_ITEMS = [
 
 export default function TrackerLayout() {
   const { pathname } = useLocation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     try { return (localStorage.getItem("kt-theme") as "dark" | "light") ?? "dark"; }
     catch { return "dark"; }
   });
   useNotificationCheck();
-
-  useEffect(() => { setDrawerOpen(false); }, [pathname]);
-
-  useEffect(() => {
-    document.body.style.overflow = drawerOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [drawerOpen]);
 
   useEffect(() => {
     document.body.style.background = theme === "dark" ? "#0C0C14" : "#F4F4F8";
@@ -94,7 +86,7 @@ export default function TrackerLayout() {
       }
 
       /* ── SIDEBAR ── */
-      .kt-sidebar { width: 220px; min-height: 100vh; background: var(--kt-sidebar-bg); border-right: 1px solid var(--kt-sidebar-b); display: flex; flex-direction: column; padding: 1.5rem 0; position: fixed; top: 0; left: 0; z-index: 50; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
+      .kt-sidebar { width: 220px; min-height: 100vh; background: var(--kt-sidebar-bg); border-right: 1px solid var(--kt-sidebar-b); display: flex; flex-direction: column; padding: 1.5rem 0; position: fixed; top: 0; left: 0; z-index: 50; }
       .kt-sidebar-logo { padding: 0 1rem 1.25rem; border-bottom: 1px solid var(--kt-sidebar-b); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; }
       .kt-sidebar-logo a { font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--kt-text); text-decoration: none; letter-spacing: -0.02em; }
       .kt-sidebar-logo span { font-size: 0.45rem; vertical-align: super; color: var(--kt-dim); }
@@ -109,17 +101,16 @@ export default function TrackerLayout() {
       .kt-main { margin-left: 220px; flex: 1; padding: 2rem 2.5rem; max-width: 1100px; overflow-x: hidden; }
 
       /* ── MOBILE TOPBAR ── */
-      .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 52px; background: var(--kt-sidebar-bg); border-bottom: 1px solid var(--kt-sidebar-b); align-items: center; justify-content: space-between; padding: 0 1.25rem; }
+      .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 52px; background: var(--kt-sidebar-bg); border-bottom: 1px solid var(--kt-sidebar-b); align-items: center; justify-content: space-between; padding: 0 1.1rem; }
       .kt-topbar-logo { font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--kt-text); text-decoration: none; letter-spacing: -0.02em; }
-      .kt-hamburger { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
-      .kt-hamburger span { display: block; width: 20px; height: 1.5px; background: var(--kt-muted); transition: all 0.2s; }
-      .kt-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
-      .kt-hamburger.open span:nth-child(2) { opacity: 0; }
-      .kt-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+      .kt-topbar-btn { background: none; border: none; cursor: pointer; color: var(--kt-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent; }
+      .kt-topbar-btn:hover { color: var(--kt-text); background: var(--kt-hover); }
 
-      /* ── DRAWER ── */
-      .kt-drawer-overlay { display: none; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
-      .kt-drawer-overlay.open { opacity: 1; pointer-events: all; }
+      /* ── BOTTOM NAV ── */
+      .kt-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; background: var(--kt-sidebar-bg); border-top: 1px solid var(--kt-sidebar-b); align-items: stretch; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom, 0px); }
+      .kt-bnav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 56px; text-decoration: none; color: var(--kt-dim); font-size: 0.5rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.12s; -webkit-tap-highlight-color: transparent; padding: 6px 2px 4px; }
+      .kt-bnav-item.active { color: var(--kt-accent); }
+      .kt-bnav-item svg { flex-shrink: 0; }
 
       /* ── PAGE ── */
       .kt-page-header { margin-bottom: 1.75rem; }
@@ -149,6 +140,8 @@ export default function TrackerLayout() {
       .kt-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
       .kt-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
       .kt-grid-4 > *, .kt-grid-3 > *, .kt-grid-2 > * { min-width: 0; }
+      .kt-dashboard-grid { display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
+      .kt-progress-grid { display: grid; grid-template-columns: 420px 1fr; gap: 1.25rem; align-items: start; }
       .kt-divider { border: none; border-top: 1px solid var(--kt-border); margin: 1.5rem 0; }
       .kt-badge { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; font-weight: 500; padding: 0.2rem 0.6rem; border: 1px solid; display: inline-block; border-radius: 20px; }
       .kt-badge-blue { color: var(--kt-accent); border-color: var(--kt-border); background: var(--kt-accent-bg); }
@@ -166,7 +159,6 @@ export default function TrackerLayout() {
 
       /* ── CHART ── */
       .kt-chart-wrap { height: 240px; }
-      @media (max-width: 768px) { .kt-chart-wrap { height: 190px; } }
 
       /* ── RESPONSIVE ── */
       .kt-mobile-only { display: none; }
@@ -175,16 +167,23 @@ export default function TrackerLayout() {
         .kt-mobile-only { display: block; }
         .kt-desktop-only { display: none; }
         .kt-topbar { display: flex; }
-        .kt-drawer-overlay { display: block; }
-        .kt-sidebar { transform: translateX(-100%); width: 260px; z-index: 65; }
-        .kt-sidebar.open { transform: translateX(0); }
-        .kt-main { margin-left: 0; padding: 1rem; padding-top: calc(52px + 1rem); }
+        .kt-sidebar { display: none; }
+        .kt-bottom-nav { display: flex; }
+        .kt-main {
+          margin-left: 0;
+          padding: 0.85rem;
+          padding-top: calc(52px + 0.85rem);
+          padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 0.5rem);
+        }
         .kt-card { padding: 1rem; }
         .kt-grid-4 { grid-template-columns: repeat(2,1fr); gap: 10px; }
         .kt-grid-3 { grid-template-columns: repeat(2,1fr); gap: 10px; }
         .kt-grid-2 { grid-template-columns: 1fr; gap: 10px; }
+        .kt-dashboard-grid { grid-template-columns: 1fr; }
+        .kt-progress-grid { grid-template-columns: 1fr; }
         .kt-page-title { font-size: 1.45rem; }
         .kt-page-header { margin-bottom: 1.25rem; }
+        .kt-chart-wrap { height: 190px; }
       }
     `;
     document.head.appendChild(style);
@@ -197,19 +196,20 @@ export default function TrackerLayout() {
 
   return (
     <div className={`kt-app${theme === "light" ? " light" : ""}`}>
-      {/* Mobile topbar */}
+      {/* Mobile topbar: logo + theme toggle */}
       <div className="kt-topbar">
         <Link to="/tracker" className="kt-topbar-logo">KordaTracker™</Link>
-        <button className={`kt-hamburger${drawerOpen ? " open" : ""}`} onClick={() => setDrawerOpen(v => !v)} aria-label="Toggle menu">
-          <span /><span /><span />
+        <button
+          className="kt-topbar-btn"
+          onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </button>
       </div>
 
-      {/* Drawer overlay */}
-      <div className={`kt-drawer-overlay${drawerOpen ? " open" : ""}`} onClick={() => setDrawerOpen(false)} />
-
-      {/* Sidebar */}
-      <aside className={`kt-sidebar${drawerOpen ? " open" : ""}`}>
+      {/* Desktop sidebar */}
+      <aside className="kt-sidebar">
         <div className="kt-sidebar-logo">
           <img src="/korda-icon.svg" width="20" height="20" style={{ flexShrink: 0 }} />
           <a href="/tracker">KordaTracker<span>™</span></a>
@@ -225,7 +225,6 @@ export default function TrackerLayout() {
         </nav>
 
         <div className="kt-sidebar-bottom">
-          {/* Theme toggle */}
           <button
             onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
             style={{ display: "flex", alignItems: "center", gap: "0.55rem", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "0.55rem 0.25rem", color: "var(--kt-dim)", fontSize: "0.78rem", fontFamily: "'DM Sans',sans-serif", transition: "color 0.15s", marginBottom: "0.85rem", borderRadius: 8 }}
@@ -243,6 +242,20 @@ export default function TrackerLayout() {
       <main className="kt-main">
         <Outlet />
       </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="kt-bottom-nav">
+        {NAV_ITEMS.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`kt-bnav-item${pathname === item.path ? " active" : ""}`}
+          >
+            <item.icon size={17} strokeWidth={pathname === item.path ? 2 : 1.5} />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
