@@ -121,6 +121,19 @@ export default function TrackerStrava() {
   const [aiSummary, setAiSummary] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile && selectedId) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile, selectedId]);
 
   const { data: tokenRow, isLoading: tokenLoading } = useStravaToken();
   const { data: activities = [], isLoading: activitiesLoading } = useStravaActivities();
@@ -442,117 +455,85 @@ export default function TrackerStrava() {
           })}
         </div>
 
-        {/* Right: map + chart */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-
-          {/* Map */}
-          <div className={`kt-card sv-map`}>
-            {routePositions.length > 0 ? (
-              <MapContainer
-                center={routePositions[0]}
-                zoom={13}
-                style={{ height: "100%", width: "100%" }}
-                zoomControl
-                attributionControl={false}
-              >
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-                <Polyline positions={routePositions as any} pathOptions={{ color: "#FC4C02", weight: 3, opacity: 0.9 }} />
-                <FitBounds positions={routePositions} />
-              </MapContainer>
-            ) : (
-              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", background: "#080810" }}>
-                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(252,76,2,0.06)", border: "1px solid rgba(252,76,2,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Activity size={22} color="rgba(252,76,2,0.4)" />
+        {/* Right column — desktop only */}
+        {!isMobile && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+            <div className="kt-card sv-map">
+              {routePositions.length > 0 ? (
+                <MapContainer center={routePositions[0]} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl attributionControl={false}>
+                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  <Polyline positions={routePositions as any} pathOptions={{ color: "#FC4C02", weight: 3, opacity: 0.9 }} />
+                  <FitBounds positions={routePositions} />
+                </MapContainer>
+              ) : (
+                <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", background: "#080810" }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(252,76,2,0.06)", border: "1px solid rgba(252,76,2,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Activity size={22} color="rgba(252,76,2,0.4)" />
+                  </div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.63rem", color: "rgba(232,240,244,0.28)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    {selectedActivity ? "No route data available" : "Select a run to view route"}
+                  </div>
                 </div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.63rem", color: "rgba(232,240,244,0.28)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                  {selectedActivity ? "No route data available" : "Select a run to view route"}
+              )}
+            </div>
+            {selectedActivity && (
+              <div className="kt-card" style={{ padding: "0.85rem 1.25rem" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.88rem", fontWeight: 500, color: "#e8f0f4" }}>{selectedActivity.name}</div>
+                  <div style={{ display: "flex", gap: "1.75rem", flexWrap: "wrap" }}>
+                    <Stat label="Distance" value={formatDist(selectedActivity.distance)} color="#FC4C02" />
+                    <Stat label="Pace" value={formatPace(selectedActivity.average_speed)} />
+                    <Stat label="Time" value={formatDuration(selectedActivity.moving_time)} />
+                    {selectedActivity.total_elevation_gain > 0 && <Stat label="Elevation" value={`${Math.round(selectedActivity.total_elevation_gain)}m`} />}
+                    {selectedActivity.average_heartrate != null && <Stat label="Avg HR" value={`${Math.round(selectedActivity.average_heartrate)} bpm`} />}
+                  </div>
                 </div>
               </div>
             )}
           </div>
+        )}
+      </div>
 
-          {/* Selected run stats strip */}
-          {selectedActivity && (
-            <div className="kt-card" style={{ padding: "0.85rem 1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.88rem", fontWeight: 500, color: "#e8f0f4" }}>{selectedActivity.name}</div>
-                <div style={{ display: "flex", gap: "1.75rem", flexWrap: "wrap" }}>
-                  <Stat label="Distance" value={formatDist(selectedActivity.distance)} color="#FC4C02" />
-                  <Stat label="Pace" value={formatPace(selectedActivity.average_speed)} />
-                  <Stat label="Time" value={formatDuration(selectedActivity.moving_time)} />
-                  {selectedActivity.total_elevation_gain > 0 && (
-                    <Stat label="Elevation" value={`${Math.round(selectedActivity.total_elevation_gain)}m`} />
-                  )}
-                  {selectedActivity.average_heartrate != null && (
-                    <Stat label="Avg HR" value={`${Math.round(selectedActivity.average_heartrate)} bpm`} />
-                  )}
-                </div>
-              </div>
+      {/* Weekly chart — full width */}
+      <div className="kt-card" style={{ marginTop: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+          <div className="kt-card-label">Weekly km, weight & pace</div>
+          <div style={{ display: "flex", gap: "1.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(252,76,2,0.7)" }}>
+              <div style={{ width: 10, height: 10, background: "rgba(252,76,2,0.5)", borderRadius: 2 }} /> km
             </div>
-          )}
-
-          {/* Progress chart */}
-          <div className="kt-card">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-              <div className="kt-card-label">Weekly km, weight & pace</div>
-              <div style={{ display: "flex", gap: "1.25rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(252,76,2,0.7)" }}>
-                  <div style={{ width: 10, height: 10, background: "rgba(252,76,2,0.5)", borderRadius: 2 }} /> km
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#5ad4a0" }}>
-                  <div style={{ width: 20, height: 2, background: "#5ad4a0", borderRadius: 1 }} /> weight
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#a78bfa" }}>
-                  <div style={{ width: 20, height: 2, background: "#a78bfa", borderRadius: 1, borderTop: "2px dashed #a78bfa" }} /> pace
-                </div>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#5ad4a0" }}>
+              <div style={{ width: 20, height: 2, background: "#5ad4a0", borderRadius: 1 }} /> weight
             </div>
-            {chartData.length === 0 ? (
-              <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.65rem", color: "rgba(232,240,244,0.28)" }}>
-                No data yet
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={210}>
-                <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,200,255,0.05)" vertical={false} />
-                  <XAxis
-                    dataKey="week"
-                    tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(232,240,244,0.3)" }}
-                    axisLine={false} tickLine={false}
-                  />
-                  <YAxis
-                    yAxisId="km"
-                    tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(232,240,244,0.3)" }}
-                    axisLine={false} tickLine={false}
-                  />
-                  <YAxis
-                    yAxisId="weight"
-                    orientation="right"
-                    tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(90,212,160,0.55)" }}
-                    axisLine={false} tickLine={false}
-                    domain={["auto", "auto"]}
-                  />
-                  <YAxis yAxisId="pace" hide domain={["dataMax + 0.5", "dataMin - 0.5"]} reversed />
-                  <Tooltip
-                    contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
-                    labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 4 }}
-                    formatter={(val: any, name: string) => {
-                      if (name === "pace") {
-                        const mins = Math.floor(val);
-                        const secs = Math.round((val - mins) * 60);
-                        return [`${mins}:${secs.toString().padStart(2, "0")} /km`, "avg pace"];
-                      }
-                      return [val, name === "km" ? "km" : "kg"];
-                    }}
-                  />
-                  <Bar yAxisId="km" dataKey="km" fill="rgba(252,76,2,0.45)" name="km" radius={[2, 2, 0, 0]} />
-                  <Line yAxisId="weight" type="monotone" dataKey="weight" stroke="#5ad4a0" strokeWidth={2} dot={false} connectNulls name="weight" />
-                  <Line yAxisId="pace" type="monotone" dataKey="pace" stroke="#a78bfa" strokeWidth={1.5} dot={false} connectNulls name="pace" strokeDasharray="4 2" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#a78bfa" }}>
+              <div style={{ width: 20, height: 2, background: "#a78bfa", borderRadius: 1 }} /> pace
+            </div>
           </div>
         </div>
+        {chartData.length === 0 ? (
+          <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.65rem", color: "rgba(232,240,244,0.28)" }}>No data yet</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={180}>
+            <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,200,255,0.05)" vertical={false} />
+              <XAxis dataKey="week" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="km" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="weight" orientation="right" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(90,212,160,0.55)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+              <YAxis yAxisId="pace" hide domain={["dataMax + 0.5", "dataMin - 0.5"]} reversed />
+              <Tooltip
+                contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
+                labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 4 }}
+                formatter={(val: any, name: string) => {
+                  if (name === "pace") { const m = Math.floor(val); return [`${m}:${Math.round((val-m)*60).toString().padStart(2,"0")} /km`, "avg pace"]; }
+                  return [val, name === "km" ? "km" : "kg"];
+                }}
+              />
+              <Bar yAxisId="km" dataKey="km" fill="rgba(252,76,2,0.45)" name="km" radius={[2,2,0,0]} />
+              <Line yAxisId="weight" type="monotone" dataKey="weight" stroke="#5ad4a0" strokeWidth={2} dot={false} connectNulls name="weight" />
+              <Line yAxisId="pace" type="monotone" dataKey="pace" stroke="#a78bfa" strokeWidth={1.5} dot={false} connectNulls name="pace" strokeDasharray="4 2" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Efficiency metrics */}
@@ -672,6 +653,91 @@ export default function TrackerStrava() {
           )
         }
       </div>
+      {/* Mobile bottom sheet */}
+      {isMobile && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setSelectedId(null)}
+            style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 40,
+              opacity: selectedId ? 1 : 0,
+              pointerEvents: selectedId ? "auto" : "none",
+              transition: "opacity 0.25s ease",
+            }}
+          />
+          {/* Sheet */}
+          <div
+            style={{
+              position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50,
+              background: "#0D0D16",
+              borderTop: "1px solid rgba(0,200,255,0.12)",
+              borderRadius: "16px 16px 0 0",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              transform: selectedId ? "translateY(0)" : "translateY(100%)",
+              transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)",
+              willChange: "transform",
+            }}
+          >
+            {/* Handle */}
+            <div style={{ display: "flex", justifyContent: "center", padding: "0.75rem 0 0.25rem" }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(232,240,244,0.15)" }} />
+            </div>
+
+            {selectedActivity && (
+              <div style={{ padding: "0.75rem 1.25rem 2rem" }}>
+                {/* Header */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
+                  <div>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "1rem", fontWeight: 600, color: "#e8f0f4", marginBottom: 2 }}>
+                      {selectedActivity.name}
+                    </div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.35)" }}>
+                      {(() => { try { const d = parseISO(selectedActivity.start_date_local); return isValid(d) ? format(d, "EEEE, d MMM yyyy") : ""; } catch { return ""; } })()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    style={{ background: "rgba(232,240,244,0.06)", border: "none", borderRadius: 8, padding: "0.35rem 0.75rem", color: "rgba(232,240,244,0.5)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", cursor: "pointer" }}
+                  >
+                    close
+                  </button>
+                </div>
+
+                {/* Stats grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                  {[
+                    { label: "Distance", value: formatDist(selectedActivity.distance), accent: "#FC4C02" },
+                    { label: "Pace",     value: formatPace(selectedActivity.average_speed) },
+                    { label: "Time",     value: formatDuration(selectedActivity.moving_time) },
+                    ...(selectedActivity.total_elevation_gain > 0 ? [{ label: "Elevation", value: `${Math.round(selectedActivity.total_elevation_gain)}m` }] : []),
+                    ...(selectedActivity.average_heartrate != null ? [{ label: "Avg HR", value: `${Math.round(selectedActivity.average_heartrate)} bpm` }] : []),
+                    ...(selectedActivity.max_heartrate != null ? [{ label: "Max HR", value: `${Math.round(selectedActivity.max_heartrate)} bpm` }] : []),
+                  ].map(s => (
+                    <div key={s.label} style={{ background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: 8, padding: "0.65rem 0.75rem" }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.92rem", fontWeight: 700, color: s.accent ?? "#e8f0f4" }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Map */}
+                {routePositions.length > 0 && (
+                  <div style={{ height: 260, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,200,255,0.08)" }}>
+                    <MapContainer center={routePositions[0]} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl={false} attributionControl={false}>
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                      <Polyline positions={routePositions as any} pathOptions={{ color: "#FC4C02", weight: 3, opacity: 0.9 }} />
+                      <FitBounds positions={routePositions} />
+                    </MapContainer>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .sv-main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 2px; align-items: start; }
@@ -682,10 +748,9 @@ export default function TrackerStrava() {
         .sv-map       { padding: 0; overflow: hidden; height: 400px; }
         @media (max-width: 768px) {
           .sv-main-grid { grid-template-columns: 1fr; }
-          .sv-list      { max-height: 55vh; }
+          .sv-list      { max-height: none; }
           .sv-pr-grid   { grid-template-columns: repeat(2,1fr); }
           .sv-eff-grid  { grid-template-columns: 1fr !important; }
-          .sv-map       { height: 240px; }
         }
       `}</style>
     </div>
