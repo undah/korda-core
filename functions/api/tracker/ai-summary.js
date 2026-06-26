@@ -13,57 +13,38 @@ export async function onRequestPost(context) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { checkins = [], journal = [], goal = null, runs = [], range = "30d" } = body;
+  const { runs = [], range = "30 days" } = body;
 
-  const goalLine = goal?.goal_weight
-    ? `Goal: reach ${goal.goal_weight} kg (weekly target: ${goal.weekly_target ?? "not set"} kg/week).`
-    : "No specific goal set.";
+  if (!runs.length) {
+    return Response.json({ summary: "No runs found in this period." });
+  }
 
-  const checkinLines = checkins.length
-    ? checkins.map(c =>
-        `${c.log_date}: ${c.weight} kg${c.waist ? `, waist ${c.waist}cm` : ""}${c.notes ? ` — "${c.notes}"` : ""}`
-      ).join("\n")
-    : "No weight check-ins in this period.";
+  const totalKm   = runs.reduce((s, r) => s + r.distance, 0) / 1000;
+  const totalSecs = runs.reduce((s, r) => s + r.moving_time, 0);
+  const avgPaceMps = runs.reduce((s, r) => s + r.average_speed, 0) / runs.length;
+  const paceMin = Math.floor(1000 / avgPaceMps / 60);
+  const paceSec = Math.round((1000 / avgPaceMps / 60 % 1) * 60);
 
-  const journalLines = journal.length
-    ? journal.map(j => [
-        `${j.log_date}:`,
-        j.mood      ? `  mood: ${j.mood}`           : "",
-        j.energy    ? `  energy: ${j.energy}`        : "",
-        j.sleep_hrs ? `  sleep: ${j.sleep_hrs}h`    : "",
-        j.wins      ? `  wins: ${j.wins}`            : "",
-        j.struggles ? `  struggles: ${j.struggles}`  : "",
-      ].filter(Boolean).join("\n")).join("\n\n")
-    : "No journal entries in this period.";
+  const runLines = runs.map(r => {
+    const pace = r.average_speed > 0
+      ? `${Math.floor(1000 / r.average_speed / 60)}:${String(Math.round((1000 / r.average_speed / 60 % 1) * 60)).padStart(2, "0")} /km`
+      : "–";
+    const date = r.start_date_local?.slice(0, 10) ?? "?";
+    return `${date}: ${(r.distance / 1000).toFixed(2)} km @ ${pace}${r.average_heartrate ? `, HR ${Math.round(r.average_heartrate)} bpm` : ""}${r.total_elevation_gain ? `, elev ${Math.round(r.total_elevation_gain)}m` : ""}`;
+  }).join("\n");
 
-  const runLines = runs.length
-    ? runs.map(r => {
-        const pace = r.average_speed > 0
-          ? `${Math.floor(1000 / r.average_speed / 60)}:${String(Math.round((1000 / r.average_speed / 60 % 1) * 60)).padStart(2, "0")} /km`
-          : "–";
-        return `${r.start_date_local?.slice(0, 10)}: ${(r.distance / 1000).toFixed(2)} km @ ${pace}${r.average_heartrate ? `, HR ${Math.round(r.average_heartrate)} bpm` : ""}`;
-      }).join("\n")
-    : "No Strava runs linked.";
+  const prompt = `You are a running coach. Analyse the following ${range} of Strava data and write a concise coaching summary (4–6 sentences) covering:
+1. Volume and consistency — how many runs, total km, frequency
+2. Pace trend — is the athlete getting faster or slower, and by how much?
+3. One specific strength visible in the data
+4. One actionable suggestion to improve over the next period
 
-  const prompt = `You are a personal fitness and health coach reviewing ${range} of data for a client. Write a thorough but concise analysis (5–7 sentences) structured around these points:
+Use actual numbers. Be direct and specific. No bullet points or headers — flowing text only.
 
-1. Weight trend — what's the overall direction, rate of change, and consistency?
-2. Training — how is the running volume and pace evolving?
-3. Lifestyle — what patterns stand out in mood, energy, and sleep?
-4. Key win — what's the most notable positive from this period?
-5. One priority — the single most impactful thing to focus on next.
+PERIOD: last ${range}
+TOTAL: ${runs.length} runs, ${totalKm.toFixed(1)} km, avg pace ${paceMin}:${String(paceSec).padStart(2, "0")} /km
 
-Keep the tone direct, specific, and encouraging. Use actual numbers from the data. No bullet points or headers — flowing paragraphs only.
-
-${goalLine}
-
-WEIGHT CHECK-INS:
-${checkinLines}
-
-JOURNAL ENTRIES:
-${journalLines}
-
-STRAVA RUNS:
+RUNS (newest first):
 ${runLines}`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -75,7 +56,7 @@ ${runLines}`;
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 500,
+      max_tokens: 400,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -86,6 +67,5 @@ ${runLines}`;
   }
 
   const data = await res.json();
-  const summary = data?.content?.[0]?.text ?? "";
-  return Response.json({ summary });
+  return Response.json({ summary: data?.content?.[0]?.text ?? "" });
 }

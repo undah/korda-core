@@ -6,9 +6,9 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Activity, LogOut, Mountain, Heart } from "lucide-react";
+import { Activity, LogOut, Mountain, Heart, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, startOfWeek, isValid } from "date-fns";
+import { format, parseISO, startOfWeek, isValid, subDays } from "date-fns";
 import {
   useStravaToken, useStravaActivities, useConnectStrava,
   useDisconnectStrava, getStravaAuthUrl, StravaActivity,
@@ -117,6 +117,10 @@ export default function TrackerStrava() {
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [filter, setFilter] = useState<"run" | "all">("run");
+  const [aiRange, setAiRange] = useState<30 | 60 | 90>(30);
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const { data: tokenRow, isLoading: tokenLoading } = useStravaToken();
   const { data: activities = [], isLoading: activitiesLoading } = useStravaActivities();
@@ -226,6 +230,27 @@ export default function TrackerStrava() {
   }, [activities]);
 
   const athlete = tokenRow?.athlete_data;
+
+  const generateAiSummary = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const cutoff = subDays(new Date(), aiRange).toISOString().split("T")[0];
+      const recentRuns = activities.filter(a => isRun(a) && a.start_date_local?.slice(0, 10) >= cutoff);
+      const res = await fetch("/api/tracker/ai-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runs: recentRuns, range: `${aiRange} days` }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { summary } = await res.json();
+      setAiSummary(summary);
+    } catch (e: any) {
+      setAiError(e?.message ?? "Failed to generate summary");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // ── Loading / connecting ───────────────────────────────────────────────────
   if (tokenLoading || connectStrava.isPending) {
@@ -493,6 +518,48 @@ export default function TrackerStrava() {
           </div>
         </div>
       </div>
+
+      {/* AI Coach */}
+      <div className="kt-card" style={{ marginTop: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.65rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Sparkles size={13} color="#FC4C02" />
+            <span className="kt-card-label" style={{ marginBottom: 0 }}>AI Running Coach</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            {([30, 60, 90] as const).map(d => (
+              <button key={d} onClick={() => { setAiRange(d); setAiSummary(""); }} style={{
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", letterSpacing: "0.08em",
+                padding: "0.25rem 0.7rem", border: "1px solid", borderRadius: 20, cursor: "pointer", transition: "all 0.13s",
+                background: aiRange === d ? "rgba(252,76,2,0.1)" : "transparent",
+                color: aiRange === d ? "#FC4C02" : "rgba(232,240,244,0.4)",
+                borderColor: aiRange === d ? "rgba(252,76,2,0.35)" : "rgba(232,240,244,0.1)",
+              }}>{d}d</button>
+            ))}
+            <button onClick={generateAiSummary} disabled={aiLoading} style={{
+              display: "flex", alignItems: "center", gap: "0.4rem",
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", fontWeight: 600,
+              padding: "0.4rem 1rem", border: "none", borderRadius: 8, cursor: aiLoading ? "not-allowed" : "pointer",
+              background: aiLoading ? "rgba(252,76,2,0.1)" : "#FC4C02", color: aiLoading ? "rgba(232,240,244,0.4)" : "#fff",
+              opacity: aiLoading ? 0.7 : 1, transition: "all 0.15s",
+            }}>
+              {aiLoading
+                ? <><RefreshCw size={11} style={{ animation: "spin 1s linear infinite" }} /> Analysing…</>
+                : <><Sparkles size={11} /> Analyse</>}
+            </button>
+          </div>
+        </div>
+        {aiError && <div style={{ fontSize: "0.8rem", color: "#EF4444" }}>{aiError}</div>}
+        {aiSummary
+          ? <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.88rem", lineHeight: 1.75, color: "rgba(232,240,244,0.85)", margin: 0 }}>{aiSummary}</p>
+          : !aiLoading && !aiError && (
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.28)", textAlign: "center", padding: "1.5rem 0" }}>
+              Select a range and analyse your runs
+            </div>
+          )
+        }
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
