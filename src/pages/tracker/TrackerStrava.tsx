@@ -211,6 +211,42 @@ export default function TrackerStrava() {
     };
   }, [activities]);
 
+  // Body Efficiency Index: speed (m/s) / weight (kg) × 1000 — higher = more efficient
+  const bodyEffData = useMemo(() => {
+    return activities
+      .filter(isRun)
+      .filter(a => a.distance > 800 && a.average_speed > 0)
+      .map(a => {
+        const date = a.start_date_local?.slice(0, 10);
+        if (!date) return null;
+        const d = parseISO(date);
+        if (!isValid(d)) return null;
+        const weight = getLatestWeight(date);
+        if (!weight) return null;
+        return { date, label: format(d, "MMM d"), bei: +(a.average_speed / weight * 1000).toFixed(2), weight };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-40);
+  }, [activities, getLatestWeight]);
+
+  // Aerobic Efficiency Index: speed (m/s) / HR (bpm) × 1000 — higher = fitter
+  const hrEffData = useMemo(() => {
+    return activities
+      .filter(isRun)
+      .filter(a => a.distance > 800 && a.average_speed > 0 && a.average_heartrate != null)
+      .map(a => {
+        const date = a.start_date_local?.slice(0, 10);
+        if (!date) return null;
+        const d = parseISO(date);
+        if (!isValid(d)) return null;
+        return { date, label: format(d, "MMM d"), aei: +(a.average_speed / a.average_heartrate! * 1000).toFixed(2), hr: Math.round(a.average_heartrate!) };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-40);
+  }, [activities]);
+
   // Personal records
   const records = useMemo(() => {
     const runs = activities.filter(isRun).filter(a => a.distance > 500 && a.average_speed > 0);
@@ -518,6 +554,83 @@ export default function TrackerStrava() {
           </div>
         </div>
       </div>
+
+      {/* Efficiency metrics */}
+      {(bodyEffData.length >= 3 || hrEffData.length >= 3) && (
+        <div style={{ display: "grid", gridTemplateColumns: hrEffData.length >= 3 && bodyEffData.length >= 3 ? "1fr 1fr" : "1fr", gap: "1rem", marginTop: "1rem" }}>
+
+          {bodyEffData.length >= 3 && (() => {
+            const current = bodyEffData[bodyEffData.length - 1].bei;
+            const baseline = bodyEffData.slice(0, Math.min(5, bodyEffData.length)).reduce((s, d) => s + d.bei, 0) / Math.min(5, bodyEffData.length);
+            const trend = +((current - baseline) / baseline * 100).toFixed(1);
+            return (
+              <div className="kt-card">
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
+                  <div>
+                    <div className="kt-card-label">Body Efficiency Index</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.35)", marginTop: 2 }}>speed per kg bodyweight — higher = better</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.15rem", fontWeight: 700, color: "#FC4C02" }}>{current.toFixed(1)}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", color: trend >= 0 ? "#22C55E" : "#EF4444", marginTop: 2 }}>
+                      {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}% vs baseline
+                    </div>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <ComposedChart data={bodyEffData} margin={{ top: 4, right: 4, left: -32, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,200,255,0.05)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                    <Tooltip
+                      contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10 }}
+                      labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 3 }}
+                      formatter={(val: any, _: any, props: any) => [`${val} (${props.payload.weight} kg)`, "BEI"]}
+                    />
+                    <Line type="monotone" dataKey="bei" stroke="#FC4C02" strokeWidth={1.5} dot={{ r: 3, fill: "#FC4C02", strokeWidth: 0 }} activeDot={{ r: 4 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
+
+          {hrEffData.length >= 3 && (() => {
+            const current = hrEffData[hrEffData.length - 1].aei;
+            const baseline = hrEffData.slice(0, Math.min(5, hrEffData.length)).reduce((s, d) => s + d.aei, 0) / Math.min(5, hrEffData.length);
+            const trend = +((current - baseline) / baseline * 100).toFixed(1);
+            return (
+              <div className="kt-card">
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
+                  <div>
+                    <div className="kt-card-label">Aerobic Efficiency Index</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.35)", marginTop: 2 }}>speed per heartbeat — higher = fitter</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.15rem", fontWeight: 700, color: "#a78bfa" }}>{current.toFixed(1)}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", color: trend >= 0 ? "#22C55E" : "#EF4444", marginTop: 2 }}>
+                      {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}% vs baseline
+                    </div>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <ComposedChart data={hrEffData} margin={{ top: 4, right: 4, left: -32, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,200,255,0.05)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                    <Tooltip
+                      contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10 }}
+                      labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 3 }}
+                      formatter={(val: any, _: any, props: any) => [`${val} (${props.payload.hr} bpm)`, "AEI"]}
+                    />
+                    <Line type="monotone" dataKey="aei" stroke="#a78bfa" strokeWidth={1.5} dot={{ r: 3, fill: "#a78bfa", strokeWidth: 0 }} activeDot={{ r: 4 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
+
+        </div>
+      )}
 
       {/* AI Coach */}
       <div className="kt-card" style={{ marginTop: "1rem" }}>
