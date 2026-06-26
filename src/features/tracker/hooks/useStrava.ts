@@ -2,8 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 
-const CLIENT_ID     = import.meta.env.VITE_STRAVA_CLIENT_ID as string;
-const CLIENT_SECRET = import.meta.env.VITE_STRAVA_CLIENT_SECRET as string;
+const CLIENT_ID = "261214";
 
 export interface StravaAthlete {
   id: number;
@@ -56,14 +55,12 @@ async function refreshIfNeeded(token: StravaTokenRow): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   if (token.expires_at > now + 300) return token.access_token;
 
-  const res = await fetch("https://www.strava.com/oauth/token", {
+  const res = await fetch("/api/strava/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      refresh_token: token.refresh_token,
       grant_type: "refresh_token",
+      refresh_token: token.refresh_token,
     }),
   });
   const data = await res.json();
@@ -131,14 +128,12 @@ export function useConnectStrava() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (code: string): Promise<void> => {
-      const res = await fetch("https://www.strava.com/oauth/token", {
+      const res = await fetch("/api/strava/token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
-          code,
           grant_type: "authorization_code",
+          code,
         }),
       });
       const data = await res.json();
