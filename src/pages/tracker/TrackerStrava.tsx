@@ -139,11 +139,20 @@ export default function TrackerStrava() {
     }
   }, [searchParams, tokenRow, tokenLoading]);
 
-  // Weight by date map
-  const weightByDate = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const c of checkins) { if (c.weight) m[c.log_date] = c.weight; }
-    return m;
+  // Returns most recent weight on or before given date
+  const getLatestWeight = useMemo(() => {
+    const sorted = checkins
+      .filter(c => c.weight)
+      .map(c => ({ date: c.log_date, weight: c.weight as number }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return (date: string): number | null => {
+      let result: number | null = null;
+      for (const entry of sorted) {
+        if (entry.date <= date) result = entry.weight;
+        else break;
+      }
+      return result;
+    };
   }, [checkins]);
 
   const filteredActivities = useMemo(() => {
@@ -161,21 +170,28 @@ export default function TrackerStrava() {
     catch { return []; }
   }, [selectedActivity]);
 
-  // Weekly chart data (km + weight)
+  // Weekly chart data (km + weight + pace)
   const chartData = useMemo(() => {
-    const weeks: Record<string, { week: string; km: number; weightSum: number; weightN: number }> = {};
+    const weeks: Record<string, { week: string; km: number; weightSum: number; weightN: number; distSum: number; timeSum: number }> = {};
     for (const a of (filter === "run" ? activities.filter(isRun) : activities)) {
       const d = parseISO(a.start_date_local);
       if (!isValid(d)) continue;
       const wk = format(startOfWeek(d, { weekStartsOn: 1 }), "MMM d");
       const dk = format(d, "yyyy-MM-dd");
-      if (!weeks[wk]) weeks[wk] = { week: wk, km: 0, weightSum: 0, weightN: 0 };
+      if (!weeks[wk]) weeks[wk] = { week: wk, km: 0, weightSum: 0, weightN: 0, distSum: 0, timeSum: 0 };
       weeks[wk].km += a.distance / 1000;
-      const w = weightByDate[dk];
+      weeks[wk].distSum += a.distance;
+      weeks[wk].timeSum += a.moving_time;
+      const w = getLatestWeight(dk);
       if (w) { weeks[wk].weightSum += w; weeks[wk].weightN++; }
     }
     return Object.values(weeks)
-      .map(w => ({ week: w.week, km: +w.km.toFixed(1), weight: w.weightN ? +(w.weightSum / w.weightN).toFixed(1) : null }))
+      .map(w => ({
+        week: w.week,
+        km: +w.km.toFixed(1),
+        weight: w.weightN ? +(w.weightSum / w.weightN).toFixed(1) : null,
+        pace: w.distSum > 0 ? +(1000 / (w.distSum / w.timeSum) / 60).toFixed(2) : null,
+      }))
       .reverse()
       .slice(-20);
   }, [activities, filter, weightByDate]);
@@ -188,6 +204,24 @@ export default function TrackerStrava() {
       totalKm:  runs.reduce((s, a) => s + a.distance, 0) / 1000,
       totalTime: runs.reduce((s, a) => s + a.moving_time, 0),
     };
+  }, [activities]);
+
+  // Personal records
+  const records = useMemo(() => {
+    const runs = activities.filter(isRun).filter(a => a.distance > 500 && a.average_speed > 0);
+    if (!runs.length) return null;
+    const longest  = runs.reduce((b, a) => a.distance > b.distance ? a : b, runs[0]);
+    const fastest  = runs.filter(a => a.distance > 1000).reduce((b, a) => a.average_speed > b.average_speed ? a : b, runs[0]);
+    const mostElev = runs.reduce((b, a) => a.total_elevation_gain > b.total_elevation_gain ? a : b, runs[0]);
+    const weekKm: Record<string, number> = {};
+    for (const a of runs) {
+      const d = parseISO(a.start_date_local);
+      if (!isValid(d)) continue;
+      const wk = format(startOfWeek(d, { weekStartsOn: 1 }), "yyyy-MM-dd");
+      weekKm[wk] = (weekKm[wk] || 0) + a.distance / 1000;
+    }
+    const bestWeekKm = Math.max(...Object.values(weekKm));
+    return { longest, fastest, mostElev, bestWeekKm };
   }, [activities]);
 
   const athlete = tokenRow?.athlete_data;
@@ -279,6 +313,24 @@ export default function TrackerStrava() {
         </div>
       )}
 
+      {/* Personal Records */}
+      {records && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: "1rem" }}>
+          {[
+            { label: "Longest Run",   value: formatDist(records.longest.distance),          sub: format(parseISO(records.longest.start_date_local), "MMM d, yyyy") },
+            { label: "Fastest Pace",  value: formatPace(records.fastest.average_speed),      sub: formatDist(records.fastest.distance) },
+            { label: "Best Week",     value: records.bestWeekKm.toFixed(1) + " km",          sub: "weekly volume" },
+            { label: "Most Elevation",value: Math.round(records.mostElev.total_elevation_gain) + " m", sub: formatDist(records.mostElev.distance) },
+          ].map(({ label, value, sub }) => (
+            <div key={label} style={{ background: "#0D0D16", border: "1px solid rgba(252,76,2,0.12)", borderTop: "2px solid rgba(252,76,2,0.3)", borderRadius: 2, padding: "0.75rem 1rem" }}>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.35)", marginBottom: 4 }}>{label}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.92rem", fontWeight: 600, color: "#FC4C02" }}>{value}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.3)", marginTop: 3 }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Filter pills */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
         {(["run", "all"] as const).map(f => (
@@ -321,7 +373,7 @@ export default function TrackerStrava() {
                 key={a.id}
                 activity={a}
                 selected={selectedId === a.id}
-                weightKg={dk ? (weightByDate[dk] ?? null) : null}
+                weightKg={dk ? (getLatestWeight(dk) ?? null) : null}
                 onClick={() => setSelectedId(selectedId === a.id ? null : a.id)}
               />
             );
@@ -380,13 +432,16 @@ export default function TrackerStrava() {
           {/* Progress chart */}
           <div className="kt-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-              <div className="kt-card-label">Weekly km & weight</div>
+              <div className="kt-card-label">Weekly km, weight & pace</div>
               <div style={{ display: "flex", gap: "1.25rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(252,76,2,0.7)" }}>
                   <div style={{ width: 10, height: 10, background: "rgba(252,76,2,0.5)", borderRadius: 2 }} /> km
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#5ad4a0" }}>
                   <div style={{ width: 20, height: 2, background: "#5ad4a0", borderRadius: 1 }} /> weight
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#a78bfa" }}>
+                  <div style={{ width: 20, height: 2, background: "#a78bfa", borderRadius: 1, borderTop: "2px dashed #a78bfa" }} /> pace
                 </div>
               </div>
             </div>
@@ -415,13 +470,22 @@ export default function TrackerStrava() {
                     axisLine={false} tickLine={false}
                     domain={["auto", "auto"]}
                   />
+                  <YAxis yAxisId="pace" hide domain={["dataMax + 0.5", "dataMin - 0.5"]} reversed />
                   <Tooltip
                     contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
                     labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 4 }}
-                    formatter={(val: any, name: string) => [val, name === "km" ? "km" : "kg"]}
+                    formatter={(val: any, name: string) => {
+                      if (name === "pace") {
+                        const mins = Math.floor(val);
+                        const secs = Math.round((val - mins) * 60);
+                        return [`${mins}:${secs.toString().padStart(2, "0")} /km`, "avg pace"];
+                      }
+                      return [val, name === "km" ? "km" : "kg"];
+                    }}
                   />
                   <Bar yAxisId="km" dataKey="km" fill="rgba(252,76,2,0.45)" name="km" radius={[2, 2, 0, 0]} />
                   <Line yAxisId="weight" type="monotone" dataKey="weight" stroke="#5ad4a0" strokeWidth={2} dot={false} connectNulls name="weight" />
+                  <Line yAxisId="pace" type="monotone" dataKey="pace" stroke="#a78bfa" strokeWidth={1.5} dot={false} connectNulls name="pace" strokeDasharray="4 2" />
                 </ComposedChart>
               </ResponsiveContainer>
             )}
