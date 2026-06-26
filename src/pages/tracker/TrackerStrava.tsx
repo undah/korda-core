@@ -377,7 +377,7 @@ export default function TrackerStrava() {
 
       {/* Personal Records */}
       {records && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: "1rem" }}>
+        <div className="sv-pr-grid">
           {[
             { label: "Longest Run",   value: formatDist(records.longest.distance),          sub: (() => { const d = parseISO(records.longest.start_date_local); return isValid(d) ? format(d, "MMM d, yyyy") : ""; })() },
             { label: "Fastest Pace",  value: formatPace(records.fastest.average_speed),      sub: formatDist(records.fastest.distance) },
@@ -416,10 +416,10 @@ export default function TrackerStrava() {
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: "2px", alignItems: "start" }}>
+      <div className="sv-main-grid">
 
         {/* Left: activity list */}
-        <div style={{ maxHeight: "78vh", overflowY: "auto", paddingRight: 1 }}>
+        <div className="sv-list">
           {activitiesLoading ? (
             <div style={{ padding: "3rem", textAlign: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.68rem", color: "rgba(232,240,244,0.3)" }}>
               Fetching activities…
@@ -446,7 +446,7 @@ export default function TrackerStrava() {
         <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
 
           {/* Map */}
-          <div className="kt-card" style={{ padding: 0, overflow: "hidden", height: 400 }}>
+          <div className={`kt-card sv-map`}>
             {routePositions.length > 0 ? (
               <MapContainer
                 center={routePositions[0]}
@@ -557,7 +557,7 @@ export default function TrackerStrava() {
 
       {/* Efficiency metrics */}
       {(bodyEffData.length >= 3 || hrEffData.length >= 3) && (
-        <div style={{ display: "grid", gridTemplateColumns: hrEffData.length >= 3 && bodyEffData.length >= 3 ? "1fr 1fr" : "1fr", gap: "1rem", marginTop: "1rem" }}>
+        <div className={`sv-eff-grid${hrEffData.length >= 3 && bodyEffData.length >= 3 ? " sv-eff-2col" : ""}`}>
 
           {bodyEffData.length >= 3 && (() => {
             const current = bodyEffData[bodyEffData.length - 1].bei;
@@ -672,7 +672,22 @@ export default function TrackerStrava() {
           )
         }
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .sv-main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 2px; align-items: start; }
+        .sv-list      { max-height: 78vh; overflow-y: auto; padding-right: 1px; }
+        .sv-pr-grid   { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 1rem; }
+        .sv-eff-grid  { display: grid; gap: 1rem; margin-top: 1rem; }
+        .sv-eff-2col  { grid-template-columns: 1fr 1fr; }
+        .sv-map       { padding: 0; overflow: hidden; height: 400px; }
+        @media (max-width: 768px) {
+          .sv-main-grid { grid-template-columns: 1fr; }
+          .sv-list      { max-height: 55vh; }
+          .sv-pr-grid   { grid-template-columns: repeat(2,1fr); }
+          .sv-eff-grid  { grid-template-columns: 1fr !important; }
+          .sv-map       { height: 240px; }
+        }
+      `}</style>
     </div>
   );
 }
