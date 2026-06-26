@@ -137,7 +137,7 @@ export function useConnectStrava() {
         }),
       });
       const data = await res.json();
-      if (!data.access_token) throw new Error(data.message ?? "Token exchange failed");
+      if (!data.access_token) throw new Error(data.message ?? data.error ?? JSON.stringify(data));
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
