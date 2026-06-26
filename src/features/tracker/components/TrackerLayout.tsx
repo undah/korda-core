@@ -8,9 +8,9 @@ const NAV_ITEMS = [
   { path: "/tracker/progress",  label: "Progress",  icon: TrendingUp },
   { path: "/tracker/journal",   label: "Journal",   icon: BookOpen },
   { path: "/tracker/photos",    label: "Photos",    icon: Camera },
+  { path: "/tracker/strava",    label: "Strava",    icon: Zap },
   { path: "/tracker/analysis",  label: "Analysis",  icon: BarChart2 },
   { path: "/tracker/settings",  label: "Settings",  icon: Settings },
-  { path: "/tracker/strava",   label: "Strava",    icon: Zap },
 ];
 
 export default function TrackerLayout() {

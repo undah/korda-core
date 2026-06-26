@@ -20,6 +20,14 @@ import "leaflet/dist/leaflet.css";
 
 function formatDist(m: number) { return (m / 1000).toFixed(2) + " km"; }
 
+function formatRaceTime(secs: number) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.round(secs % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function formatPace(mps: number) {
   if (!mps) return "–";
   const mpk = 1000 / mps / 60;
@@ -224,6 +232,26 @@ export default function TrackerStrava() {
     return { longest, fastest, mostElev, bestWeekKm };
   }, [activities]);
 
+  // Race predictions via Riegel formula: T2 = T1 × (D2/D1)^1.06
+  const racePredictions = useMemo(() => {
+    const runs = activities.filter(isRun).filter(a => a.distance >= 1000 && a.average_speed > 0);
+    if (!runs.length) return null;
+    const ref = runs.reduce((b, a) => a.average_speed > b.average_speed ? a : b, runs[0]);
+    const predict = (targetM: number) => ref.moving_time * Math.pow(targetM / ref.distance, 1.06);
+    return {
+      ref,
+      races: [
+        { name: "5K",   dist: 5000 },
+        { name: "10K",  dist: 10000 },
+        { name: "Half", dist: 21097 },
+        { name: "Full", dist: 42195 },
+      ].map(({ name, dist }) => {
+        const secs = predict(dist);
+        return { name, time: formatRaceTime(Math.round(secs)), pace: formatPace(dist / secs) };
+      }),
+    };
+  }, [activities]);
+
   const athlete = tokenRow?.athlete_data;
 
   // ── Loading / connecting ───────────────────────────────────────────────────
@@ -328,6 +356,27 @@ export default function TrackerStrava() {
               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.3)", marginTop: 3 }}>{sub}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Race Predictor */}
+      {racePredictions && (
+        <div className="kt-card" style={{ marginBottom: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "0.85rem" }}>
+            <div className="kt-card-label">Race Predictor</div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.3)" }}>
+              based on {formatPace(racePredictions.ref.average_speed)} over {formatDist(racePredictions.ref.distance)}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {racePredictions.races.map(({ name, time, pace }) => (
+              <div key={name} style={{ textAlign: "center", padding: "0.65rem 0.5rem", background: "#080810", borderRadius: 4, border: "1px solid rgba(0,200,255,0.06)" }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.35)", marginBottom: 6 }}>{name}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1rem", fontWeight: 600, color: "#FC4C02", marginBottom: 4 }}>{time}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.35)" }}>{pace}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
