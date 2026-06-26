@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings, Zap, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings, Zap, Sun, Moon, Sparkles } from "lucide-react";
 import { useNotificationCheck } from "@/hooks/useNotificationCheck";
 
 const NAV_ITEMS = [
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: "/tracker/photos",    label: "Photos",    icon: Camera },
   { path: "/tracker/strava",    label: "Strava",    icon: Zap },
   { path: "/tracker/analysis",  label: "Analysis",  icon: BarChart2 },
+  { path: "/tracker/ai",        label: "AI Coach",  icon: Sparkles },
   { path: "/tracker/settings",  label: "Settings",  icon: Settings },
 ];
 
