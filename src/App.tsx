@@ -46,6 +46,7 @@ import TrackerJournal from "./pages/tracker/TrackerJournal";
 import TrackerPhotos from "./pages/tracker/TrackerPhotos";
 import TrackerAnalysis from "./pages/tracker/TrackerAnalysis";
 import TrackerSettings from "./pages/tracker/TrackerSettings";
+import TrackerStrava from "./pages/tracker/TrackerStrava";
 import SessionLog from "./pages/SessionLog";
 import Charting from "./pages/Charting";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
@@ -101,6 +102,7 @@ function AnimatedRoutes() {
               <Route path="/tracker/photos"    element={<TrackerPhotos />} />
               <Route path="/tracker/analysis"  element={<TrackerAnalysis />} />
               <Route path="/tracker/settings" element={<TrackerSettings />} />
+              <Route path="/tracker/strava"   element={<TrackerStrava />} />
             </Route>
           </Route>
 
