@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      '/api/ctrader': {
+        target: 'https://openapi.ctrader.com/apps',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ctrader/, ''),
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

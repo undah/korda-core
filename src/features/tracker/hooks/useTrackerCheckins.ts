@@ -109,15 +109,18 @@ export function useProgressStats(): ProgressStats | null {
     else break;
   }
 
-  // weekly avg loss
-  const weeks = Math.max(1, Math.round(sorted.length / 7));
-  const avgWeeklyLoss = +(totalLost / weeks).toFixed(2);
+  // weekly avg loss — use actual date span, not entry count
+  const daySpan = sorted.length > 1
+    ? (new Date(sorted[sorted.length - 1].log_date).getTime() - new Date(sorted[0].log_date).getTime()) / 86400000
+    : 7;
+  const avgWeeklyLoss = +(totalLost / Math.max(1, daySpan / 7)).toFixed(2);
 
-  // best week
+  // best week — compare consecutive entries, scale to 7-day equivalent
   let bestWeek = 0;
-  for (let i = 7; i < sorted.length; i++) {
-    const lost = sorted[i - 7].weight - sorted[i].weight;
-    if (lost > bestWeek) bestWeek = +lost.toFixed(1);
+  for (let i = 1; i < sorted.length; i++) {
+    const days = Math.max(1, (new Date(sorted[i].log_date).getTime() - new Date(sorted[i - 1].log_date).getTime()) / 86400000);
+    const rate = (sorted[i - 1].weight - sorted[i].weight) / days * 7;
+    if (rate > bestWeek) bestWeek = +rate.toFixed(1);
   }
 
   // percent to goal

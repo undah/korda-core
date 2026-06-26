@@ -8,6 +8,17 @@ import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 const today = () => new Date().toISOString().split("T")[0];
 const isMobile = () => window.innerWidth <= 768;
 
+const C = {
+  accent: "var(--kt-accent)",
+  green:  "var(--kt-green)",
+  red:    "var(--kt-red)",
+  text:   "var(--kt-text)",
+  muted:  "var(--kt-muted)",
+  dim:    "var(--kt-dim)",
+  card:   "var(--kt-surface)",
+  border: "var(--kt-border)",
+};
+
 export default function TrackerCalories() {
   const { data: entries = [], isLoading } = useTrackerCalories(30);
   const upsert = useUpsertCalories();
@@ -67,7 +78,7 @@ export default function TrackerCalories() {
 
       {/* 7d summary — 2x2 on all screens */}
       {last7.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, marginBottom: "1.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "1.5rem" }}>
           <div className="kt-card">
             <p className="kt-card-label">7d avg intake</p>
             <p className="kt-card-value">{avgIntake ?? "—"}</p>
@@ -75,14 +86,14 @@ export default function TrackerCalories() {
           </div>
           <div className="kt-card">
             <p className="kt-card-label">7d avg deficit</p>
-            <p className="kt-card-value" style={{ color: avgDeficit && avgDeficit > 0 ? "#5ad4a0" : "#d4705a" }}>
+            <p className="kt-card-value" style={{ color: avgDeficit && avgDeficit > 0 ? C.green : C.red }}>
               {avgDeficit !== null ? (avgDeficit > 0 ? "-" : "+") + Math.abs(avgDeficit) : "—"}
             </p>
             <p className="kt-card-sub">kcal / day</p>
           </div>
           <div className="kt-card">
             <p className="kt-card-label">Total deficit (7d)</p>
-            <p className="kt-card-value" style={{ color: "#5ad4a0" }}>{totalDeficit7 !== null ? totalDeficit7.toLocaleString() : "—"}</p>
+            <p className="kt-card-value" style={{ color: C.green }}>{totalDeficit7 !== null ? totalDeficit7.toLocaleString() : "—"}</p>
             <p className="kt-card-sub">kcal</p>
           </div>
           <div className="kt-card">
@@ -121,13 +132,13 @@ export default function TrackerCalories() {
         </div>
 
         {deficit !== null && (
-          <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: deficit > 0 ? "rgba(90,212,160,0.07)" : "rgba(212,112,90,0.07)", border: `1px solid ${deficit > 0 ? "rgba(90,212,160,0.2)" : "rgba(212,112,90,0.2)"}`, fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", color: deficit > 0 ? "#5ad4a0" : "#d4705a" }}>
+          <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: deficit > 0 ? "var(--kt-green-bg)" : "var(--kt-red-bg)", border: `1px solid ${deficit > 0 ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 10, fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", color: deficit > 0 ? C.green : C.red }}>
             {deficit > 0 ? `↓ ${deficit} kcal deficit` : `↑ ${Math.abs(deficit)} kcal surplus`}
-            {deficit > 0 && <span style={{ color: "rgba(221,232,237,0.3)", marginLeft: "1rem" }}>≈ {((deficit / 7700) * 1000).toFixed(0)}g fat</span>}
+            {deficit > 0 && <span style={{ color: C.dim, marginLeft: "1rem" }}>≈ {((deficit / 7700) * 1000).toFixed(0)}g fat</span>}
           </div>
         )}
 
-        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(221,232,237,0.2)", marginBottom: "0.75rem" }}>Macros (optional)</p>
+        <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", textTransform: "uppercase", color: "rgba(232,232,240,0.2)", marginBottom: "0.75rem" }}>Macros (optional)</p>
 
         {/* macros — 1 col on mobile, 3 col on desktop */}
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
@@ -145,32 +156,32 @@ export default function TrackerCalories() {
       <div className="kt-card">
         <p className="kt-card-label" style={{ marginBottom: "1rem" }}>History</p>
         {isLoading ? (
-          <p style={{ color: "rgba(221,232,237,0.2)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem" }}>Loading...</p>
+          <p style={{ color: C.dim, fontFamily: "'DM Sans',sans-serif", fontSize: "0.8rem" }}>Loading...</p>
         ) : sorted.length === 0 ? (
-          <p style={{ color: "rgba(221,232,237,0.3)", fontSize: "0.85rem" }}>No calorie logs yet.</p>
+          <p style={{ color: C.dim, fontSize: "0.85rem" }}>No calorie logs yet.</p>
         ) : mobile ? (
           /* MOBILE: card list */
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {sorted.map(e => (
-              <div key={e.id} style={{ padding: "0.75rem", background: "#0a0e12", borderLeft: "2px solid rgba(90,180,212,0.2)" }}>
+              <div key={e.id} style={{ padding: "0.75rem", background: "var(--kt-input-bg)", borderRadius: 10, borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "rgba(221,232,237,0.4)" }}>{e.log_date}</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: C.dim }}>{e.log_date}</span>
                   <button onClick={() => setConfirmId(e.id)}
-                    style={{ background: "none", border: "none", color: "rgba(212,112,90,0.4)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem" }}>
+                    style={{ background: "none", border: "none", color: "rgba(239,68,68,0.4)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "0.62rem" }}>
                     delete
                   </button>
                 </div>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "baseline" }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.9rem", fontWeight: 500, color: "#dde8ed" }}>{e.calories_in} kcal</span>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: e.deficit > 0 ? "#5ad4a0" : "#d4705a" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.9rem", fontWeight: 500, color: C.text }}>{e.calories_in} kcal</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: e.deficit > 0 ? C.green : C.red }}>
                     {e.deficit > 0 ? "-" : "+"}{Math.abs(e.deficit)} deficit
                   </span>
                 </div>
                 {(e.protein_g || e.carbs_g || e.fat_g) && (
                   <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.3rem" }}>
-                    {e.protein_g && <span style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.35)" }}>P {e.protein_g}g</span>}
-                    {e.carbs_g   && <span style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.35)" }}>C {e.carbs_g}g</span>}
-                    {e.fat_g     && <span style={{ fontSize: "0.72rem", color: "rgba(221,232,237,0.35)" }}>F {e.fat_g}g</span>}
+                    {e.protein_g && <span style={{ fontSize: "0.72rem", color: "rgba(232,232,240,0.35)" }}>P {e.protein_g}g</span>}
+                    {e.carbs_g   && <span style={{ fontSize: "0.72rem", color: "rgba(232,232,240,0.35)" }}>C {e.carbs_g}g</span>}
+                    {e.fat_g     && <span style={{ fontSize: "0.72rem", color: "rgba(232,232,240,0.35)" }}>F {e.fat_g}g</span>}
                   </div>
                 )}
               </div>
@@ -182,25 +193,25 @@ export default function TrackerCalories() {
             <thead>
               <tr>
                 {["Date","Intake","TDEE","Deficit","Protein","Carbs","Fat",""].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(221,232,237,0.25)", borderBottom: "1px solid rgba(90,180,212,0.07)", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'DM Sans',sans-serif", fontSize: "0.6rem", textTransform: "uppercase", color: C.dim, borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {sorted.map(e => (
-                <tr key={e.id} style={{ borderBottom: "1px solid rgba(90,180,212,0.04)" }}>
-                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "rgba(221,232,237,0.4)", whiteSpace: "nowrap" }}>{e.log_date}</td>
-                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: "#dde8ed" }}>{e.calories_in}</td>
-                  <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.4)" }}>{e.tdee}</td>
-                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: e.deficit > 0 ? "#5ad4a0" : "#d4705a" }}>{e.deficit > 0 ? "-" : "+"}{Math.abs(e.deficit)}</td>
-                  <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.4)" }}>{e.protein_g ?? "—"}g</td>
-                  <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.4)" }}>{e.carbs_g ?? "—"}g</td>
-                  <td style={{ padding: "0.6rem 0.75rem", color: "rgba(221,232,237,0.4)" }}>{e.fat_g ?? "—"}g</td>
+                <tr key={e.id} style={{ borderBottom: `1px solid var(--kt-border2)` }}>
+                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: C.dim, whiteSpace: "nowrap" }}>{e.log_date}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: C.text }}>{e.calories_in}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", color: C.dim }}>{e.tdee}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: e.deficit > 0 ? C.green : C.red }}>{e.deficit > 0 ? "-" : "+"}{Math.abs(e.deficit)}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", color: C.dim }}>{e.protein_g ?? "—"}g</td>
+                  <td style={{ padding: "0.6rem 0.75rem", color: C.dim }}>{e.carbs_g ?? "—"}g</td>
+                  <td style={{ padding: "0.6rem 0.75rem", color: C.dim }}>{e.fat_g ?? "—"}g</td>
                   <td style={{ padding: "0.6rem 0.75rem" }}>
                     <button onClick={() => setConfirmId(e.id)}
-                      style={{ background: "none", border: "none", color: "rgba(212,112,90,0.35)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", letterSpacing: "0.1em", transition: "color 0.2s" }}
-                      onMouseEnter={ev => (ev.currentTarget.style.color = "rgba(212,112,90,0.8)")}
-                      onMouseLeave={ev => (ev.currentTarget.style.color = "rgba(212,112,90,0.35)")}>
+                      style={{ background: "none", border: "none", color: "rgba(239,68,68,0.35)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "0.62rem", transition: "color 0.2s" }}
+                      onMouseEnter={ev => (ev.currentTarget.style.color = "rgba(239,68,68,0.8)")}
+                      onMouseLeave={ev => (ev.currentTarget.style.color = "rgba(239,68,68,0.35)")}>
                       delete
                     </button>
                   </td>

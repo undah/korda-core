@@ -22,4 +22,6 @@ export interface ScreenshotLog {
   image_base64: string | null;
   reason: string | null;
   created_at: string;
+  ai_validation: string | null;
+  ai_reasoning: string | null;
 }

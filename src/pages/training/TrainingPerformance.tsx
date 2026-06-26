@@ -1,5 +1,5 @@
-import { AnalyticsDashboard } from '@/pages/Analytics';
+import PerformancePage from '@/features/training/components/PerformancePage';
 
 export default function TrainingPerformance() {
-  return <AnalyticsDashboard />;
+  return <PerformancePage />;
 }
