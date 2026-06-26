@@ -194,7 +194,7 @@ export default function TrackerStrava() {
       }))
       .reverse()
       .slice(-20);
-  }, [activities, filter, weightByDate]);
+  }, [activities, filter, getLatestWeight]);
 
   // Aggregate stats
   const stats = useMemo(() => {
@@ -317,7 +317,7 @@ export default function TrackerStrava() {
       {records && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: "1rem" }}>
           {[
-            { label: "Longest Run",   value: formatDist(records.longest.distance),          sub: format(parseISO(records.longest.start_date_local), "MMM d, yyyy") },
+            { label: "Longest Run",   value: formatDist(records.longest.distance),          sub: (() => { const d = parseISO(records.longest.start_date_local); return isValid(d) ? format(d, "MMM d, yyyy") : ""; })() },
             { label: "Fastest Pace",  value: formatPace(records.fastest.average_speed),      sub: formatDist(records.fastest.distance) },
             { label: "Best Week",     value: records.bestWeekKm.toFixed(1) + " km",          sub: "weekly volume" },
             { label: "Most Elevation",value: Math.round(records.mostElev.total_elevation_gain) + " m", sub: formatDist(records.mostElev.distance) },
