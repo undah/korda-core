@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
 import polylineLib from "@mapbox/polyline";
@@ -654,7 +655,7 @@ export default function TrackerStrava() {
         }
       </div>
       {/* Mobile bottom sheet */}
-      {isMobile && (
+      {isMobile && createPortal(
         <>
           {/* Backdrop */}
           <div
@@ -735,7 +736,8 @@ export default function TrackerStrava() {
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       <style>{`
