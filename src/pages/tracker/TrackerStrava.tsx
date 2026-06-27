@@ -70,43 +70,51 @@ function ActivityCard({ activity, selected, weightKg, onClick }: {
   onClick: () => void;
 }) {
   const date = isValid(parseISO(activity.start_date_local))
-    ? format(parseISO(activity.start_date_local), "MMM d, yyyy")
+    ? format(parseISO(activity.start_date_local), "MMM d")
     : "";
+
+  const badges = [
+    activity.total_elevation_gain > 0 && `↑ ${Math.round(activity.total_elevation_gain)}m`,
+    activity.average_heartrate != null && `♥ ${Math.round(activity.average_heartrate)} bpm`,
+    weightKg && `${weightKg.toFixed(1)} kg`,
+  ].filter(Boolean) as string[];
 
   return (
     <div
       onClick={onClick}
       style={{
-        padding: "0.9rem 1rem",
-        background: selected ? "rgba(252,76,2,0.07)" : "#0D0D16",
-        border: `1px solid ${selected ? "rgba(252,76,2,0.35)" : "rgba(0,200,255,0.07)"}`,
-        borderTop: `2px solid ${selected ? "#FC4C02" : "rgba(0,200,255,0.16)"}`,
-        borderRadius: 2,
+        padding: "0.85rem 1rem",
+        background: selected ? "rgba(252,76,2,0.06)" : "transparent",
+        borderLeft: `2px solid ${selected ? "#FC4C02" : "rgba(0,200,255,0.12)"}`,
+        borderBottom: "1px solid rgba(0,200,255,0.06)",
         cursor: "pointer",
-        transition: "all 0.13s",
-        marginBottom: 2,
+        transition: "background 0.13s, border-color 0.13s",
         userSelect: "none",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
-        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.38)", letterSpacing: "0.06em" }}>{date}</div>
-        {weightKg && (
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", color: "#5ad4a0" }}>
-            {weightKg.toFixed(1)} kg
-          </div>
-        )}
+      {/* Name + date */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.5rem" }}>
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: selected ? "#fff" : "#e8f0f4", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {activity.name}
+        </div>
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", color: "rgba(232,240,244,0.3)", flexShrink: 0 }}>{date}</div>
       </div>
-      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.83rem", color: "#e8f0f4", marginBottom: "0.6rem", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {activity.name}
+
+      {/* Key stats row */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "1rem" }}>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.88rem", fontWeight: 700, color: "#FC4C02" }}>{formatDist(activity.distance)}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.72rem", color: "rgba(232,240,244,0.6)" }}>{formatPace(activity.average_speed)}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.72rem", color: "rgba(232,240,244,0.4)" }}>{formatDuration(activity.moving_time)}</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-        <Stat label="Distance" value={formatDist(activity.distance)} color="#FC4C02" />
-        <Stat label="Pace" value={formatPace(activity.average_speed)} />
-        <Stat label="Time" value={formatDuration(activity.moving_time)} />
-        {activity.total_elevation_gain > 0 && <Stat label="Elev" value={`${Math.round(activity.total_elevation_gain)}m`} />}
-        {activity.average_heartrate != null && <Stat label="Avg HR" value={`${Math.round(activity.average_heartrate)} bpm`} />}
-        {activity.average_cadence != null && <Stat label="Cadence" value={`${Math.round(activity.average_cadence)} spm`} />}
-      </div>
+
+      {/* Secondary badges */}
+      {badges.length > 0 && (
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.45rem", flexWrap: "wrap" }}>
+          {badges.map(b => (
+            <span key={b} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.3)", background: "rgba(255,255,255,0.04)", padding: "1px 6px", borderRadius: 4 }}>{b}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -141,11 +149,14 @@ export default function TrackerStrava() {
   }, []);
 
   const onDragEnd = useCallback(() => {
-    if (sheetRef.current) sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
     if (dragCurrentY.current > 100) {
+      if (sheetRef.current) sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
       setSelectedId(null);
     } else {
-      if (sheetRef.current) sheetRef.current.style.transform = "translateY(0)";
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.4s cubic-bezier(0.34, 1.28, 0.64, 1)";
+        sheetRef.current.style.transform = "translateY(0)";
+      }
     }
     dragCurrentY.current = 0;
   }, []);
@@ -537,7 +548,13 @@ export default function TrackerStrava() {
             </div>
           </div>
         </div>
-        {chartData.length === 0 ? (
+        {activitiesLoading ? (
+          <div style={{ height: 180, display: "flex", alignItems: "flex-end", gap: 6, padding: "0 4px" }}>
+            {[45, 70, 30, 85, 55, 90, 40, 65, 50, 75].map((h, i) => (
+              <div key={i} style={{ flex: 1, height: `${h}%`, background: "rgba(232,240,244,0.05)", borderRadius: "3px 3px 0 0", animation: `kt-shimmer 1.4s ease-in-out ${i * 0.07}s infinite alternate` }} />
+            ))}
+          </div>
+        ) : chartData.length === 0 ? (
           <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.65rem", color: "rgba(232,240,244,0.28)" }}>No data yet</div>
         ) : (
           <ResponsiveContainer width="100%" height={180}>
@@ -704,7 +721,9 @@ export default function TrackerStrava() {
               maxHeight: "85vh",
               overflowY: "auto",
               transform: selectedId ? "translateY(0)" : "translateY(100%)",
-              transition: "transform 0.3s cubic-bezier(0.32,0.72,0,1)",
+              transition: selectedId
+                ? "transform 0.45s cubic-bezier(0.34, 1.28, 0.64, 1)"
+                : "transform 0.3s cubic-bezier(0.32,0.72,0,1)",
               willChange: "transform",
             }}
           >
@@ -774,6 +793,7 @@ export default function TrackerStrava() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes kt-shimmer { from { opacity: 0.4; } to { opacity: 1; } }
         .sv-main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 2px; align-items: start; }
         .sv-list      { max-height: 78vh; overflow-y: auto; padding-right: 1px; }
         .sv-pr-grid   { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 1rem; }
