@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
@@ -123,6 +123,32 @@ export default function TrackerStrava() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef(0);
+  const dragCurrentY = useRef(0);
+
+  const onDragStart = useCallback((e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+    dragCurrentY.current = 0;
+    if (sheetRef.current) sheetRef.current.style.transition = "none";
+  }, []);
+
+  const onDragMove = useCallback((e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - dragStartY.current;
+    if (dy < 0) return;
+    dragCurrentY.current = dy;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${dy}px)`;
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    if (sheetRef.current) sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
+    if (dragCurrentY.current > 100) {
+      setSelectedId(null);
+    } else {
+      if (sheetRef.current) sheetRef.current.style.transform = "translateY(0)";
+    }
+    dragCurrentY.current = 0;
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -669,6 +695,7 @@ export default function TrackerStrava() {
           />
           {/* Sheet */}
           <div
+            ref={sheetRef}
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50,
               background: "#0D0D16",
@@ -681,9 +708,14 @@ export default function TrackerStrava() {
               willChange: "transform",
             }}
           >
-            {/* Handle */}
-            <div style={{ display: "flex", justifyContent: "center", padding: "0.75rem 0 0.25rem" }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(232,240,244,0.15)" }} />
+            {/* Handle — drag to dismiss */}
+            <div
+              onTouchStart={onDragStart}
+              onTouchMove={onDragMove}
+              onTouchEnd={onDragEnd}
+              style={{ display: "flex", justifyContent: "center", padding: "0.75rem 0 0.5rem", cursor: "grab", touchAction: "none" }}
+            >
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(232,240,244,0.25)" }} />
             </div>
 
             {selectedActivity && (
