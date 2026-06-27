@@ -114,7 +114,7 @@ export default function TrackerLayout() {
         bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
         left: 14px; right: 14px;
         z-index: 60;
-        background: rgba(8, 8, 16, 0.40);
+        background: rgba(8, 8, 16, 0.30);
         backdrop-filter: blur(24px) saturate(180%);
         -webkit-backdrop-filter: blur(24px) saturate(180%);
         border: none;
