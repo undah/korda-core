@@ -229,7 +229,7 @@ export default function TrackerStrava() {
   }, [isMobile, selectedId]);
 
   const { data: tokenRow, isLoading: tokenLoading } = useStravaToken();
-  const { data: activities = [], isLoading: activitiesLoading } = useStravaActivities();
+  const { data: activities = [], isLoading: activitiesLoading, dataUpdatedAt } = useStravaActivities();
   const { data: checkins = [] } = useTrackerCheckins(500);
   const connectStrava   = useConnectStrava();
   const disconnectStrava = useDisconnectStrava();
@@ -480,13 +480,20 @@ export default function TrackerStrava() {
           <div className="kt-page-eyebrow">Strava Integration</div>
           <h1 className="kt-page-title">Your <em>Runs</em></h1>
         </div>
-        <button
-          onClick={() => disconnectStrava.mutate()}
-          className="kt-btn kt-btn-outline"
-          style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.3rem" }}
-        >
-          <LogOut size={12} /> Disconnect
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem" }}>
+          <button
+            onClick={() => disconnectStrava.mutate()}
+            className="kt-btn kt-btn-outline"
+            style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <LogOut size={12} /> Disconnect
+          </button>
+          {dataUpdatedAt > 0 && (
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.04em" }}>
+              updated {format(new Date(dataUpdatedAt), "HH:mm:ss")}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Athlete bar */}

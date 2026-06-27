@@ -100,7 +100,7 @@ export function useStravaActivities() {
   return useQuery({
     queryKey: ["strava_activities"],
     enabled: !!tokenRow,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 5,
     queryFn: async (): Promise<StravaActivity[]> => {
       if (!tokenRow) throw new Error("No token");
       const accessToken = await refreshIfNeeded(tokenRow);
