@@ -107,9 +107,38 @@ export default function TrackerLayout() {
       .kt-topbar-btn { background: none; border: none; cursor: pointer; color: var(--kt-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent; }
       .kt-topbar-btn:hover { color: var(--kt-text); background: var(--kt-hover); }
 
-      /* ── BOTTOM NAV ── */
-      .kt-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; background: var(--kt-sidebar-bg); border-top: 1px solid var(--kt-sidebar-b); align-items: stretch; justify-content: space-around; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 36px); }
-      .kt-bnav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 56px; text-decoration: none; color: var(--kt-dim); font-size: 0.5rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.12s; -webkit-tap-highlight-color: transparent; padding: 6px 2px 4px; }
+      /* ── BOTTOM NAV — liquid glass ── */
+      .kt-bottom-nav {
+        display: none;
+        position: fixed;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        left: 14px; right: 14px;
+        z-index: 60;
+        background: rgba(10, 10, 18, 0.52);
+        backdrop-filter: blur(40px) saturate(200%) brightness(1.15);
+        -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.15);
+        border: 1px solid rgba(255,255,255,0.11);
+        border-radius: 24px;
+        box-shadow:
+          0 10px 40px rgba(0,0,0,0.45),
+          0 2px 8px rgba(0,0,0,0.25),
+          inset 0 1px 0 rgba(255,255,255,0.13),
+          inset 0 -1px 0 rgba(0,0,0,0.15);
+        align-items: center;
+        justify-content: space-around;
+        padding: 6px 8px;
+      }
+      .kt-app.light .kt-bottom-nav {
+        background: rgba(255,255,255,0.55);
+        border-color: rgba(0,0,0,0.07);
+        box-shadow:
+          0 10px 40px rgba(0,0,0,0.1),
+          0 2px 8px rgba(0,0,0,0.06),
+          inset 0 1px 0 rgba(255,255,255,0.85),
+          inset 0 -1px 0 rgba(0,0,0,0.04);
+      }
+      .kt-bnav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 50px; text-decoration: none; color: rgba(200,210,220,0.45); font-size: 0.48rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 5px 2px 4px; }
+      .kt-app.light .kt-bnav-item { color: rgba(60,60,80,0.45); }
       .kt-bnav-item.active { color: var(--kt-accent); }
       .kt-bnav-item svg { flex-shrink: 0; }
 
@@ -183,7 +212,7 @@ export default function TrackerLayout() {
           margin-left: 0;
           padding: 0.85rem;
           padding-top: calc(52px + 0.85rem);
-          padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 22px + 0.5rem);
+          padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px) + 24px);
         }
         .kt-card { padding: 1rem; }
         .kt-grid-4 { grid-template-columns: repeat(2,1fr); gap: 10px; }
@@ -264,14 +293,14 @@ export default function TrackerLayout() {
               key={item.path}
               to={item.path}
               className={`kt-bnav-item${active ? " active" : ""}`}
+              style={{
+                background: active ? "rgba(0,200,255,0.10)" : "transparent",
+                borderRadius: 14,
+                transition: "background 0.2s, color 0.15s",
+                padding: "5px 10px",
+              }}
             >
-              <span style={{
-                display: "block", height: 3, width: active ? 20 : 0,
-                background: "var(--kt-accent)", borderRadius: 2,
-                transition: "width 0.22s cubic-bezier(0.16,1,0.3,1)",
-                marginBottom: 2,
-              }} />
-              <item.icon size={17} strokeWidth={active ? 2 : 1.5} />
+              <item.icon size={18} strokeWidth={active ? 2 : 1.4} />
               {item.label}
             </Link>
           );
