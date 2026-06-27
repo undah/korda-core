@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
 import polylineLib from "@mapbox/polyline";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
@@ -38,6 +38,61 @@ function formatDuration(secs: number) {
 
 function isRun(a: StravaActivity) {
   return ["Run", "TrailRun", "VirtualRun"].includes(a.sport_type ?? a.type);
+}
+
+// ── HR zone estimator ─────────────────────────────────────────────────────────
+
+const HR_ZONES = [
+  { id: 1, label: "Easy",      color: "#60a5fa", min: 0,    max: 0.60 },
+  { id: 2, label: "Aerobic",   color: "#34d399", min: 0.60, max: 0.70 },
+  { id: 3, label: "Tempo",     color: "#fbbf24", min: 0.70, max: 0.80 },
+  { id: 4, label: "Threshold", color: "#f97316", min: 0.80, max: 0.90 },
+  { id: 5, label: "VO2max",    color: "#ef4444", min: 0.90, max: 1.00 },
+];
+
+function erfApprox(x: number) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x));
+  const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const r = 1 - p * Math.exp(-x * x);
+  return x >= 0 ? r : -r;
+}
+
+function estimateZones(avgHR: number, maxHR: number) {
+  const trueMax = maxHR / 0.93;
+  const stdDev = Math.max((maxHR - avgHR) * 0.85, 5);
+  const cdf = (x: number) => 0.5 * (1 + erfApprox((x - avgHR) / (stdDev * Math.SQRT2)));
+  const raw = HR_ZONES.map(z => ({
+    ...z,
+    pct: Math.max(0, cdf(z.max * trueMax) - cdf(z.min * trueMax)),
+  }));
+  const total = raw.reduce((s, z) => s + z.pct, 0);
+  return raw.map(z => ({ ...z, pct: total > 0 ? z.pct / total : 0 }));
+}
+
+function HRZoneBar({ avgHR, maxHR }: { avgHR: number; maxHR: number }) {
+  const zones = estimateZones(avgHR, maxHR).filter(z => z.pct > 0.02);
+  return (
+    <div>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(232,240,244,0.3)", marginBottom: "0.6rem" }}>
+        HR Zones <span style={{ color: "rgba(232,240,244,0.18)", fontSize: "0.48rem" }}>(estimated)</span>
+      </div>
+      <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2 }}>
+        {zones.map(z => (
+          <div key={z.id} style={{ flex: z.pct, background: z.color, opacity: 0.85 }} />
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: "0.85rem", marginTop: "0.55rem", flexWrap: "wrap" }}>
+        {zones.map(z => (
+          <div key={z.id} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: z.color }} />
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.54rem", color: "rgba(232,240,244,0.4)" }}>
+              {z.label} <span style={{ color: z.color, fontWeight: 600 }}>{Math.round(z.pct * 100)}%</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ── Map auto-fit ──────────────────────────────────────────────────────────────
@@ -316,6 +371,41 @@ export default function TrackerStrava() {
     return { longest, fastest, mostElev, bestWeekKm };
   }, [activities]);
 
+  // Training load: acute (7-day) vs chronic (28-day) daily km averages
+  const trainingLoad = useMemo(() => {
+    const runs = activities.filter(isRun);
+    const dayKm: Record<string, number> = {};
+    for (const a of runs) {
+      const dk = a.start_date_local?.slice(0, 10);
+      if (dk) dayKm[dk] = (dayKm[dk] || 0) + a.distance / 1000;
+    }
+    let acuteSum = 0, chronicSum = 0;
+    const now = new Date();
+    for (let i = 0; i < 28; i++) {
+      const dk = format(subDays(now, i), "yyyy-MM-dd");
+      const km = dayKm[dk] || 0;
+      if (i < 7) acuteSum += km;
+      chronicSum += km;
+    }
+    const atl = acuteSum / 7;
+    const ctl = chronicSum / 28;
+    const ratio = ctl > 0.01 ? atl / ctl : null;
+    return { atl: +atl.toFixed(2), ctl: +ctl.toFixed(2), ratio: ratio ? +ratio.toFixed(2) : null };
+  }, [activities]);
+
+  // Calendar heatmap: km per day for last 364 days
+  const calendarData = useMemo(() => {
+    const dayKm: Record<string, number> = {};
+    let maxKm = 0;
+    for (const a of activities.filter(isRun)) {
+      const dk = a.start_date_local?.slice(0, 10);
+      if (!dk) continue;
+      dayKm[dk] = (dayKm[dk] || 0) + a.distance / 1000;
+      if (dayKm[dk] > maxKm) maxKm = dayKm[dk];
+    }
+    return { dayKm, maxKm };
+  }, [activities]);
+
   const athlete = tokenRow?.athlete_data;
 
   const generateAiSummary = async () => {
@@ -426,6 +516,51 @@ export default function TrackerStrava() {
         </div>
       )}
 
+      {/* Training Load */}
+      {trainingLoad.ratio !== null && (() => {
+        const r = trainingLoad.ratio!;
+        const ratioColor = r > 1.3 ? "#ef4444" : r >= 1.0 ? "#22c55e" : r >= 0.8 ? "#60a5fa" : "rgba(232,240,244,0.35)";
+        const ratioLabel = r > 1.3 ? "High load" : r >= 1.0 ? "Building fitness" : r >= 0.8 ? "Maintaining" : "Detraining";
+        const markerPct = Math.min(Math.max((r / 1.6) * 100, 0), 100);
+        return (
+          <div className="kt-card" style={{ marginBottom: "2px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+              <div className="kt-card-label" style={{ marginBottom: 0 }}>Training Load</div>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", color: ratioColor, background: ratioColor + "18", padding: "2px 8px", borderRadius: 20 }}>{ratioLabel}</span>
+            </div>
+            <div style={{ display: "flex", gap: "2.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+              {[
+                { val: trainingLoad.atl, label: "Acute · 7d", color: "#FC4C02" },
+                { val: trainingLoad.ctl, label: "Chronic · 28d", color: "rgba(232,240,244,0.7)" },
+                { val: r.toFixed(2), label: "Ratio ATL/CTL", color: ratioColor },
+              ].map(s => (
+                <div key={s.label}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.3rem", fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.val}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 4 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {/* Gauge */}
+            <div style={{ position: "relative" }}>
+              <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", gap: 1 }}>
+                <div style={{ flex: 0.8,  background: "rgba(232,240,244,0.12)" }} />
+                <div style={{ flex: 0.2,  background: "#60a5fa",  opacity: 0.6 }} />
+                <div style={{ flex: 0.3,  background: "#22c55e",  opacity: 0.7 }} />
+                <div style={{ flex: 0.3,  background: "#ef4444",  opacity: 0.65 }} />
+              </div>
+              <div style={{ position: "absolute", top: -3, left: `calc(${markerPct}% - 5px)`, width: 10, height: 12, borderRadius: 2, background: ratioColor, boxShadow: `0 0 6px ${ratioColor}` }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.4rem" }}>
+              {[["< 0.8", "Detraining"], ["0.8", ""], ["1.0", "Building"], ["1.3", "High risk"]].map(([tick, lbl]) => (
+                <div key={tick} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", color: "rgba(232,240,244,0.25)", textAlign: "center" }}>
+                  {tick}{lbl ? <><br />{lbl}</> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Personal Records */}
       {records && (
         <div className="sv-pr-grid">
@@ -501,6 +636,8 @@ export default function TrackerStrava() {
                 <MapContainer center={routePositions[0]} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl attributionControl={false}>
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                   <Polyline positions={routePositions as any} pathOptions={{ color: "#FC4C02", weight: 3, opacity: 0.9 }} />
+                  <CircleMarker center={routePositions[0]} radius={6} pathOptions={{ fillColor: "#22C55E", color: "#fff", weight: 2, fillOpacity: 1 }} />
+                  <CircleMarker center={routePositions[routePositions.length - 1]} radius={6} pathOptions={{ fillColor: "#FC4C02", color: "#fff", weight: 2, fillOpacity: 1 }} />
                   <FitBounds positions={routePositions} />
                 </MapContainer>
               ) : (
@@ -526,6 +663,11 @@ export default function TrackerStrava() {
                     {selectedActivity.average_heartrate != null && <Stat label="Avg HR" value={`${Math.round(selectedActivity.average_heartrate)} bpm`} />}
                   </div>
                 </div>
+                {selectedActivity.average_heartrate != null && selectedActivity.max_heartrate != null && (
+                  <div style={{ marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(0,200,255,0.08)" }}>
+                    <HRZoneBar avgHR={selectedActivity.average_heartrate} maxHR={selectedActivity.max_heartrate} />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -579,6 +721,93 @@ export default function TrackerStrava() {
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Calendar Heatmap */}
+      {Object.keys(calendarData.dayKm).length > 0 && (() => {
+        const today = new Date();
+        // Align to Monday of current week, go back 52 weeks
+        const dayOfWeek = (today.getDay() + 6) % 7; // 0 = Mon
+        const gridEnd = subDays(today, dayOfWeek - 6); // end on Sunday of current week
+        const weeks: string[][] = [];
+        for (let w = 51; w >= 0; w--) {
+          const week: string[] = [];
+          for (let d = 0; d < 7; d++) {
+            week.push(format(subDays(gridEnd, w * 7 + (6 - d)), "yyyy-MM-dd"));
+          }
+          weeks.push(week);
+        }
+        const monthLabels: { label: string; col: number }[] = [];
+        weeks.forEach((week, wi) => {
+          const first = week[0];
+          if (wi === 0 || first.slice(8, 10) <= "07") {
+            const d = parseISO(first);
+            if (isValid(d)) {
+              const lbl = format(d, "MMM");
+              if (!monthLabels.length || monthLabels[monthLabels.length - 1].label !== lbl) {
+                monthLabels.push({ label: lbl, col: wi });
+              }
+            }
+          }
+        });
+        const cellSize = 11;
+        const gap = 2;
+        return (
+          <div className="kt-card" style={{ marginTop: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <div className="kt-card-label" style={{ marginBottom: 0 }}>Activity Calendar</div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.5rem", color: "rgba(232,240,244,0.28)" }}>less</span>
+                {[0.08, 0.3, 0.55, 0.8, 1].map(o => (
+                  <div key={o} style={{ width: 9, height: 9, borderRadius: 2, background: o < 0.1 ? "rgba(255,255,255,0.05)" : `rgba(252,76,2,${o})` }} />
+                ))}
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.5rem", color: "rgba(232,240,244,0.28)" }}>more</span>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+              {/* Month labels */}
+              <div style={{ display: "flex", gap: gap, marginBottom: 3, paddingLeft: 22 }}>
+                {weeks.map((_, wi) => {
+                  const ml = monthLabels.find(m => m.col === wi);
+                  return (
+                    <div key={wi} style={{ width: cellSize, flexShrink: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", color: "rgba(232,240,244,0.3)" }}>
+                      {ml ? ml.label : ""}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap }}>
+                {/* Day labels */}
+                <div style={{ display: "flex", flexDirection: "column", gap, marginRight: 2 }}>
+                  {["M", "", "W", "", "F", "", "S"].map((d, i) => (
+                    <div key={i} style={{ height: cellSize, width: 14, fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.42rem", color: "rgba(232,240,244,0.22)", display: "flex", alignItems: "center" }}>{d}</div>
+                  ))}
+                </div>
+                {/* Grid */}
+                {weeks.map((week, wi) => (
+                  <div key={wi} style={{ display: "flex", flexDirection: "column", gap }}>
+                    {week.map(day => {
+                      const km = calendarData.dayKm[day] || 0;
+                      const intensity = calendarData.maxKm > 0 ? km / calendarData.maxKm : 0;
+                      const isToday = day === format(today, "yyyy-MM-dd");
+                      return (
+                        <div
+                          key={day}
+                          title={km > 0 ? `${day}: ${km.toFixed(1)} km` : day}
+                          style={{
+                            width: cellSize, height: cellSize, borderRadius: 2, flexShrink: 0,
+                            background: km > 0 ? `rgba(252,76,2,${0.15 + intensity * 0.85})` : "rgba(255,255,255,0.04)",
+                            outline: isToday ? "1px solid rgba(0,200,255,0.5)" : "none",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Efficiency metrics */}
       {(bodyEffData.length >= 3 || hrEffData.length >= 3) && (
@@ -774,12 +1003,21 @@ export default function TrackerStrava() {
                   ))}
                 </div>
 
+                {/* HR Zones */}
+                {selectedActivity.average_heartrate != null && selectedActivity.max_heartrate != null && (
+                  <div style={{ marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: 10 }}>
+                    <HRZoneBar avgHR={selectedActivity.average_heartrate} maxHR={selectedActivity.max_heartrate} />
+                  </div>
+                )}
+
                 {/* Map */}
                 {routePositions.length > 0 && (
                   <div style={{ height: 260, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,200,255,0.08)" }}>
                     <MapContainer center={routePositions[0]} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl={false} attributionControl={false}>
                       <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                       <Polyline positions={routePositions as any} pathOptions={{ color: "#FC4C02", weight: 3, opacity: 0.9 }} />
+                      <CircleMarker center={routePositions[0]} radius={6} pathOptions={{ fillColor: "#22C55E", color: "#fff", weight: 2, fillOpacity: 1 }} />
+                      <CircleMarker center={routePositions[routePositions.length - 1]} radius={6} pathOptions={{ fillColor: "#FC4C02", color: "#fff", weight: 2, fillOpacity: 1 }} />
                       <FitBounds positions={routePositions} />
                     </MapContainer>
                   </div>
