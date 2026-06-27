@@ -114,27 +114,37 @@ export default function TrackerLayout() {
         bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
         left: 14px; right: 14px;
         z-index: 60;
-        background: rgba(10, 10, 18, 0.52);
-        backdrop-filter: blur(40px) saturate(200%) brightness(1.15);
-        -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.15);
-        border: 1px solid rgba(255,255,255,0.11);
-        border-radius: 24px;
+        background: linear-gradient(
+          160deg,
+          rgba(255,255,255,0.065) 0%,
+          rgba(8, 8, 16, 0.42) 35%,
+          rgba(8, 8, 16, 0.48) 100%
+        );
+        backdrop-filter: blur(48px) saturate(220%) brightness(1.2);
+        -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(1.2);
+        border: none;
+        border-radius: 26px;
         box-shadow:
-          0 10px 40px rgba(0,0,0,0.45),
-          0 2px 8px rgba(0,0,0,0.25),
-          inset 0 1px 0 rgba(255,255,255,0.13),
-          inset 0 -1px 0 rgba(0,0,0,0.15);
+          0 12px 48px rgba(0,0,0,0.5),
+          0 2px 10px rgba(0,0,0,0.3),
+          inset 0 1.5px 0 rgba(255,255,255,0.18),
+          inset 0 -1px 0 rgba(255,255,255,0.04),
+          inset 1px 0 0 rgba(255,255,255,0.06),
+          inset -1px 0 0 rgba(255,255,255,0.06);
         align-items: center;
         justify-content: space-around;
         padding: 6px 8px;
       }
       .kt-app.light .kt-bottom-nav {
-        background: rgba(255,255,255,0.55);
-        border-color: rgba(0,0,0,0.07);
+        background: linear-gradient(
+          160deg,
+          rgba(255,255,255,0.75) 0%,
+          rgba(240,242,248,0.55) 100%
+        );
         box-shadow:
-          0 10px 40px rgba(0,0,0,0.1),
+          0 12px 40px rgba(0,0,0,0.1),
           0 2px 8px rgba(0,0,0,0.06),
-          inset 0 1px 0 rgba(255,255,255,0.85),
+          inset 0 1.5px 0 rgba(255,255,255,0.95),
           inset 0 -1px 0 rgba(0,0,0,0.04);
       }
       .kt-bnav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 50px; text-decoration: none; color: rgba(200,210,220,0.45); font-size: 0.48rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 5px 2px 4px; }
