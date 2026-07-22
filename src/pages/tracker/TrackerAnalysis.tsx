@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
-  ComposedChart, LineChart, Line, Area, XAxis, YAxis,
+  ComposedChart, LineChart, Line, Bar, Area, XAxis, YAxis,
   Tooltip, ResponsiveContainer, ReferenceLine, Legend,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
 import { format, parseISO, subDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
+import { useStravaToken, useStravaActivities } from "@/features/tracker/hooks/useStrava";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 const C = {
@@ -81,6 +83,23 @@ const M_LABELS: Record<string, string> = {
   waist: "Waist", chest: "Chest", hips: "Hips", arms: "Arms", thighs: "Thighs", body_fat: "Body fat",
 };
 
+function CorrelationTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0]?.payload;
+  if (!p) return null;
+  return (
+    <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
+      <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "0.68rem" }}>Week of {format(parseISO(p.week), "MMM d")}</p>
+      <p style={{ color: "#d4a05a" }}>{p.trainingMin} min training</p>
+      {p.weightChange != null && (
+        <p style={{ color: p.weightChange <= 0 ? "#5ad4a0" : "#d4705a", marginTop: "0.15rem" }}>
+          {p.weightChange > 0 ? "+" : ""}{p.weightChange} kg that week
+        </p>
+      )}
+    </div>
+  );
+}
+
 function MeasureTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const date = payload[0]?.payload?.date;
@@ -103,6 +122,8 @@ export default function TrackerAnalysis() {
   const { data: goal }          = useTrackerGoal();
   const stats                   = useProgressStats();
   const { data: photos = [] }   = useTrackerPhotos();
+  const { data: stravaToken }   = useStravaToken();
+  const { data: activities = [] } = useStravaActivities();
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
 
   const sorted = [...checkins].sort((a, b) => a.log_date.localeCompare(b.log_date));
@@ -119,6 +140,40 @@ export default function TrackerAnalysis() {
   const startWeight = sorted[0]?.weight ?? null;
 
   const weeklyData = buildWeekly(sorted);
+
+  // Training load vs weight — weekly training minutes (Strava) aligned to the same Monday-start weeks as weeklyData
+  const weeklyTrainingMin = useMemo(() => {
+    const map: Record<string, number> = {};
+    activities.forEach(a => {
+      const d = new Date(a.start_date_local ?? a.start_date);
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      const key = monday.toISOString().split("T")[0];
+      map[key] = (map[key] ?? 0) + a.moving_time / 60;
+    });
+    return map;
+  }, [activities]);
+
+  const correlationData = useMemo(() =>
+    weeklyData.map((w, i) => ({
+      week: w.week,
+      trainingMin: Math.round(weeklyTrainingMin[w.week] ?? 0),
+      weightChange: i > 0 ? +(w.avg - weeklyData[i - 1].avg).toFixed(1) : null,
+    })),
+    [weeklyData, weeklyTrainingMin]
+  );
+
+  const trainingInsight = useMemo(() => {
+    const weeks = correlationData.filter(w => w.weightChange != null);
+    if (weeks.length < 4) return null;
+    const minutes = weeks.map(w => w.trainingMin).sort((a, b) => a - b);
+    const median = minutes[Math.floor(minutes.length / 2)];
+    const high = weeks.filter(w => w.trainingMin > median);
+    const low = weeks.filter(w => w.trainingMin <= median);
+    if (high.length < 2 || low.length < 2) return null;
+    const avg = (arr: typeof weeks) => +(arr.reduce((s, w) => s + (w.weightChange ?? 0), 0) / arr.length).toFixed(1);
+    return { highAvg: avg(high), lowAvg: avg(low), median: Math.round(median) };
+  }, [correlationData]);
   const firstDate  = sorted[0]?.log_date;
   const lastDate   = sorted[sorted.length - 1]?.log_date;
   const totalDays  = firstDate && lastDate
@@ -450,6 +505,71 @@ export default function TrackerAnalysis() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Training load vs weight */}
+      <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
+        <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Training load vs weight</p>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.dim, marginBottom: "1.25rem" }}>
+          Weekly training minutes (Strava) next to that week's weight change
+        </p>
+
+        {!stravaToken ? (
+          <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
+            <p style={{ color: "var(--kt-muted)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Connect Strava to see how training load lines up with your weight trend.</p>
+            <Link to="/tracker/strava" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "var(--kt-accent)", textDecoration: "none" }}>Connect Strava →</Link>
+          </div>
+        ) : correlationData.filter(w => w.trainingMin > 0).length < 2 ? (
+          <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
+            <p style={{ color: "var(--kt-muted)", fontSize: "0.85rem" }}>Not enough logged training yet — keep syncing runs to unlock this view.</p>
+          </div>
+        ) : (
+          <>
+            <div className="kt-chart-wrap" style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={correlationData} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+                  <XAxis
+                    dataKey="week"
+                    tickFormatter={d => { try { return format(parseISO(d), "MMM d"); } catch { return ""; } }}
+                    tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#9090A0" }}
+                    axisLine={false} tickLine={false} interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    yAxisId="min"
+                    tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#9090A0" }}
+                    axisLine={false} tickLine={false} width={32}
+                  />
+                  <YAxis yAxisId="kg" orientation="right" hide />
+                  <Tooltip content={<CorrelationTooltip />} cursor={{ fill: "rgba(0,200,255,0.04)" }} />
+                  <Bar yAxisId="min" dataKey="trainingMin" fill="rgba(212,160,90,0.45)" radius={[3, 3, 0, 0]} />
+                  <Line yAxisId="kg" type="monotone" dataKey="weightChange" stroke="#00C8FF" strokeWidth={2} dot={{ r: 3, fill: "#00C8FF", strokeWidth: 0 }} connectNulls={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ display: "flex", gap: "1.2rem", marginTop: "0.85rem", paddingTop: "0.75rem", borderTop: "1px solid var(--kt-border)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span style={{ width: 10, height: 10, background: "rgba(212,160,90,0.6)", borderRadius: 2, display: "inline-block" }} />
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-dim)" }}>Training (min/wk)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span style={{ width: 16, height: 2, background: "#00C8FF", borderRadius: 2, display: "inline-block" }} />
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-dim)" }}>Weight change (kg/wk)</span>
+              </div>
+            </div>
+
+            {trainingInsight && (
+              <div style={{ marginTop: "1rem", padding: "0.8rem 1rem", background: "var(--kt-surface2)", borderLeft: "2px solid var(--kt-accent)", borderRadius: "0 8px 8px 0" }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--kt-muted)", lineHeight: 1.65 }}>
+                  In weeks above {trainingInsight.median} min of training, your average change was{" "}
+                  <strong style={{ color: trainingInsight.highAvg <= 0 ? C.green : C.red }}>{trainingInsight.highAvg > 0 ? "+" : ""}{trainingInsight.highAvg} kg</strong>
+                  {" "}vs{" "}
+                  <strong style={{ color: trainingInsight.lowAvg <= 0 ? C.green : C.red }}>{trainingInsight.lowAvg > 0 ? "+" : ""}{trainingInsight.lowAvg} kg</strong>
+                  {" "}in lighter weeks.
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Measurement trends chart */}

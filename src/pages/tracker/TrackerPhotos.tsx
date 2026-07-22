@@ -34,6 +34,38 @@ function StatDiff({ label, from, to, unit = "", invert = false }: { label: strin
   );
 }
 
+function TimelineSparkline({ points }: { points: { date: string; weight: number }[] }) {
+  if (points.length < 2) return null;
+  const width = 120, height = 32;
+  const weights = points.map(p => p.weight);
+  const min = Math.min(...weights), max = Math.max(...weights);
+  const range = max - min || 1;
+  const stepX = width / (points.length - 1);
+  const path = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${(i * stepX).toFixed(1)},${(height - ((p.weight - min) / range) * height).toFixed(1)}`)
+    .join(" ");
+  const lastX = (points.length - 1) * stepX;
+  const lastY = height - ((points[points.length - 1].weight - min) / range) * height;
+  const delta = +(points[points.length - 1].weight - points[0].weight).toFixed(1);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: "block", flexShrink: 0 }}>
+        <path d={path} fill="none" stroke="#00C8FF" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={lastX} cy={lastY} r={2.5} fill="#00C8FF" />
+      </svg>
+      <div>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: "var(--kt-muted)" }}>
+          {points[0].weight} kg <span style={{ color: "var(--kt-dim)" }}>→</span> {points[points.length - 1].weight} kg
+        </p>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: delta <= 0 ? "#5ad4a0" : "#d4705a", marginTop: "0.15rem" }}>
+          {delta > 0 ? "+" : ""}{delta} kg across {points.length} photo dates
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function CompareSlider({ urlA, urlB }: { urlA: string; urlB: string }) {
   const [pos, setPos] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -162,6 +194,16 @@ export default function TrackerPhotos() {
     return acc;
   }, {});
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+  const timelineWeightSeries = [...dates]
+    .sort((a, b) => a.localeCompare(b))
+    .map(date => {
+      const weight = byDate[date].find(p => p.weight_at != null)?.weight_at
+        ?? checkins.find(c => c.log_date === date)?.weight
+        ?? null;
+      return weight != null ? { date, weight } : null;
+    })
+    .filter((p): p is { date: string; weight: number } => p !== null);
 
   const photoA = dateA ? byDate[dateA]?.find(p => p.angle === compareAngle) : null;
   const photoB = dateB ? byDate[dateB]?.find(p => p.angle === compareAngle) : null;
@@ -363,6 +405,12 @@ export default function TrackerPhotos() {
             <p style={{ color: "var(--kt-dim)", fontSize: "0.85rem" }}>No photos yet.</p>
           ) : (
             <>
+              {timelineWeightSeries.length >= 2 && (
+                <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
+                  <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Weight across photos</p>
+                  <TimelineSparkline points={timelineWeightSeries} />
+                </div>
+              )}
               {dates.length >= 2 && (
                 <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.62rem", letterSpacing: "0.12em", color: "var(--kt-dim)", marginBottom: "1rem" }}>
                   // tap the circle next to a date to select it for comparison

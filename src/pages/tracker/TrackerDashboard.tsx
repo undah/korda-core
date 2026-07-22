@@ -7,6 +7,7 @@ import {
 import { format, parseISO, subDays, addDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
+import { useStravaToken, useStravaActivities } from "@/features/tracker/hooks/useStrava";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 type Range = "1W" | "1M" | "3M" | "All";
@@ -105,6 +106,8 @@ export default function TrackerDashboard() {
   const stats = useProgressStats();
   const { data: photos = [] } = useTrackerPhotos();
   const { data: journalEntries = [] } = useTrackerJournal(7);
+  const { data: stravaToken } = useStravaToken();
+  const { data: activities = [] } = useStravaActivities();
   const [range, setRange] = useState<Range>("3M");
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
   const [showRaw, setShowRaw]             = useState(true);
@@ -278,6 +281,11 @@ export default function TrackerDashboard() {
     </div>
   );
 
+  const weekActivities = activities.filter(a => (a.start_date_local ?? a.start_date)?.slice(0, 10) >= cutoff7d);
+  const weekTrainingMin = Math.round(weekActivities.reduce((s, a) => s + a.moving_time, 0) / 60);
+  const weekDistanceKm = +(weekActivities.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(1);
+  const weekJournalCount = journalEntries.filter(j => j.log_date >= cutoff7d).length;
+
   return (
     <div>
       {/* Lightbox */}
@@ -316,6 +324,33 @@ export default function TrackerDashboard() {
         <Link to="/tracker/progress" className="kt-btn kt-btn-blue" style={{ textDecoration: "none", marginTop: "0.5rem" }}>
           + Log today
         </Link>
+      </div>
+
+      {/* This week recap — ties weight, training, and journal together */}
+      <div className="kt-grid-3" style={{ marginBottom: "1rem" }}>
+        <StatCard
+          label="Weigh-ins"
+          value={`${last7.length}/7`}
+          sub={weekChg !== null ? `${weekChg > 0 ? "+" : ""}${weekChg} kg avg this week` : "days logged"}
+        />
+        {stravaToken ? (
+          <StatCard
+            label="Training"
+            value={`${weekActivities.length} ${weekActivities.length === 1 ? "session" : "sessions"}`}
+            sub={weekActivities.length ? `${weekDistanceKm} km · ${weekTrainingMin} min` : "no sessions yet"}
+          />
+        ) : (
+          <Link to="/tracker/strava" className="kt-card" style={{ textDecoration: "none", display: "block" }}>
+            <p className="kt-card-label">Training</p>
+            <p className="kt-card-value" style={{ fontSize: "1.1rem", color: C.dim }}>Connect Strava</p>
+            <p className="kt-card-sub">see this week's sessions →</p>
+          </Link>
+        )}
+        <StatCard
+          label="Journal"
+          value={`${weekJournalCount}/7`}
+          sub={weekJournalCount ? "days logged" : "no entries yet"}
+        />
       </div>
 
       {/* 2-column dashboard: main content left, panel right */}

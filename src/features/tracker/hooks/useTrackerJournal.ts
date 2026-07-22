@@ -55,24 +55,6 @@ export function useTrackerCalories(limit = 30) {
   });
 }
 
-export function useUpsertCalories() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: Omit<TrackerCalories, "id" | "user_id" | "created_at" | "deficit">) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      const { data, error } = await supabase
-        .from("tracker_calories")
-        .insert({ ...payload, user_id: user.id })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tracker_calories"] }),
-  });
-}
-
 // ─── photos ──────────────────────────────────────────────────────────────────
 
 export function useTrackerPhotos() {
@@ -149,16 +131,5 @@ export function useDeleteJournal() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tracker_journal"] }),
-  });
-}
-
-export function useDeleteCalories() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tracker_calories").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tracker_calories"] }),
   });
 }
