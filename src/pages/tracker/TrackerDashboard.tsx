@@ -1,13 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import {
-  ComposedChart, Line, Area, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, ReferenceLine,
-} from "recharts";
 import { format, parseISO, subDays, addDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
-import { useStravaToken, useStravaActivities } from "@/features/tracker/hooks/useStrava";
+import WeightTrendChart from "@/features/tracker/components/WeightTrendChart";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 type Range = "1W" | "1M" | "3M" | "All";
@@ -38,66 +34,6 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
   );
 }
 
-// ── Tooltip factory ───────────────────────────────────────────────────────────
-
-function makeTooltip(
-  photosByDate: Record<string, TrackerPhoto[]>,
-  startWeight: number | null
-) {
-  return function WeightTooltip({ active, payload }: any) {
-    if (!active || !payload?.length) return null;
-    const w = payload.find((p: any) => p.dataKey === "weight");
-    const a = payload.find((p: any) => p.dataKey === "avg7");
-    const date = payload[0]?.payload?.date;
-    const dayPhotos = date ? (photosByDate[date] ?? []) : [];
-    const pctLoss = startWeight && w?.value != null
-      ? +((startWeight - w.value) / startWeight * 100).toFixed(1)
-      : null;
-
-    return (
-      <div style={{
-        background: "#0C0C18",
-        border: "1px solid rgba(0,200,255,0.2)",
-        borderRadius: 10,
-        padding: "0.75rem 1rem",
-        fontFamily: "'IBM Plex Mono', monospace",
-        fontSize: "0.72rem",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
-        maxWidth: 320,
-        pointerEvents: "none",
-      }}>
-        <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "0.68rem" }}>
-          {date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}
-        </p>
-        {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "0.9rem" }}>{w.value} kg</p>}
-        {pctLoss !== null && (
-          <p style={{ color: pctLoss > 0 ? C.green : C.red, fontSize: "0.7rem", marginTop: "0.15rem" }}>
-            {pctLoss > 0 ? "−" : "+"}{Math.abs(pctLoss)}% from start
-          </p>
-        )}
-        {a && <p style={{ color: "var(--kt-muted)", marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
-        {dayPhotos.length > 0 && (
-          <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid var(--kt-border)" }}>
-            <p style={{ fontSize: "0.52rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.45rem" }}>
-              photos · click dot to open
-            </p>
-            <div style={{ display: "flex", gap: "0.3rem" }}>
-              {dayPhotos.map(photo => (
-                <div key={photo.id} style={{ position: "relative", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
-                  <img src={photo.url} alt={photo.angle} style={{ width: 54, height: 72, objectFit: "cover", display: "block" }} />
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "0.46rem", textTransform: "capitalize", color: "var(--kt-text)" }}>
-                    {photo.angle}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function TrackerDashboard() {
@@ -106,13 +42,8 @@ export default function TrackerDashboard() {
   const stats = useProgressStats();
   const { data: photos = [] } = useTrackerPhotos();
   const { data: journalEntries = [] } = useTrackerJournal(7);
-  const { data: stravaToken } = useStravaToken();
-  const { data: activities = [] } = useStravaActivities();
   const [range, setRange] = useState<Range>("3M");
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
-  const [showRaw, setShowRaw]             = useState(true);
-  const [showAvg, setShowAvg]             = useState(true);
-  const [showProjected, setShowProjected] = useState(true);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -177,29 +108,13 @@ export default function TrackerDashboard() {
     return { lowestWeight: +lowestWeight.toFixed(1), lowestDate, biggestDrop: +biggestDrop.toFixed(1), bestWeek7: +bestWeek7.toFixed(1) };
   }, [sorted]);
 
-  const startWeight = sorted[0]?.weight ?? null;
-
-  // Build chart data with 7d rolling avg
-  const chartData = useMemo(() =>
-    sorted.map((c, i) => {
-      const slice = sorted.slice(Math.max(0, i - 6), i + 1);
-      const avg7 = +(slice.reduce((s, x) => s + x.weight, 0) / slice.length).toFixed(2);
-      return { date: c.log_date, weight: c.weight, avg7 };
-    }),
-    [sorted]
-  );
-
   // Filter by selected range
   const filteredData = useMemo(() => {
     const days = RANGE_DAYS[range];
-    if (!days) return chartData;
+    if (!days) return sorted;
     const cutoff = subDays(new Date(), days).toISOString().split("T")[0];
-    return chartData.filter(d => d.date >= cutoff);
-  }, [chartData, range]);
-
-  const weights = filteredData.map(d => d.weight);
-  const yMin = weights.length ? Math.floor(Math.min(...weights) - 1.5) : 0;
-  const yMax = weights.length ? Math.ceil(Math.max(...weights) + 1.5) : 100;
+    return sorted.filter(d => d.log_date >= cutoff);
+  }, [sorted, range]);
 
   const latest  = sorted[sorted.length - 1];
   const cutoff7d  = subDays(new Date(), 7).toISOString().split("T")[0];
@@ -242,23 +157,6 @@ export default function TrackerDashboard() {
     return out;
   }, [paceKgPerWeek, latest, goal]);
 
-  const combinedData = useMemo(() => {
-    const hist = filteredData.map((d, i) => ({
-      ...d,
-      projected: i === filteredData.length - 1 && projectedPoints.length ? (d.weight as number | undefined) : undefined,
-    }));
-    if (!projectedPoints.length) return hist;
-    return [...hist, ...projectedPoints.map(p => ({
-      date: p.date, weight: undefined as number | undefined,
-      avg7: undefined as number | undefined, projected: p.projected,
-    }))];
-  }, [filteredData, projectedPoints]);
-
-  const TooltipContent = useMemo(
-    () => makeTooltip(photosByDate, startWeight),
-    [photosByDate, startWeight]
-  );
-
   if (isLoading) return (
     <div style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
       loading data...
@@ -280,11 +178,6 @@ export default function TrackerDashboard() {
       </div>
     </div>
   );
-
-  const weekActivities = activities.filter(a => (a.start_date_local ?? a.start_date)?.slice(0, 10) >= cutoff7d);
-  const weekTrainingMin = Math.round(weekActivities.reduce((s, a) => s + a.moving_time, 0) / 60);
-  const weekDistanceKm = +(weekActivities.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(1);
-  const weekJournalCount = journalEntries.filter(j => j.log_date >= cutoff7d).length;
 
   return (
     <div>
@@ -326,33 +219,6 @@ export default function TrackerDashboard() {
         </Link>
       </div>
 
-      {/* This week recap — ties weight, training, and journal together */}
-      <div className="kt-grid-3" style={{ marginBottom: "1rem" }}>
-        <StatCard
-          label="Weigh-ins"
-          value={`${last7.length}/7`}
-          sub={weekChg !== null ? `${weekChg > 0 ? "+" : ""}${weekChg} kg avg this week` : "days logged"}
-        />
-        {stravaToken ? (
-          <StatCard
-            label="Training"
-            value={`${weekActivities.length} ${weekActivities.length === 1 ? "session" : "sessions"}`}
-            sub={weekActivities.length ? `${weekDistanceKm} km · ${weekTrainingMin} min` : "no sessions yet"}
-          />
-        ) : (
-          <Link to="/tracker/strava" className="kt-card" style={{ textDecoration: "none", display: "block" }}>
-            <p className="kt-card-label">Training</p>
-            <p className="kt-card-value" style={{ fontSize: "1.1rem", color: C.dim }}>Connect Strava</p>
-            <p className="kt-card-sub">see this week's sessions →</p>
-          </Link>
-        )}
-        <StatCard
-          label="Journal"
-          value={`${weekJournalCount}/7`}
-          sub={weekJournalCount ? "days logged" : "no entries yet"}
-        />
-      </div>
-
       {/* 2-column dashboard: main content left, panel right */}
       <div className="kt-dashboard-grid">
 
@@ -369,92 +235,37 @@ export default function TrackerDashboard() {
 
           {/* Chart */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: "1.5rem", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", gap: "1rem", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", gap: "1rem", flexWrap: "wrap" }}>
               <div>
                 <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
                 <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: C.dim }}>
-                  {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg  ·  ` : ""}Raw + 7-day avg
-                  {filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? "  ·  cyan dots = photos" : ""}
+                  {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg` : "No goal set"}
                 </p>
               </div>
               <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
                 {RANGES.map(r => (
-                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "#00C8FF" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
+                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "var(--kt-accent)" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
                 ))}
               </div>
             </div>
-            {filteredData.length < 2 ? (
-              <div style={{ textAlign: "center", padding: "3rem", color: C.muted, fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem" }}>Not enough data for this range.</div>
-            ) : (
-              <div className="kt-chart-wrap">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={combinedData} margin={{ top: 8, right: 12, bottom: 0, left: -8 }} onClick={(data: any) => { if (!data?.activePayload?.[0]) return; const date = data.activePayload[0].payload?.date; if (!date) return; const dayPhotos = photosByDate[date] ?? []; if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos); }} style={{ cursor: "default" }}>
-                    <defs>
-                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#5ab4d4" stopOpacity={0.18} />
-                        <stop offset="100%" stopColor="#5ab4d4" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="date" tickFormatter={d => { try { return format(parseISO(d), range === "1W" ? "EEE d" : "MMM d"); } catch { return ""; } }} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#9090A0" }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(combinedData.length / 7) - 1)} />
-                    <YAxis domain={[yMin, yMax]} tickFormatter={v => `${v}`} tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#9090A0" }} axisLine={false} tickLine={false} tickCount={5} width={32} />
-                    <Tooltip content={TooltipContent} cursor={{ stroke: "rgba(0,200,255,0.12)", strokeWidth: 1 }} />
-                    {goal?.goal_weight && <ReferenceLine y={goal.goal_weight} stroke="rgba(90,212,160,0.3)" strokeDasharray="6 4" strokeWidth={1} label={{ value: `goal: ${goal.goal_weight} kg`, position: "insideTopLeft", fill: "rgba(90,212,160,0.55)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }} />}
-                    {showAvg && <Area type="monotone" dataKey="avg7" fill="url(#areaGrad)" stroke="none" dot={false} activeDot={false} />}
-                    {showRaw && <Line type="monotone" dataKey="weight" stroke="rgba(90,180,212,0.3)" strokeWidth={1} strokeDasharray="3 4"
-                      dot={(props: any) => {
-                        const { cx, cy, payload } = props;
-                        if (cx == null || cy == null) return <g key={`dot-${payload.date}`} />;
-                        const hasPhotos = (photosByDate[payload.date]?.length ?? 0) > 0;
-                        return hasPhotos ? (
-                          <g key={`dot-${payload.date}`} style={{ cursor: "pointer" }}>
-                            <circle cx={cx} cy={cy} r={8} fill="rgba(0,200,255,0.1)" strokeWidth={0} />
-                            <circle cx={cx} cy={cy} r={4} fill="#00C8FF" strokeWidth={1.5} stroke="rgba(0,200,255,0.5)" />
-                          </g>
-                        ) : <circle key={`dot-${payload.date}`} cx={cx} cy={cy} r={2.5} fill="rgba(90,180,212,0.55)" strokeWidth={0} />;
-                      }}
-                      activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
-                    />}
-                    {showAvg && <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />}
-                    {showProjected && projectedPoints.length > 0 && (
-                      <Line type="monotone" dataKey="projected" stroke="rgba(90,212,160,0.7)" strokeWidth={1.5} strokeDasharray="5 4" activeDot={false} connectNulls={false}
-                        dot={(props: any) => {
-                          const { cx, cy, payload, index } = props;
-                          if (payload.projected == null || cx == null || cy == null) return <g key={`pd-${index}`} />;
-                          const isLast = index === combinedData.length - 1;
-                          // Show a small dot every ~8 projected steps and always at the end
-                          const projIdx = index - (combinedData.length - projectedPoints.length);
-                          const showLabel = isLast || projIdx % 8 === 3;
-                          return (
-                            <g key={`pd-${index}`}>
-                              {showLabel && <circle cx={cx} cy={cy} r={2.5} fill="rgba(90,212,160,0.8)" strokeWidth={0} />}
-                              {showLabel && (
-                                <text x={cx} y={cy - 7} textAnchor="middle" fill="rgba(90,212,160,0.75)"
-                                  fontFamily="'IBM Plex Mono',monospace" fontSize={8}>
-                                  {payload.projected} kg
-                                </text>
-                              )}
-                            </g>
-                          );
-                        }}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid var(--kt-border)", flexWrap: "wrap" }}>
-              {[
-                { key: "raw",       label: "Raw",       active: showRaw,       set: setShowRaw,       icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,180,212,0.7)" strokeWidth="1.5" strokeDasharray="3 3" /></svg> },
-                { key: "avg",       label: "7d avg",    active: showAvg,       set: setShowAvg,       icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg> },
-                ...(projectedPoints.length > 0 ? [{ key: "proj", label: "Projected", active: showProjected, set: setShowProjected, icon: <svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="rgba(90,212,160,0.7)" strokeWidth="1.5" strokeDasharray="4 3" /></svg> }] : []),
-                ...(filteredData.some(d => (photosByDate[d.date]?.length ?? 0) > 0) ? [{ key: "photos", label: "Photos", active: true, set: () => {}, icon: <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00C8FF" /></svg> }] : []),
-              ].map(item => (
-                <button key={item.key} onClick={() => item.set((v: boolean) => !v)}
-                  style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "none", border: "1px solid", borderColor: item.active ? "var(--kt-border)" : "transparent", borderRadius: 6, padding: "0.2rem 0.55rem", cursor: "pointer", opacity: item.active ? 1 : 0.35, transition: "all 0.15s" }}>
-                  {item.icon}
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-muted)", textDecoration: item.active ? "none" : "line-through" }}>{item.label}</span>
-                </button>
-              ))}
+
+            <WeightTrendChart
+              points={filteredData.map(c => ({ date: c.log_date, weight: c.weight }))}
+              projected={range === "All" || range === "3M" ? projectedPoints : []}
+              goal={goal?.goal_weight}
+              photosByDate={photosByDate}
+              height={220}
+              onDotClick={date => {
+                const dayPhotos = photosByDate[date] ?? [];
+                if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos);
+              }}
+            />
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid var(--kt-border)" }}>
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "var(--kt-dim)" }}>
+                {filteredData.some(c => (photosByDate[c.log_date]?.length ?? 0) > 0) ? "filled dots = photos" : ""}
+              </p>
+              <Link to="/tracker/graph" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.75, textDecoration: "none", letterSpacing: "0.06em" }}>Full graph →</Link>
             </div>
           </div>
 
@@ -591,6 +402,7 @@ export default function TrackerDashboard() {
           <div style={{ padding: "0.5rem 0" }}>
             {[
               { to: "/tracker/progress", label: "Log check-in" },
+              { to: "/tracker/graph",    label: "Weight graph" },
               { to: "/tracker/journal",  label: "Daily journal" },
               { to: "/tracker/photos",   label: "Progress photos" },
               { to: "/tracker/analysis", label: "Deep analysis" },

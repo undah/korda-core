@@ -1,5 +1,6 @@
 // src/features/tracker/hooks/useTrackerCheckins.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { subDays, addDays } from "date-fns";
 import { supabase } from "@/lib/supabaseClient";
 import { TrackerCheckin, TrackerGoal, ProgressStats } from "../types";
 
@@ -138,4 +139,40 @@ export function useProgressStats(): ProgressStats | null {
     : null;
 
   return { totalLost, percentToGoal, currentStreak: streak, avgWeeklyLoss, daysToGoal, bestWeek };
+}
+
+// ─── weight projection ─────────────────────────────────────────────────────────
+// Shared by the Dashboard chart and the dedicated Graph screen so both project
+// the same trajectory from the same 30-day pace.
+
+export function computeWeightProjection(
+  sorted: TrackerCheckin[],
+  goal: TrackerGoal | null | undefined
+): { paceKgPerWeek: number | null; projectedPoints: { date: string; projected: number }[] } {
+  if (sorted.length < 2 || !goal?.goal_weight) return { paceKgPerWeek: null, projectedPoints: [] };
+
+  const cutoff30 = subDays(new Date(), 30).toISOString().split("T")[0];
+  const last30 = sorted.filter(c => c.log_date >= cutoff30);
+  const paceKgPerWeek = last30.length >= 2
+    ? +((last30[last30.length - 1].weight - last30[0].weight) /
+        ((new Date(last30[last30.length - 1].log_date).getTime() -
+          new Date(last30[0].log_date).getTime()) / (7 * 24 * 60 * 60 * 1000))
+      ).toFixed(2)
+    : null;
+
+  const latest = sorted[sorted.length - 1];
+  const goalW = goal.goal_weight;
+  const projectedPoints: { date: string; projected: number }[] = [];
+
+  if (paceKgPerWeek && paceKgPerWeek < 0) {
+    let w = latest.weight;
+    for (let i = 1; i <= 53; i++) {
+      const d = addDays(new Date(latest.log_date), i * 7).toISOString().split("T")[0];
+      w = +(w + paceKgPerWeek).toFixed(2);
+      if (w <= goalW) { projectedPoints.push({ date: d, projected: goalW }); break; }
+      projectedPoints.push({ date: d, projected: w });
+    }
+  }
+
+  return { paceKgPerWeek, projectedPoints };
 }

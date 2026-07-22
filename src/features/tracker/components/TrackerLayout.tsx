@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings, Zap, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings, Zap, Sun, Moon, LineChart } from "lucide-react";
 import { useNotificationCheck } from "@/hooks/useNotificationCheck";
 
 const NAV_ITEMS = [
   { path: "/tracker/dashboard", label: "Overview",  icon: LayoutDashboard },
+  { path: "/tracker/graph",     label: "Graph",      icon: LineChart },
   { path: "/tracker/progress",  label: "Progress",  icon: TrendingUp },
   { path: "/tracker/journal",   label: "Journal",   icon: BookOpen },
   { path: "/tracker/photos",    label: "Photos",    icon: Camera },
@@ -212,7 +213,7 @@ export default function TrackerLayout() {
         to   { opacity: 1; transform: translateY(0); }
       }
       .kt-page-anim {
-        animation: kt-page-in 0.24s cubic-bezier(0.16,1,0.3,1) both;
+        animation: kt-page-in 0.24s cubic-bezier(0.16,1,0.3,1);
       }
 
       /* ── RESPONSIVE ── */

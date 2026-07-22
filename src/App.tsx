@@ -42,6 +42,7 @@ import TrackerLogin from "./pages/TrackerLogin";
 import KordaTracker from "./pages/KordaTracker";
 import TrackerLayout from "./features/tracker/components/TrackerLayout";
 import TrackerDashboard from "./pages/tracker/TrackerDashboard";
+import TrackerGraph from "./pages/tracker/TrackerGraph";
 import TrackerProgress from "./pages/tracker/TrackerProgress";
 import TrackerJournal from "./pages/tracker/TrackerJournal";
 import TrackerPhotos from "./pages/tracker/TrackerPhotos";
@@ -99,6 +100,7 @@ function AnimatedRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route element={<TrackerLayout />}>
               <Route path="/tracker/dashboard" element={<TrackerDashboard />} />
+              <Route path="/tracker/graph"     element={<TrackerGraph />} />
               <Route path="/tracker/progress"  element={<TrackerProgress />} />
               <Route path="/tracker/journal"   element={<TrackerJournal />} />
               <Route path="/tracker/photos"    element={<TrackerPhotos />} />
