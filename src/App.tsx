@@ -28,6 +28,7 @@ import TrainingRules from "./pages/training/TrainingRules";
 import TrainingFinetune from "./pages/training/TrainingFinetune";
 import TrainingChat from "./pages/training/TrainingChat";
 
+import Demo from "./pages/Demo";
 import KordaTrading from "./pages/KordaTrading";
 import Index from "./pages/Index";
 import Journal from "./pages/Journal";
@@ -92,6 +93,7 @@ function AnimatedRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/tracker" element={<KordaTracker />} />
           <Route path="/tracker/login" element={<TrackerLogin />} />
+          <Route path="/demo" element={<Demo />} />
 
           {/* Tracker app — protected, own layout */}
           <Route element={<ProtectedRoute />}>
