@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings, Zap, Sun, Moon, LineChart } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BookOpen, Camera, BarChart2, Settings, Zap, Sun, Moon, LineChart, MoreHorizontal } from "lucide-react";
 import { useNotificationCheck } from "@/hooks/useNotificationCheck";
 
+// Full list — used as-is for the desktop sidebar, which has room for all of it.
 const NAV_ITEMS = [
   { path: "/tracker/dashboard", label: "Overview",  icon: LayoutDashboard },
   { path: "/tracker/graph",     label: "Graph",      icon: LineChart },
@@ -14,18 +15,29 @@ const NAV_ITEMS = [
   { path: "/tracker/settings",  label: "Settings",  icon: Settings },
 ];
 
+// Mobile bottom nav only has room for ~5 icons before it crowds out. Keep the
+// daily-use items front and center; everything else lives behind "More".
+const MOBILE_PRIMARY_PATHS = ["/tracker/dashboard", "/tracker/progress", "/tracker/journal", "/tracker/photos"];
+const MOBILE_PRIMARY_ITEMS = NAV_ITEMS.filter(i => MOBILE_PRIMARY_PATHS.includes(i.path));
+const MOBILE_MORE_ITEMS = NAV_ITEMS.filter(i => !MOBILE_PRIMARY_PATHS.includes(i.path));
+
 export default function TrackerLayout() {
   const { pathname } = useLocation();
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     try { return (localStorage.getItem("kt-theme") as "dark" | "light") ?? "dark"; }
     catch { return "dark"; }
   });
+  const [moreOpen, setMoreOpen] = useState(false);
   useNotificationCheck();
 
   useEffect(() => {
     document.body.style.background = theme === "dark" ? "#0C0C14" : "#F4F4F8";
     localStorage.setItem("kt-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -154,10 +166,39 @@ export default function TrackerLayout() {
         background: rgba(245, 246, 250, 0.40);
         box-shadow: 0 16px 48px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
       }
-      .kt-bnav-item { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 50px; text-decoration: none; color: rgba(200,210,220,0.45); font-size: 0.48rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 5px 2px 4px; }
+      .kt-bnav-item { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 50px; text-decoration: none; color: rgba(200,210,220,0.45); font-size: 0.48rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 5px 2px 4px; background: none; border: none; cursor: pointer; }
       .kt-app.light .kt-bnav-item { color: rgba(60,60,80,0.45); }
       .kt-bnav-item.active { color: var(--kt-accent); }
       .kt-bnav-item svg { flex-shrink: 0; }
+
+      /* ── BOTTOM NAV — "More" sheet ── */
+      .kt-more-backdrop { display: none; position: fixed; inset: 0; z-index: 59; background: rgba(0,0,0,0.25); }
+      .kt-more-backdrop.open { display: block; }
+      .kt-more-sheet {
+        display: none;
+        position: fixed;
+        left: 14px; right: 14px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+        z-index: 61;
+        background: rgba(16, 16, 26, 0.92);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid var(--kt-border);
+        border-radius: 20px;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.25);
+        padding: 10px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        animation: kt-more-in 0.18s cubic-bezier(0.16,1,0.3,1);
+      }
+      .kt-app.light .kt-more-sheet { background: rgba(255, 255, 255, 0.92); }
+      .kt-more-sheet.open { display: grid; }
+      @keyframes kt-more-in {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .kt-more-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 4px; border-radius: 14px; text-decoration: none; color: var(--kt-muted); font-size: 0.6rem; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+      .kt-more-item.active { color: var(--kt-accent); background: var(--kt-accent-bg); }
 
       /* ── PAGE ── */
       .kt-page-header { margin-bottom: 1.75rem; }
@@ -301,9 +342,24 @@ export default function TrackerLayout() {
         </div>
       </main>
 
+      {/* "More" backdrop + sheet (mobile) */}
+      <div className={`kt-more-backdrop${moreOpen ? " open" : ""}`} onClick={() => setMoreOpen(false)} />
+      <div className={`kt-more-sheet${moreOpen ? " open" : ""}`}>
+        {MOBILE_MORE_ITEMS.map(item => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`kt-more-item${pathname === item.path ? " active" : ""}`}
+          >
+            <item.icon size={18} strokeWidth={pathname === item.path ? 2 : 1.4} />
+            {item.label}
+          </Link>
+        ))}
+      </div>
+
       {/* Mobile bottom nav */}
       <nav className="kt-bottom-nav">
-        {NAV_ITEMS.map((item) => {
+        {MOBILE_PRIMARY_ITEMS.map((item) => {
           const active = pathname === item.path;
           return (
             <Link
@@ -322,6 +378,25 @@ export default function TrackerLayout() {
             </Link>
           );
         })}
+        {(() => {
+          const moreActive = MOBILE_MORE_ITEMS.some(i => i.path === pathname);
+          return (
+            <button
+              type="button"
+              onClick={() => setMoreOpen(o => !o)}
+              className={`kt-bnav-item${moreActive || moreOpen ? " active" : ""}`}
+              style={{
+                background: moreActive || moreOpen ? "rgba(0,200,255,0.10)" : "transparent",
+                borderRadius: 14,
+                transition: "background 0.2s, color 0.15s",
+                padding: "5px 10px",
+              }}
+            >
+              <MoreHorizontal size={18} strokeWidth={moreActive || moreOpen ? 2 : 1.4} />
+              More
+            </button>
+          );
+        })()}
       </nav>
     </div>
   );
