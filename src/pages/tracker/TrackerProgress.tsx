@@ -171,6 +171,7 @@ export default function TrackerProgress() {
   };
 
   const sorted = [...checkins].sort((a, b) => b.log_date.localeCompare(a.log_date));
+  const hasAnyMeasurement = checkins.some(c => c.waist || c.chest || c.hips || c.arms || c.thighs || c.body_fat);
   const measurements = [
     { key: "waist", label: "Waist", unit: "cm" },
     { key: "chest", label: "Chest", unit: "cm" },
@@ -249,6 +250,19 @@ export default function TrackerProgress() {
             <label className="kt-label">Weight <span style={{ color: C.accent, fontSize: "0.7rem" }}>required</span></label>
             <WeightInput value={form.weight} onChange={setField("weight")} />
           </div>
+
+          {/* Measurement nudge — shown until the user logs their first one */}
+          {checkins.length > 0 && !hasAnyMeasurement && !showMeasure && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.7rem 0.9rem", marginBottom: "1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10 }}>
+              <p style={{ fontSize: "0.76rem", color: C.muted, lineHeight: 1.5, margin: 0 }}>
+                Log your first measurement to unlock trend charts on Analysis.
+              </p>
+              <button type="button" onClick={() => setShowMeasure(true)}
+                style={{ background: "none", border: "none", color: C.accent, fontSize: "0.76rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "'DM Sans',sans-serif" }}>
+                Add now →
+              </button>
+            </div>
+          )}
 
           {/* Measurements toggle */}
           <button type="button" onClick={() => setShowMeasure(v => !v)}

@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { format, parseISO, subDays, addDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import WeightTrendChart from "@/features/tracker/components/WeightTrendChart";
+import { getUnseenMilestone, markMilestoneSeen } from "@/features/tracker/lib/milestones";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 type Range = "1W" | "1M" | "3M" | "All";
@@ -47,6 +49,18 @@ export default function TrackerDashboard() {
   const [aiSummary, setAiSummary] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!stats) return;
+    const milestone = getUnseenMilestone(stats);
+    if (milestone) {
+      toast.success(milestone.message);
+      markMilestoneSeen(milestone.id);
+    }
+    // stats is a fresh object every render (useProgressStats isn't memoized); depend on
+    // its scalar fields instead so this only re-runs when the values actually change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats?.totalLost, stats?.percentToGoal, stats?.currentStreak]);
 
   const generateSummary = async () => {
     setAiLoading(true);
@@ -348,6 +362,12 @@ export default function TrackerDashboard() {
                       </span>
                       <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: C.dim }}>target: −{Math.abs(targetPace)} kg/wk</span>
                     </div>
+                    {paceStatus === "behind" && (
+                      <Link to="/tracker/settings" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", marginTop: "0.75rem", padding: "0.5rem 0.7rem", background: "var(--kt-red-bg)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, textDecoration: "none" }}>
+                        <span style={{ fontSize: "0.7rem", color: C.muted }}>Behind pace — adjust your goal?</span>
+                        <span style={{ fontSize: "0.68rem", color: C.red, fontWeight: 600, whiteSpace: "nowrap" }}>Settings →</span>
+                      </Link>
+                    )}
                   </>
                 )}
               </>

@@ -6,6 +6,7 @@ import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins"
 import type { TrackerPhoto } from "@/features/tracker/types";
 import { toast } from "sonner";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
+import { generateShareImage, shareOrDownloadBlob } from "@/features/tracker/lib/shareProgressImage";
 
 const today = () => new Date().toISOString().split("T")[0];
 const ANGLES = ["front", "side", "back", "face"] as const;
@@ -136,6 +137,7 @@ export default function TrackerPhotos() {
   const [flipAngle, setFlipAngle] = useState<Angle>("front");
   const [flipIdx, setFlipIdx] = useState(0);
   const [flipPlaying, setFlipPlaying] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const flipTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,6 +211,26 @@ export default function TrackerPhotos() {
   const photoB = dateB ? byDate[dateB]?.find(p => p.angle === compareAngle) : null;
   const checkinA = dateA ? checkins.find(c => c.log_date === dateA) : null;
   const checkinB = dateB ? checkins.find(c => c.log_date === dateB) : null;
+
+  const handleShareProgress = async () => {
+    if (!photoA || !photoB || !checkinA?.weight || !checkinB?.weight) return;
+    setSharing(true);
+    try {
+      const blob = await generateShareImage({
+        beforeUrl: photoA.url,
+        afterUrl: photoB.url,
+        beforeDate: dateA,
+        afterDate: dateB,
+        beforeWeight: checkinA.weight,
+        afterWeight: checkinB.weight,
+      });
+      await shareOrDownloadBlob(blob, `progress-${dateA}-${dateB}.png`);
+    } catch {
+      toast.error("Couldn't generate the image — try again.");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const handleTabCompare = () => {
     if (dates.length >= 2 && !dateA && !dateB) {
@@ -685,6 +707,13 @@ export default function TrackerPhotos() {
                               {(Math.abs(checkinB.weight - checkinA.weight) / (Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000) / 7)).toFixed(2)} kg
                             </p>
                           </div>
+                          {photoA && photoB && (
+                            <div style={{ gridColumn: "1 / -1" }}>
+                              <button className="kt-btn kt-btn-blue" onClick={handleShareProgress} disabled={sharing} style={{ width: "100%" }}>
+                                {sharing ? "Generating..." : "Share progress →"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
