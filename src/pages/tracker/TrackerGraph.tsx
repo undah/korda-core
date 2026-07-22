@@ -2,7 +2,6 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { subDays } from "date-fns";
-import { Plus } from "lucide-react";
 import { useTrackerCheckins, useTrackerGoal, computeWeightProjection } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
 import WeightTrendChart from "@/features/tracker/components/WeightTrendChart";
@@ -103,16 +102,21 @@ export default function TrackerGraph() {
           <p className="kt-page-eyebrow">Graph</p>
           <h1 className="kt-page-title">Weight <em>trend</em></h1>
         </div>
-        <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
-          {RANGES.map(r => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.75rem", background: range === r ? "var(--kt-accent)" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}
-            >
-              {r}
-            </button>
-          ))}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+            {RANGES.map(r => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.75rem", background: range === r ? "var(--kt-accent)" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <Link to="/tracker/progress" className="kt-btn kt-btn-blue" style={{ textDecoration: "none", whiteSpace: "nowrap" }}>
+            + Log today
+          </Link>
         </div>
       </div>
 
@@ -170,15 +174,6 @@ export default function TrackerGraph() {
           <p className="kt-card-sub">{targetWeight != null ? "to target" : "no goal set"}</p>
         </div>
       </div>
-
-      {/* Floating add button */}
-      <Link
-        to="/tracker/progress"
-        aria-label="Log today's check-in"
-        style={{ position: "fixed", bottom: "calc(env(safe-area-inset-bottom, 0px) + 90px)", right: "1.5rem", width: 52, height: 52, borderRadius: "50%", background: "var(--kt-accent)", color: "var(--kt-bg)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 40, textDecoration: "none" }}
-      >
-        <Plus size={22} strokeWidth={2.5} />
-      </Link>
     </div>
   );
 }
