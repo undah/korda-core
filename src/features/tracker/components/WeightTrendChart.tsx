@@ -1,5 +1,5 @@
 // src/features/tracker/components/WeightTrendChart.tsx
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ComposedChart, Line, Area, XAxis, YAxis,
   Tooltip, ResponsiveContainer, ReferenceLine,
@@ -10,11 +10,14 @@ import type { TrackerPhoto } from "../types";
 export interface WeightChartPoint {
   date: string;
   weight: number;
+  /** Optional pre-computed 7-day rolling average (over the full history, not just the visible range). */
+  avg7?: number;
 }
 
 interface ChartRow {
   date: string;
   weight?: number;
+  avg7?: number;
   projected?: number;
 }
 
@@ -34,6 +37,7 @@ function makeTooltip(photosByDate: Record<string, TrackerPhoto[]>) {
           {(() => { try { return format(parseISO(row.date), "EEE, MMM d yyyy"); } catch { return row.date; } })()}
         </p>
         {row.weight != null && <p style={{ color: "var(--kt-accent)", fontWeight: 500, fontSize: "0.9rem" }}>{row.weight} kg</p>}
+        {row.avg7 != null && <p style={{ color: "var(--kt-muted)", marginTop: "0.15rem" }}>7d avg: {row.avg7} kg</p>}
         {row.projected != null && row.weight == null && <p style={{ color: "#5ad4a0" }}>{row.projected} kg projected</p>}
         {dayPhotos.length > 0 && (
           <p style={{ marginTop: "0.4rem", paddingTop: "0.4rem", borderTop: "1px solid var(--kt-border)", fontSize: "0.6rem", color: "var(--kt-dim)" }}>
@@ -43,6 +47,18 @@ function makeTooltip(photosByDate: Record<string, TrackerPhoto[]>) {
       </div>
     );
   };
+}
+
+function LineToggle({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "none", border: "1px solid", borderColor: active ? "var(--kt-border)" : "transparent", borderRadius: 6, padding: "0.2rem 0.55rem", cursor: "pointer", opacity: active ? 1 : 0.35, transition: "all 0.15s" }}
+    >
+      {icon}
+      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-muted)", textDecoration: active ? "none" : "line-through" }}>{label}</span>
+    </button>
+  );
 }
 
 interface WeightTrendChartProps {
@@ -66,10 +82,18 @@ export default function WeightTrendChart({
   height = 260,
   monthTicksOnly = false,
 }: WeightTrendChartProps) {
+  const hasAvg = points.some(p => p.avg7 != null);
+  const hasProjected = projected.length > 0;
+
+  const [showRaw, setShowRaw] = useState(true);
+  const [showAvg, setShowAvg] = useState(true);
+  const [showProjected, setShowProjected] = useState(true);
+
   const combined = useMemo<ChartRow[]>(() => {
     const hist: ChartRow[] = points.map((p, i) => ({
       date: p.date,
       weight: p.weight,
+      avg7: p.avg7,
       projected: i === points.length - 1 && projected.length ? p.weight : undefined,
     }));
     if (!projected.length) return hist;
@@ -95,71 +119,106 @@ export default function WeightTrendChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart
-        data={combined}
-        margin={{ top: 10, right: 12, bottom: 0, left: -18 }}
-        onClick={(d: { activePayload?: { payload: ChartRow }[] }) => {
-          const date = d?.activePayload?.[0]?.payload?.date;
-          if (date && onDotClick) onDotClick(date);
-        }}
-      >
-        <defs>
-          <linearGradient id="wtcGoalGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#5ad4a0" stopOpacity={0.28} />
-            <stop offset="100%" stopColor="#5ad4a0" stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <XAxis
-          dataKey="date"
-          tickFormatter={d => { try { return format(parseISO(d), monthTicksOnly ? "MMM" : "MMM d"); } catch { return ""; } }}
-          tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "var(--kt-dim)" }}
-          axisLine={false} tickLine={false}
-          interval="preserveStartEnd"
-          minTickGap={monthTicksOnly ? 36 : 20}
-        />
-        <YAxis
-          domain={[yMin, yMax]}
-          tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "var(--kt-dim)" }}
-          axisLine={false} tickLine={false} tickCount={5} width={30}
-        />
-        <Tooltip content={<TooltipContent />} cursor={{ stroke: "var(--kt-border)", strokeWidth: 1 }} />
-
-        {goal != null && (
-          <ReferenceLine y={goal} stroke="rgba(90,212,160,0.4)" strokeDasharray="5 4" strokeWidth={1} />
-        )}
-
-        {projected.length > 0 && (
-          <Area type="monotone" dataKey="projected" stroke="none" fill="url(#wtcGoalGrad)" connectNulls activeDot={false} />
-        )}
-        {projected.length > 0 && (
-          <Line type="monotone" dataKey="projected" stroke="#5ad4a0" strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} connectNulls />
-        )}
-
-        <Line
-          type="monotone"
-          dataKey="weight"
-          stroke="var(--kt-accent)"
-          strokeWidth={2.5}
-          connectNulls
-          dot={(props: { cx?: number; cy?: number; payload: ChartRow }) => {
-            const { cx, cy, payload } = props;
-            if (cx == null || cy == null) return <g key={`d-${payload.date}`} />;
-            const hasPhotos = (photosByDate[payload.date]?.length ?? 0) > 0;
-            return (
-              <circle
-                key={`d-${payload.date}`}
-                cx={cx} cy={cy} r={hasPhotos ? 5 : 3.5}
-                fill={hasPhotos ? "var(--kt-accent)" : "var(--kt-surface)"}
-                stroke="var(--kt-accent)"
-                strokeWidth={2}
-                style={{ cursor: hasPhotos ? "pointer" : "default" }}
-              />
-            );
+    <>
+      <ResponsiveContainer width="100%" height={height}>
+        <ComposedChart
+          data={combined}
+          margin={{ top: 10, right: 12, bottom: 0, left: 0 }}
+          onClick={(d: { activePayload?: { payload: ChartRow }[] }) => {
+            const date = d?.activePayload?.[0]?.payload?.date;
+            if (date && onDotClick) onDotClick(date);
           }}
-          activeDot={{ r: 6, fill: "var(--kt-accent)", strokeWidth: 2, stroke: "var(--kt-surface)" }}
-        />
-      </ComposedChart>
-    </ResponsiveContainer>
+        >
+          <defs>
+            <linearGradient id="wtcGoalGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#5ad4a0" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#5ad4a0" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="date"
+            tickFormatter={d => { try { return format(parseISO(d), monthTicksOnly ? "MMM" : "MMM d"); } catch { return ""; } }}
+            tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "var(--kt-dim)" }}
+            axisLine={false} tickLine={false}
+            interval="preserveStartEnd"
+            minTickGap={monthTicksOnly ? 36 : 20}
+          />
+          <YAxis
+            domain={[yMin, yMax]}
+            tick={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "var(--kt-dim)" }}
+            axisLine={false} tickLine={false} tickCount={5} width={36}
+          />
+          <Tooltip content={<TooltipContent />} cursor={{ stroke: "var(--kt-border)", strokeWidth: 1 }} />
+
+          {goal != null && (
+            <ReferenceLine y={goal} stroke="rgba(90,212,160,0.4)" strokeDasharray="5 4" strokeWidth={1} />
+          )}
+
+          {showProjected && hasProjected && (
+            <Area type="monotone" dataKey="projected" stroke="none" fill="url(#wtcGoalGrad)" connectNulls activeDot={false} />
+          )}
+          {showProjected && hasProjected && (
+            <Line type="monotone" dataKey="projected" stroke="#5ad4a0" strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} connectNulls />
+          )}
+
+          {showRaw && (
+            <Line
+              type="monotone"
+              dataKey="weight"
+              stroke="var(--kt-accent)"
+              strokeWidth={2.5}
+              connectNulls
+              dot={(props: { cx?: number; cy?: number; payload: ChartRow }) => {
+                const { cx, cy, payload } = props;
+                if (cx == null || cy == null) return <g key={`d-${payload.date}`} />;
+                const hasPhotos = (photosByDate[payload.date]?.length ?? 0) > 0;
+                return (
+                  <circle
+                    key={`d-${payload.date}`}
+                    cx={cx} cy={cy} r={hasPhotos ? 5 : 3.5}
+                    fill={hasPhotos ? "var(--kt-accent)" : "var(--kt-surface)"}
+                    stroke="var(--kt-accent)"
+                    strokeWidth={2}
+                    style={{ cursor: hasPhotos ? "pointer" : "default" }}
+                  />
+                );
+              }}
+              activeDot={{ r: 6, fill: "var(--kt-accent)", strokeWidth: 2, stroke: "var(--kt-surface)" }}
+            />
+          )}
+
+          {showAvg && hasAvg && (
+            <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} connectNulls />
+          )}
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {(hasAvg || hasProjected) && (
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid var(--kt-border)", flexWrap: "wrap" }}>
+          <LineToggle
+            active={showRaw}
+            onClick={() => setShowRaw(v => !v)}
+            label="Raw"
+            icon={<svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="var(--kt-accent)" strokeWidth="1.5" /></svg>}
+          />
+          {hasAvg && (
+            <LineToggle
+              active={showAvg}
+              onClick={() => setShowAvg(v => !v)}
+              label="7d avg"
+              icon={<svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ab4d4" strokeWidth="2" /></svg>}
+            />
+          )}
+          {hasProjected && (
+            <LineToggle
+              active={showProjected}
+              onClick={() => setShowProjected(v => !v)}
+              label="Projected"
+              icon={<svg width="20" height="2"><line x1="0" y1="1" x2="20" y2="1" stroke="#5ad4a0" strokeWidth="1.5" strokeDasharray="4 3" /></svg>}
+            />
+          )}
+        </div>
+      )}
+    </>
   );
 }

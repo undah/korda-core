@@ -116,6 +116,17 @@ export default function TrackerDashboard() {
     return sorted.filter(d => d.log_date >= cutoff);
   }, [sorted, range]);
 
+  // 7-day rolling average per date, computed over the full history so the
+  // start of a filtered range still has real preceding days to average over.
+  const avg7ByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    sorted.forEach((c, i) => {
+      const slice = sorted.slice(Math.max(0, i - 6), i + 1);
+      map[c.log_date] = +(slice.reduce((s, x) => s + x.weight, 0) / slice.length).toFixed(2);
+    });
+    return map;
+  }, [sorted]);
+
   const latest  = sorted[sorted.length - 1];
   const cutoff7d  = subDays(new Date(), 7).toISOString().split("T")[0];
   const cutoff14d = subDays(new Date(), 14).toISOString().split("T")[0];
@@ -250,7 +261,7 @@ export default function TrackerDashboard() {
             </div>
 
             <WeightTrendChart
-              points={filteredData.map(c => ({ date: c.log_date, weight: c.weight }))}
+              points={filteredData.map(c => ({ date: c.log_date, weight: c.weight, avg7: avg7ByDate[c.log_date] }))}
               projected={range === "All" || range === "3M" ? projectedPoints : []}
               goal={goal?.goal_weight}
               photosByDate={photosByDate}

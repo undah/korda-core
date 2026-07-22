@@ -40,6 +40,17 @@ export default function TrackerGraph() {
     return sorted.filter(c => c.log_date >= cutoff);
   }, [sorted, range]);
 
+  // 7-day rolling average per date, computed over the full history so the
+  // start of a filtered range still has real preceding days to average over.
+  const avg7ByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    sorted.forEach((c, i) => {
+      const slice = sorted.slice(Math.max(0, i - 6), i + 1);
+      map[c.log_date] = +(slice.reduce((s, x) => s + x.weight, 0) / slice.length).toFixed(2);
+    });
+    return map;
+  }, [sorted]);
+
   const startWeight = filtered[0]?.weight ?? sorted[0]?.weight ?? null;
   const currentWeight = sorted[sorted.length - 1]?.weight ?? null;
   const targetWeight = goal?.goal_weight ?? null;
@@ -139,7 +150,7 @@ export default function TrackerGraph() {
       {/* Chart */}
       <div className="kt-card" style={{ marginBottom: "1.25rem" }}>
         <WeightTrendChart
-          points={filtered.map(c => ({ date: c.log_date, weight: c.weight }))}
+          points={filtered.map(c => ({ date: c.log_date, weight: c.weight, avg7: avg7ByDate[c.log_date] }))}
           projected={SHOW_PROJECTION[range] ? projectedPoints : []}
           goal={targetWeight}
           photosByDate={photosByDate}
