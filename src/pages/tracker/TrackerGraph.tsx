@@ -5,6 +5,7 @@ import { subDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, computeWeightProjection } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
 import WeightTrendChart from "@/features/tracker/components/WeightTrendChart";
+import BodyCompChart from "@/features/tracker/components/BodyCompChart";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 type Range = "1M" | "3M" | "6M" | "1Y" | "All";
@@ -56,6 +57,19 @@ export default function TrackerGraph() {
   const targetWeight = goal?.goal_weight ?? null;
   const change = startWeight != null && currentWeight != null ? +(currentWeight - startWeight).toFixed(1) : null;
   const remaining = currentWeight != null && targetWeight != null ? +(currentWeight - targetWeight).toFixed(1) : null;
+
+  // Body composition — derived from generated columns, null until user adds body_fat to a check-in
+  const bodyComp = useMemo(() => {
+    const withBF = sorted.filter(c => c.fat_mass_kg != null && c.lean_mass_kg != null);
+    if (withBF.length === 0) return null;
+    const latest   = withBF[withBF.length - 1];
+    const earliest = withBF[0];
+    return {
+      currentFat:  latest.fat_mass_kg!,
+      currentLean: latest.lean_mass_kg!,
+      fatLost:     +(earliest.fat_mass_kg! - latest.fat_mass_kg!).toFixed(1),
+    };
+  }, [sorted]);
 
   if (isLoading) return (
     <div style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
@@ -184,6 +198,44 @@ export default function TrackerGraph() {
           </p>
           <p className="kt-card-sub">{targetWeight != null ? "to target" : "no goal set"}</p>
         </div>
+      </div>
+
+      {/* Body composition ─────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: "0.5rem" }}>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--kt-accent)", opacity: 0.7 }}>
+          Body composition
+        </p>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.35rem", fontWeight: 400, color: "var(--kt-text)", margin: "0.1rem 0 1rem" }}>
+          Fat vs <em>lean</em> mass
+        </h2>
+      </div>
+
+      {bodyComp && (
+        <div className="kt-grid-3" style={{ marginBottom: "1.25rem" }}>
+          <div className="kt-card" style={{ textAlign: "center", borderTop: "2px solid #f97316" }}>
+            <p className="kt-card-label">Current fat</p>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.25rem", color: "#f97316" }}>
+              {bodyComp.currentFat.toFixed(1)} kg
+            </p>
+          </div>
+          <div className="kt-card" style={{ textAlign: "center", borderTop: "2px solid #06b6d4" }}>
+            <p className="kt-card-label">Current lean</p>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.25rem", color: "#06b6d4" }}>
+              {bodyComp.currentLean.toFixed(1)} kg
+            </p>
+          </div>
+          <div className="kt-card" style={{ textAlign: "center", borderTop: `2px solid ${bodyComp.fatLost >= 0 ? "var(--kt-green)" : "var(--kt-red)"}` }}>
+            <p className="kt-card-label">Fat lost</p>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.25rem", color: bodyComp.fatLost >= 0 ? "var(--kt-green)" : "var(--kt-red)" }}>
+              {bodyComp.fatLost >= 0 ? "" : "+"}{(-bodyComp.fatLost).toFixed(1)} kg
+            </p>
+            <p className="kt-card-sub">since first bf% log</p>
+          </div>
+        </div>
+      )}
+
+      <div className="kt-card" style={{ marginBottom: "2rem" }}>
+        <BodyCompChart checkins={sorted} height={260} />
       </div>
     </div>
   );

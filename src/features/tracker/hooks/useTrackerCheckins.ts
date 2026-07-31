@@ -24,7 +24,7 @@ export function useTrackerCheckins(limit = 90) {
 export function useAddCheckin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<TrackerCheckin, "id" | "user_id" | "created_at">) => {
+    mutationFn: async (payload: Omit<TrackerCheckin, "id" | "user_id" | "created_at" | "fat_mass_kg" | "lean_mass_kg">) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase

@@ -13,6 +13,9 @@ export interface TrackerCheckin {
   body_fat?: number | null;
   notes?: string | null;
   created_at: string;
+  // Generated columns — read-only, derived from weight * body_fat / 100
+  readonly fat_mass_kg?: number | null;
+  readonly lean_mass_kg?: number | null;
 }
 
 export interface TrackerGoal {
