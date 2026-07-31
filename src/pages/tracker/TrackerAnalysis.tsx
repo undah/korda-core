@@ -344,7 +344,7 @@ export default function TrackerAnalysis() {
         <div className="kt-card">
           <p className="kt-card-label">Avg weekly loss</p>
           <p className="kt-card-value">{stats ? `${stats.avgWeeklyLoss} kg` : "—"}</p>
-          <p className="kt-card-sub">rolling trend</p>
+          <p className="kt-card-sub">since first check-in</p>
         </div>
         <div className="kt-card">
           <p className="kt-card-label">Best week</p>

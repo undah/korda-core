@@ -342,7 +342,7 @@ export default function TrackerDashboard() {
 
           {/* Weekly pace */}
           <div style={{ padding: "1.25rem" }}>
-            <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Weekly pace</p>
+            <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Weekly pace <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.7em" }}>· last 30 days</span></p>
             {paceKgPerWeek !== null ? (
               <>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem", marginBottom: "0.5rem" }}>
