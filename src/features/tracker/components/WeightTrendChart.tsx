@@ -116,9 +116,9 @@ export default function WeightTrendChart({
   }, [points, projected]);
 
   const allVals = [
-    ...points.map(p => p.weight),
-    ...projected.map(p => p.projected),
-    ...(goal != null ? [goal] : []),
+    ...(showRaw  ? points.map(p => p.weight) : []),
+    ...(showAvg  ? points.map(p => p.avg7).filter((v): v is number => v != null) : []),
+    ...(showProjected && hasProjected ? projected.map(p => p.projected) : []),
   ];
   const yMin = allVals.length ? Math.floor(Math.min(...allVals) - 1.5) : 0;
   const yMax = allVals.length ? Math.ceil(Math.max(...allVals) + 1.5) : 100;
