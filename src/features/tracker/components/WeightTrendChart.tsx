@@ -109,11 +109,11 @@ export default function WeightTrendChart({
       date: p.date,
       weight: p.weight,
       avg7: p.avg7,
-      projected: i === points.length - 1 && projected.length ? p.weight : undefined,
+      projected: i === points.length - 1 && projected.length && showProjected ? p.weight : undefined,
     }));
-    if (!projected.length) return hist;
+    if (!projected.length || !showProjected) return hist;
     return [...hist, ...projected.map(p => ({ date: p.date, projected: p.projected }))];
-  }, [points, projected]);
+  }, [points, projected, showProjected]);
 
   const allVals = [
     ...(showRaw  ? points.map(p => p.weight) : []),
