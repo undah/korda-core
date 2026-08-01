@@ -44,7 +44,7 @@ export default function TrackerDashboard() {
   const stats = useProgressStats();
   const { data: photos = [] } = useTrackerPhotos();
   const { data: journalEntries = [] } = useTrackerJournal(7);
-  const [range, setRange] = useState<Range>("3M");
+  const [range, setRange] = useState<Range>("1M");
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -250,12 +250,22 @@ export default function TrackerDashboard() {
         {/* ── LEFT: stats + chart + recent check-ins ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
 
-          {/* Stats row */}
-          <div className="kt-grid-4">
-            <StatCard label="Current weight" value={latest ? `${latest.weight} kg` : "—"} sub={avg7 ? `7d avg: ${avg7} kg` : undefined} />
-            <StatCard label="Total lost" value={stats ? `${stats.totalLost > 0 ? "-" : "+"}${Math.abs(stats.totalLost)} kg` : "—"} sub={goal?.goal_weight ? `Goal: ${goal.goal_weight} kg` : undefined} color={stats && stats.totalLost > 0 ? C.green : C.red} />
-            <StatCard label="Goal progress" value={stats ? `${stats.percentToGoal}%` : "—"} sub={stats?.daysToGoal ? `~${stats.daysToGoal} days left` : undefined} />
-            <StatCard label="Streak" value={stats ? `${stats.currentStreak}d` : "—"} sub={weekChg !== null ? `${weekChg > 0 ? "+" : ""}${weekChg} kg this week` : `${checkins.length} total`} color={C.text} />
+          {/* Compact summary strip — replaces 4-card grid on mobile */}
+          <div className="kt-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ display: "flex" }}>
+              {[
+                { label: "Now",    value: latest ? `${latest.weight} kg` : "—",                                                    color: C.accent, sub: avg7 ? `7d avg ${avg7}` : undefined },
+                { label: "Lost",   value: stats ? `${stats.totalLost > 0 ? "−" : "+"}${Math.abs(stats.totalLost)} kg` : "—",      color: stats && stats.totalLost > 0 ? C.green : C.red },
+                { label: "Goal",   value: stats ? `${stats.percentToGoal}%` : "—",                                                 color: C.text, sub: stats?.daysToGoal ? `~${stats.daysToGoal}d` : undefined },
+                { label: "Streak", value: stats ? `${stats.currentStreak}d` : "—",                                                 color: C.text, sub: weekChg !== null ? `${weekChg > 0 ? "+" : ""}${weekChg} kg` : undefined },
+              ].map((stat, i, arr) => (
+                <div key={stat.label} style={{ flex: 1, textAlign: "center", padding: "0.85rem 0.25rem", borderRight: i < arr.length - 1 ? `1px solid var(--kt-border)` : "none" }}>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.52rem", color: C.dim, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>{stat.label}</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 600, color: stat.color, lineHeight: 1.1 }}>{stat.value}</p>
+                  {stat.sub && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.5rem", color: C.dim, marginTop: "0.2rem" }}>{stat.sub}</p>}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Chart */}
@@ -279,17 +289,16 @@ export default function TrackerDashboard() {
               projected={range === "All" || range === "3M" ? projectedPoints : []}
               goal={goal?.goal_weight}
               photosByDate={photosByDate}
-              height={220}
+              height={200}
+              showLabels={false}
+              hideToggles
               onDotClick={date => {
                 const dayPhotos = photosByDate[date] ?? [];
                 if (dayPhotos.length > 0) setLightboxPhotos(dayPhotos);
               }}
             />
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid var(--kt-border)" }}>
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "var(--kt-dim)" }}>
-                {filteredData.some(c => (photosByDate[c.log_date]?.length ?? 0) > 0) ? "filled dots = photos" : ""}
-              </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.6rem" }}>
               <Link to="/tracker/graph" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.75, textDecoration: "none", letterSpacing: "0.06em" }}>Full graph →</Link>
             </div>
           </div>

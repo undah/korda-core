@@ -86,6 +86,10 @@ interface WeightTrendChartProps {
   onDotClick?: (date: string) => void;
   height?: number;
   monthTicksOnly?: boolean;
+  /** Override auto label visibility. false = never, true = always, undefined = auto (≤20 pts) */
+  showLabels?: boolean;
+  /** Hide the Raw / 7d avg / Projected toggle row entirely */
+  hideToggles?: boolean;
 }
 
 export default function WeightTrendChart({
@@ -96,6 +100,8 @@ export default function WeightTrendChart({
   onDotClick,
   height = 260,
   monthTicksOnly = false,
+  showLabels: showLabelsProp,
+  hideToggles = false,
 }: WeightTrendChartProps) {
   const hasAvg       = points.some(p => p.avg7 != null);
   const hasProjected = projected.length > 0;
@@ -125,8 +131,7 @@ export default function WeightTrendChart({
 
   const TooltipContent = useMemo(() => makeTooltip(photosByDate), [photosByDate]);
 
-  // Show inline labels only when there are few enough points to avoid collisions
-  const showLabels = points.length <= 20;
+  const showLabels = showLabelsProp !== undefined ? showLabelsProp : points.length <= 20;
 
   if (points.length < 2) {
     return (
@@ -250,7 +255,7 @@ export default function WeightTrendChart({
         </ComposedChart>
       </ResponsiveContainer>
 
-      {(hasAvg || hasProjected) && (
+      {!hideToggles && (hasAvg || hasProjected) && (
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px solid var(--kt-border)", flexWrap: "wrap" }}>
           <LineToggle
             active={showRaw}
