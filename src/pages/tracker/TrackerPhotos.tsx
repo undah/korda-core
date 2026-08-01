@@ -223,6 +223,10 @@ export default function TrackerPhotos() {
         afterDate: dateB,
         beforeWeight: checkinA.weight,
         afterWeight: checkinB.weight,
+        beforeBodyFat: checkinA.body_fat ?? null,
+        afterBodyFat:  checkinB.body_fat ?? null,
+        beforeWaist:   checkinA.waist   ?? null,
+        afterWaist:    checkinB.waist   ?? null,
       });
       await shareOrDownloadBlob(blob, `progress-${dateA}-${dateB}.png`);
     } catch {
