@@ -169,7 +169,7 @@ export default function TrackerGraph() {
           goal={targetWeight}
           photosByDate={photosByDate}
           height={300}
-          monthTicksOnly={range !== "1M"}
+          monthTicksOnly={range === "1Y" || range === "All"}
           onDotClick={date => {
             const p = photosByDate[date];
             if (p?.length) setLightboxPhotos(p);
