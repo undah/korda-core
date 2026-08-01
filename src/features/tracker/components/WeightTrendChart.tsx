@@ -31,15 +31,15 @@ function makeTooltip(photosByDate: Record<string, TrackerPhoto[]>) {
     const row = payload[0].payload;
     const dayPhotos = photosByDate[row.date] ?? [];
     return (
-      <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-border)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.35)", pointerEvents: "none" }}>
-        <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "0.68rem" }}>
+      <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-md)", padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.35)", pointerEvents: "none" }}>
+        <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "var(--kt-fs-2xs)" }}>
           {(() => { try { return format(parseISO(row.date), "EEE, MMM d yyyy"); } catch { return row.date; } })()}
         </p>
-        {row.weight != null && <p style={{ color: "var(--kt-accent)", fontWeight: 500, fontSize: "0.9rem" }}>{row.weight} kg</p>}
+        {row.weight != null && <p style={{ color: "var(--kt-accent)", fontWeight: 500, fontSize: "var(--kt-fs-md)" }}>{row.weight} kg</p>}
         {row.avg7  != null && <p style={{ color: "#5ab4d4", marginTop: "0.15rem" }}>7d avg: {row.avg7} kg</p>}
         {row.projected != null && row.weight == null && <p style={{ color: "#5ad4a0" }}>{row.projected} kg projected</p>}
         {dayPhotos.length > 0 && (
-          <p style={{ marginTop: "0.4rem", paddingTop: "0.4rem", borderTop: "1px solid var(--kt-border)", fontSize: "0.6rem", color: "var(--kt-dim)" }}>
+          <p style={{ marginTop: "0.4rem", paddingTop: "0.4rem", borderTop: "1px solid var(--kt-border)", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>
             {dayPhotos.length} photo{dayPhotos.length > 1 ? "s" : ""} · tap to view
           </p>
         )}
@@ -55,7 +55,7 @@ function LineToggle({ active, onClick, icon, label }: { active: boolean; onClick
       style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "none", border: "1px solid", borderColor: active ? "var(--kt-border)" : "transparent", borderRadius: 6, padding: "0.2rem 0.55rem", cursor: "pointer", opacity: active ? 1 : 0.35, transition: "all 0.15s" }}
     >
       {icon}
-      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-muted)", textDecoration: active ? "none" : "line-through" }}>{label}</span>
+      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-muted)", textDecoration: active ? "none" : "line-through" }}>{label}</span>
     </button>
   );
 }
@@ -69,7 +69,7 @@ function WeightDotLabel(props: { x?: number; y?: number; value?: number }) {
       x={+x}
       y={+y - 10}
       textAnchor="middle"
-      fill="rgba(232,232,240,0.55)"
+      fill="var(--kt-muted)"
       fontFamily="'IBM Plex Mono',monospace"
       fontSize={9}
     >
@@ -136,7 +136,7 @@ export default function WeightTrendChart({
   if (points.length < 2) {
     return (
       <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem" }}>Not enough data for this range.</p>
+        <p style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-sm)" }}>Not enough data for this range.</p>
       </div>
     );
   }
@@ -238,14 +238,14 @@ export default function WeightTrendChart({
                     key={`d-${payload.date}`}
                     cx={cx} cy={cy}
                     r={hasPhotos ? 5 : 3.5}
-                    fill={hasPhotos ? "var(--kt-accent)" : "var(--kt-bg,#07090b)"}
+                    fill={hasPhotos ? "var(--kt-accent)" : "var(--kt-surface)"}
                     stroke="var(--kt-accent)"
                     strokeWidth={2}
                     style={{ cursor: hasPhotos ? "pointer" : "default" }}
                   />
                 );
               }}
-              activeDot={{ r: 6, fill: "var(--kt-accent)", strokeWidth: 2, stroke: "var(--kt-bg,#07090b)" }}
+              activeDot={{ r: 6, fill: "var(--kt-accent)", strokeWidth: 2, stroke: "var(--kt-surface)" }}
             >
               {showLabels && (
                 <LabelList dataKey="weight" content={(p: any) => <WeightDotLabel {...p} />} />

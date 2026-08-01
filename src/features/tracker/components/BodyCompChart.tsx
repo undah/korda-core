@@ -33,7 +33,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
     <div style={{
       background: "var(--kt-surface2)", border: "1px solid var(--kt-border)",
       borderRadius: 6, padding: "0.6rem 0.9rem",
-      fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", lineHeight: 1.9,
+      fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", lineHeight: 1.9,
     }}>
       <p style={{ color: "var(--kt-dim)", marginBottom: "0.15rem" }}>{label}</p>
       <p style={{ color: "#f97316" }}>fat   {fat  != null ? `${fat.toFixed(1)} kg`  : "—"}</p>
@@ -65,7 +65,7 @@ export default function BodyCompChart({ checkins, height = 260 }: Props) {
     return (
       <p style={{
         color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace",
-        fontSize: "0.75rem", textAlign: "center", padding: "2.5rem 0",
+        fontSize: "var(--kt-fs-xs)", textAlign: "center", padding: "2.5rem 0",
       }}>
         No body composition data yet — add a body fat % to any check-in to see this chart.
       </p>
@@ -125,7 +125,7 @@ export default function BodyCompChart({ checkins, height = 260 }: Props) {
         </AreaChart>
       </ResponsiveContainer>
       <p style={{
-        fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.08em",
+        fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.08em",
         color: "var(--kt-dim)", marginTop: "0.75rem", lineHeight: 1.7,
       }}>
         <span style={{ color: "#f97316" }}>■</span> fat mass (raw) &nbsp;

@@ -51,6 +51,27 @@ export default function TrackerLayout() {
       html, body { margin: 0; }
       .kt-app *, .kt-app *::before, .kt-app *::after { box-sizing: border-box; }
 
+      /* ── TYPE SCALE ──
+         One ladder, eight steps, 10px floor. Replaces the 38 ad-hoc rem values
+         that used to be typed inline (smallest was 0.42rem / 6.7px). */
+      .kt-app {
+        --kt-fs-3xs: 0.625rem;   /* 10px — dense chart + table labels, the floor */
+        --kt-fs-2xs: 0.6875rem;  /* 11px — eyebrows, meta, nav labels */
+        --kt-fs-xs:  0.75rem;    /* 12px — field labels, captions */
+        --kt-fs-sm:  0.8125rem;  /* 13px — secondary body */
+        --kt-fs-md:  0.875rem;   /* 14px — body */
+        --kt-fs-lg:  1.125rem;   /* 18px — sub-headings */
+        --kt-fs-xl:  1.5rem;     /* 24px — stat values */
+        --kt-fs-2xl: 1.875rem;   /* 30px — page titles, hero numbers */
+
+        /* ── RADII ── four tokens instead of twelve loose pixel values */
+        --kt-r-sm:   8px;        /* inputs, buttons, chips */
+        --kt-r-md:   12px;       /* cards */
+        --kt-r-lg:   16px;       /* modals */
+        --kt-r-xl:   26px;       /* bottom nav — signature element */
+        --kt-r-full: 999px;      /* badges, pills */
+      }
+
       /* ── DARK THEME (default) ── */
       .kt-app {
         --kt-bg:           #0C0C14;
@@ -102,13 +123,13 @@ export default function TrackerLayout() {
       /* ── SIDEBAR ── */
       .kt-sidebar { width: 220px; min-height: 100vh; background: var(--kt-sidebar-bg); border-right: 1px solid var(--kt-sidebar-b); display: flex; flex-direction: column; padding: 1.5rem 0; position: fixed; top: 0; left: 0; z-index: 50; }
       .kt-sidebar-logo { padding: 0 1rem 1.25rem; border-bottom: 1px solid var(--kt-sidebar-b); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; }
-      .kt-sidebar-logo a { font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--kt-text); text-decoration: none; letter-spacing: -0.02em; }
-      .kt-sidebar-logo span { font-size: 0.45rem; vertical-align: super; color: var(--kt-dim); }
-      .kt-nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.85rem; margin: 1px 0.65rem; font-size: 0.83rem; font-weight: 400; color: var(--kt-muted); text-decoration: none; transition: all 0.12s; border-radius: 8px; }
+      .kt-sidebar-logo a { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-md); font-weight: 700; color: var(--kt-text); text-decoration: none; letter-spacing: -0.02em; }
+      .kt-sidebar-logo span { font-size: var(--kt-fs-3xs); vertical-align: super; color: var(--kt-dim); }
+      .kt-nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.85rem; margin: 1px 0.65rem; font-size: var(--kt-fs-md); font-weight: 400; color: var(--kt-muted); text-decoration: none; transition: all 0.12s; border-radius: var(--kt-r-sm); }
       .kt-nav-item:hover { color: var(--kt-text); background: var(--kt-hover); }
       .kt-nav-item.active { color: var(--kt-accent); background: var(--kt-accent-bg); font-weight: 500; }
       .kt-sidebar-bottom { margin-top: auto; padding: 1rem 1rem 0; border-top: 1px solid var(--kt-sidebar-b); }
-      .kt-back-link { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; color: var(--kt-dim); text-decoration: none; transition: color 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+      .kt-back-link { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-sm); color: var(--kt-dim); text-decoration: none; transition: color 0.2s; display: flex; align-items: center; gap: 0.4rem; }
       .kt-back-link:hover { color: var(--kt-muted); }
 
       /* ── MAIN ── */
@@ -116,8 +137,8 @@ export default function TrackerLayout() {
 
       /* ── MOBILE TOPBAR ── */
       .kt-topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 52px; background: var(--kt-sidebar-bg); border-bottom: 1px solid var(--kt-sidebar-b); align-items: center; justify-content: space-between; padding: 0 1.1rem; }
-      .kt-topbar-logo { font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--kt-text); text-decoration: none; letter-spacing: -0.02em; }
-      .kt-topbar-btn { background: none; border: none; cursor: pointer; color: var(--kt-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent; }
+      .kt-topbar-logo { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-md); font-weight: 700; color: var(--kt-text); text-decoration: none; letter-spacing: -0.02em; }
+      .kt-topbar-btn { background: none; border: none; cursor: pointer; color: var(--kt-muted); padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: var(--kt-r-sm); transition: color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent; }
       .kt-topbar-btn:hover { color: var(--kt-text); background: var(--kt-hover); }
 
       /* ── BOTTOM NAV — liquid glass ── */
@@ -131,7 +152,7 @@ export default function TrackerLayout() {
         backdrop-filter: blur(24px) saturate(180%);
         -webkit-backdrop-filter: blur(24px) saturate(180%);
         border: none;
-        border-radius: 26px;
+        border-radius: var(--kt-r-xl);
         box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.25);
         align-items: center;
         justify-content: space-around;
@@ -166,8 +187,8 @@ export default function TrackerLayout() {
         background: rgba(245, 246, 250, 0.40);
         box-shadow: 0 16px 48px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
       }
-      .kt-bnav-item { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 50px; text-decoration: none; color: rgba(200,210,220,0.45); font-size: 0.48rem; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 5px 2px 4px; background: none; border: none; cursor: pointer; }
-      .kt-app.light .kt-bnav-item { color: rgba(60,60,80,0.45); }
+      /* Nav labels were 0.48rem (7.7px) — below legibility on the primary nav. */
+      .kt-bnav-item { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; flex: 1; min-height: 50px; text-decoration: none; color: var(--kt-muted); font-size: var(--kt-fs-3xs); font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.02em; transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 5px 2px 4px; background: none; border: none; cursor: pointer; }
       .kt-bnav-item.active { color: var(--kt-accent); }
       .kt-bnav-item svg { flex-shrink: 0; }
 
@@ -184,7 +205,7 @@ export default function TrackerLayout() {
         backdrop-filter: blur(24px) saturate(180%);
         -webkit-backdrop-filter: blur(24px) saturate(180%);
         border: 1px solid var(--kt-border);
-        border-radius: 20px;
+        border-radius: var(--kt-r-lg);
         box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.25);
         padding: 10px;
         grid-template-columns: repeat(4, 1fr);
@@ -197,27 +218,42 @@ export default function TrackerLayout() {
         from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
       }
-      .kt-more-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 4px; border-radius: 14px; text-decoration: none; color: var(--kt-muted); font-size: 0.6rem; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+      .kt-more-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 4px; border-radius: var(--kt-r-md); text-decoration: none; color: var(--kt-muted); font-size: var(--kt-fs-3xs); font-family: 'DM Sans', sans-serif; font-weight: 500; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
       .kt-more-item.active { color: var(--kt-accent); background: var(--kt-accent-bg); }
 
       /* ── PAGE ── */
       .kt-page-header { margin-bottom: 1.75rem; }
-      .kt-page-eyebrow { font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kt-accent); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; opacity: 0.8; }
-      .kt-page-title { font-family: 'Playfair Display', serif; font-size: 1.85rem; font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; color: var(--kt-text); }
+      .kt-page-eyebrow { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-2xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kt-accent); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; opacity: 0.8; }
+      .kt-page-title { font-family: 'Playfair Display', serif; font-size: var(--kt-fs-2xl); font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; color: var(--kt-text); }
       .kt-page-title em { font-style: italic; color: var(--kt-accent); }
+      /* Playfair is reserved for titles. Section headings share the ladder. */
+      .kt-section-title { font-family: 'Playfair Display', serif; font-size: var(--kt-fs-lg); font-weight: 400; color: var(--kt-text); margin: 0.1rem 0 1rem; }
+      .kt-section-title em { font-style: italic; color: var(--kt-accent); }
+
+      /* ── NUMBERS ──
+         THE RULE: every piece of data wears IBM Plex Mono. DM Sans is for UI
+         chrome, Playfair is for page + section titles only. Previously the same
+         weight value rendered in all three depending on which page you were on. */
+      .kt-num    { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: var(--kt-text); }
+      .kt-num-sm { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: var(--kt-fs-sm); color: var(--kt-text); }
+      .kt-num-lg { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: var(--kt-fs-xl); font-weight: 500; line-height: 1; letter-spacing: -0.01em; color: var(--kt-accent); }
+      .kt-num-xl { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: var(--kt-fs-2xl); font-weight: 500; line-height: 1; letter-spacing: -0.02em; color: var(--kt-accent); }
+      /* Dim mono metadata — dates, units, counts. Was hand-typed ~180 times. */
+      .kt-meta   { font-family: 'IBM Plex Mono', monospace; font-size: var(--kt-fs-2xs); color: var(--kt-dim); }
+      .kt-meta-xs{ font-family: 'IBM Plex Mono', monospace; font-size: var(--kt-fs-3xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--kt-dim); }
 
       /* ── CARD ── */
-      .kt-card { background: var(--kt-surface); border: 1px solid var(--kt-border); padding: 1.35rem 1.5rem; border-radius: 12px; overflow-x: hidden; box-shadow: var(--kt-shadow); }
-      .kt-card-label { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 500; color: var(--kt-muted); margin-bottom: 0.4rem; }
-      .kt-card-value { font-family: 'DM Sans', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--kt-accent); line-height: 1; letter-spacing: -0.02em; }
-      .kt-card-sub { font-size: 0.72rem; color: var(--kt-dim); margin-top: 0.35rem; }
+      .kt-card { background: var(--kt-surface); border: 1px solid var(--kt-border); padding: 1.35rem 1.5rem; border-radius: var(--kt-r-md); overflow-x: hidden; box-shadow: var(--kt-shadow); }
+      .kt-card-label { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-xs); font-weight: 500; color: var(--kt-muted); margin-bottom: 0.4rem; }
+      .kt-card-value { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: var(--kt-fs-xl); font-weight: 500; color: var(--kt-accent); line-height: 1; letter-spacing: -0.01em; }
+      .kt-card-sub { font-size: var(--kt-fs-xs); color: var(--kt-dim); margin-top: 0.35rem; }
 
       /* ── INPUTS ── */
-      .kt-input { box-sizing: border-box; background: var(--kt-input-bg); border: 1px solid var(--kt-border); color: var(--kt-text); padding: 0.6rem 0.9rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; width: 100%; max-width: 100%; min-width: 0; outline: none; transition: border-color 0.2s, box-shadow 0.2s; border-radius: 8px; }
+      .kt-input { box-sizing: border-box; background: var(--kt-input-bg); border: 1px solid var(--kt-border); color: var(--kt-text); padding: 0.6rem 0.9rem; font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-md); width: 100%; max-width: 100%; min-width: 0; outline: none; transition: border-color 0.2s, box-shadow 0.2s; border-radius: var(--kt-r-sm); }
       .kt-input:focus { border-color: var(--kt-accent); box-shadow: 0 0 0 3px var(--kt-accent-bg); }
       .kt-input::placeholder { color: var(--kt-dim); }
-      .kt-label { font-family: 'DM Sans', sans-serif; font-size: 0.73rem; font-weight: 500; color: var(--kt-muted); display: block; margin-bottom: 0.4rem; }
-      .kt-btn { font-family: 'DM Sans', sans-serif; font-size: 0.83rem; font-weight: 500; padding: 0.6rem 1.35rem; cursor: pointer; border: none; transition: all 0.15s; border-radius: 8px; }
+      .kt-label { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-xs); font-weight: 500; color: var(--kt-muted); display: block; margin-bottom: 0.4rem; }
+      .kt-btn { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-md); font-weight: 500; padding: 0.6rem 1.35rem; cursor: pointer; border: none; transition: all 0.15s; border-radius: var(--kt-r-sm); }
       .kt-btn-blue { background: var(--kt-accent); color: #080810; font-weight: 600; }
       .kt-btn-blue:hover { opacity: 0.88; }
       .kt-btn-outline { background: transparent; color: var(--kt-accent); border: 1px solid var(--kt-border); }
@@ -231,7 +267,7 @@ export default function TrackerLayout() {
       .kt-dashboard-grid { display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
       .kt-progress-grid { display: grid; grid-template-columns: 420px 1fr; gap: 1.25rem; align-items: start; }
       .kt-divider { border: none; border-top: 1px solid var(--kt-border); margin: 1.5rem 0; }
-      .kt-badge { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; font-weight: 500; padding: 0.2rem 0.6rem; border: 1px solid; display: inline-block; border-radius: 20px; }
+      .kt-badge { font-family: 'DM Sans', sans-serif; font-size: var(--kt-fs-2xs); font-weight: 500; padding: 0.2rem 0.6rem; border: 1px solid; display: inline-block; border-radius: var(--kt-r-full); }
       .kt-badge-blue { color: var(--kt-accent); border-color: var(--kt-border); background: var(--kt-accent-bg); }
       .kt-badge-green { color: var(--kt-green); border-color: var(--kt-green-bg); background: var(--kt-green-bg); }
       .kt-badge-red { color: var(--kt-red); border-color: var(--kt-red-bg); background: var(--kt-red-bg); }
@@ -324,7 +360,7 @@ export default function TrackerLayout() {
         <div className="kt-sidebar-bottom">
           <button
             onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
-            style={{ display: "flex", alignItems: "center", gap: "0.55rem", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "0.55rem 0.25rem", color: "var(--kt-dim)", fontSize: "0.78rem", fontFamily: "'DM Sans',sans-serif", transition: "color 0.15s", marginBottom: "0.85rem", borderRadius: 8 }}
+            style={{ display: "flex", alignItems: "center", gap: "0.55rem", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "0.55rem 0.25rem", color: "var(--kt-dim)", fontSize: "var(--kt-fs-sm)", fontFamily: "'DM Sans',sans-serif", transition: "color 0.15s", marginBottom: "0.85rem", borderRadius: 8 }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--kt-text)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--kt-dim)")}
           >

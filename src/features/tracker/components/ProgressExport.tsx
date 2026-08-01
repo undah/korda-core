@@ -201,7 +201,7 @@ export default function ProgressExport({
             color: "var(--kt-dim)",
             cursor: "pointer",
             fontFamily: "'IBM Plex Mono',monospace",
-            fontSize: "0.65rem",
+            fontSize: "var(--kt-fs-2xs)",
             letterSpacing: "0.1em",
             padding: "0.5rem 1.5rem",
           }}
@@ -215,7 +215,7 @@ export default function ProgressExport({
 
 const msgStyle: CSSProperties = {
   fontFamily: "'IBM Plex Mono',monospace",
-  fontSize: "0.78rem",
+  fontSize: "var(--kt-fs-sm)",
   color: "var(--kt-dim)",
   textAlign: "center",
   lineHeight: 1.7,

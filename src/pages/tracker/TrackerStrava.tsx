@@ -73,8 +73,8 @@ function HRZoneBar({ avgHR, maxHR }: { avgHR: number; maxHR: number }) {
   const zones = estimateZones(avgHR, maxHR).filter(z => z.pct > 0.02);
   return (
     <div>
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(232,240,244,0.3)", marginBottom: "0.6rem" }}>
-        HR Zones <span style={{ color: "rgba(232,240,244,0.18)", fontSize: "0.48rem" }}>(estimated)</span>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(232,240,244,0.3)", marginBottom: "0.6rem" }}>
+        HR Zones <span style={{ color: "rgba(232,240,244,0.18)", fontSize: "var(--kt-fs-3xs)" }}>(estimated)</span>
       </div>
       <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2 }}>
         {zones.map(z => (
@@ -85,7 +85,7 @@ function HRZoneBar({ avgHR, maxHR }: { avgHR: number; maxHR: number }) {
         {zones.map(z => (
           <div key={z.id} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: z.color }} />
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.54rem", color: "rgba(232,240,244,0.4)" }}>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.4)" }}>
               {z.label} <span style={{ color: z.color, fontWeight: 600 }}>{Math.round(z.pct * 100)}%</span>
             </span>
           </div>
@@ -110,8 +110,8 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
 function Stat({ label, value, color = "rgba(232,240,244,0.8)" }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.38)", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.73rem", color, fontWeight: 500 }}>{value}</div>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.38)", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", color, fontWeight: 500 }}>{value}</div>
     </div>
   );
 }
@@ -149,24 +149,24 @@ function ActivityCard({ activity, selected, weightKg, onClick }: {
     >
       {/* Name + date */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.5rem" }}>
-        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", fontWeight: 600, color: selected ? "#fff" : "#e8f0f4", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "var(--kt-fs-md)", fontWeight: 600, color: selected ? "#fff" : "#e8f0f4", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {activity.name}
         </div>
-        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", color: "rgba(232,240,244,0.3)", flexShrink: 0 }}>{date}</div>
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", flexShrink: 0 }}>{date}</div>
       </div>
 
       {/* Key stats row */}
       <div style={{ display: "flex", alignItems: "baseline", gap: "1rem" }}>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.88rem", fontWeight: 700, color: "#FC4C02" }}>{formatDist(activity.distance)}</span>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.72rem", color: "rgba(232,240,244,0.6)" }}>{formatPace(activity.average_speed)}</span>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.72rem", color: "rgba(232,240,244,0.4)" }}>{formatDuration(activity.moving_time)}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-md)", fontWeight: 700, color: "#FC4C02" }}>{formatDist(activity.distance)}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", color: "rgba(232,240,244,0.6)" }}>{formatPace(activity.average_speed)}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", color: "rgba(232,240,244,0.4)" }}>{formatDuration(activity.moving_time)}</span>
       </div>
 
       {/* Secondary badges */}
       {badges.length > 0 && (
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.45rem", flexWrap: "wrap" }}>
           {badges.map(b => (
-            <span key={b} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.3)", background: "rgba(255,255,255,0.04)", padding: "1px 6px", borderRadius: 4 }}>{b}</span>
+            <span key={b} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", background: "rgba(255,255,255,0.04)", padding: "1px 6px", borderRadius: 4 }}>{b}</span>
           ))}
         </div>
       )}
@@ -433,7 +433,7 @@ export default function TrackerStrava() {
   if (tokenLoading || connectStrava.isPending) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
-        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.72rem", color: "rgba(232,240,244,0.35)", letterSpacing: "0.1em" }}>
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", color: "rgba(232,240,244,0.35)", letterSpacing: "0.1em" }}>
           {connectStrava.isPending ? "Connecting to Strava…" : "Loading…"}
         </div>
       </div>
@@ -453,13 +453,13 @@ export default function TrackerStrava() {
             <div style={{ width: 68, height: 68, borderRadius: "50%", background: "rgba(252,76,2,0.08)", border: "2px solid rgba(252,76,2,0.28)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.75rem" }}>
               <Activity size={30} color="#FC4C02" />
             </div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.35rem", marginBottom: "0.8rem" }}>Connect Strava</div>
-            <div style={{ fontSize: "0.8rem", color: "rgba(232,240,244,0.5)", lineHeight: 1.65, marginBottom: "2rem" }}>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "var(--kt-fs-lg)", marginBottom: "0.8rem" }}>Connect Strava</div>
+            <div style={{ fontSize: "var(--kt-fs-sm)", color: "rgba(232,240,244,0.5)", lineHeight: 1.65, marginBottom: "2rem" }}>
               Link your Strava account to see your runs, routes on a map, and how your weight evolves with your training.
             </div>
             <button
               onClick={() => { window.location.href = getStravaAuthUrl(); }}
-              style={{ background: "#FC4C02", color: "#fff", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.07em", padding: "0.85rem 2rem", border: "none", borderRadius: 6, cursor: "pointer", width: "100%", transition: "opacity 0.2s" }}
+              style={{ background: "#FC4C02", color: "#fff", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", fontWeight: 700, letterSpacing: "0.07em", padding: "0.85rem 2rem", border: "none", borderRadius: 6, cursor: "pointer", width: "100%", transition: "opacity 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
             >
@@ -489,7 +489,7 @@ export default function TrackerStrava() {
             <LogOut size={12} /> Disconnect
           </button>
           {dataUpdatedAt > 0 && (
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.25)", letterSpacing: "0.04em" }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.25)", letterSpacing: "0.04em" }}>
               updated {format(new Date(dataUpdatedAt), "HH:mm:ss")}
             </div>
           )}
@@ -505,8 +505,8 @@ export default function TrackerStrava() {
             style={{ width: 46, height: 46, borderRadius: "50%", border: "2px solid rgba(252,76,2,0.4)", flexShrink: 0 }}
           />
           <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.92rem", color: "#e8f0f4" }}>{athlete.firstname} {athlete.lastname}</div>
-            {athlete.city && <div style={{ fontSize: "0.7rem", color: "rgba(232,240,244,0.4)", marginTop: 2 }}>{athlete.city}, {athlete.country}</div>}
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "var(--kt-fs-md)", color: "#e8f0f4" }}>{athlete.firstname} {athlete.lastname}</div>
+            {athlete.city && <div style={{ fontSize: "var(--kt-fs-xs)", color: "rgba(232,240,244,0.4)", marginTop: 2 }}>{athlete.city}, {athlete.country}</div>}
           </div>
           <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
             {[
@@ -516,7 +516,7 @@ export default function TrackerStrava() {
             ].map(({ val, label }) => (
               <div key={label} style={{ textAlign: "center" }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.15rem", fontWeight: 600, color: "#FC4C02" }}>{val}</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.38)", marginTop: 2 }}>{label}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.38)", marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -533,7 +533,7 @@ export default function TrackerStrava() {
           <div className="kt-card" style={{ marginBottom: "2px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
               <div className="kt-card-label" style={{ marginBottom: 0 }}>Training Load</div>
-              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", color: ratioColor, background: ratioColor + "18", padding: "2px 8px", borderRadius: 20 }}>{ratioLabel}</span>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: ratioColor, background: ratioColor + "18", padding: "2px 8px", borderRadius: 20 }}>{ratioLabel}</span>
             </div>
             <div style={{ display: "flex", gap: "2.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
               {[
@@ -543,7 +543,7 @@ export default function TrackerStrava() {
               ].map(s => (
                 <div key={s.label}>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.3rem", fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.val}</div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 4 }}>{s.label}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 4 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -559,7 +559,7 @@ export default function TrackerStrava() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.4rem" }}>
               {[["< 0.8", "Detraining"], ["0.8", ""], ["1.0", "Building"], ["1.3", "High risk"]].map(([tick, lbl]) => (
-                <div key={tick} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", color: "rgba(232,240,244,0.25)", textAlign: "center" }}>
+                <div key={tick} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.25)", textAlign: "center" }}>
                   {tick}{lbl ? <><br />{lbl}</> : null}
                 </div>
               ))}
@@ -578,9 +578,9 @@ export default function TrackerStrava() {
             { label: "Most Elevation",value: Math.round(records.mostElev.total_elevation_gain) + " m", sub: formatDist(records.mostElev.distance) },
           ].map(({ label, value, sub }) => (
             <div key={label} style={{ background: "#0D0D16", border: "1px solid rgba(252,76,2,0.12)", borderTop: "2px solid rgba(252,76,2,0.3)", borderRadius: 2, padding: "0.75rem 1rem" }}>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.35)", marginBottom: 4 }}>{label}</div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.92rem", fontWeight: 600, color: "#FC4C02" }}>{value}</div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(232,240,244,0.3)", marginTop: 3 }}>{sub}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.35)", marginBottom: 4 }}>{label}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-md)", fontWeight: 600, color: "#FC4C02" }}>{value}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", marginTop: 3 }}>{sub}</div>
             </div>
           ))}
         </div>
@@ -593,7 +593,7 @@ export default function TrackerStrava() {
             key={f}
             onClick={() => setFilter(f)}
             style={{
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase",
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.1em", textTransform: "uppercase",
               padding: "0.3rem 0.85rem", border: "1px solid", borderRadius: 20, cursor: "pointer", transition: "all 0.13s",
               background: filter === f ? "rgba(252,76,2,0.1)" : "transparent",
               color: filter === f ? "#FC4C02" : "rgba(232,240,244,0.4)",
@@ -603,7 +603,7 @@ export default function TrackerStrava() {
             {f === "run" ? "Runs only" : "All activities"}
           </button>
         ))}
-        <div style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", color: "rgba(232,240,244,0.35)", alignSelf: "center" }}>
+        <div style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.35)", alignSelf: "center" }}>
           {filteredActivities.length} activities
         </div>
       </div>
@@ -614,11 +614,11 @@ export default function TrackerStrava() {
         {/* Left: activity list */}
         <div className="sv-list">
           {activitiesLoading ? (
-            <div style={{ padding: "3rem", textAlign: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.68rem", color: "rgba(232,240,244,0.3)" }}>
+            <div style={{ padding: "3rem", textAlign: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.3)" }}>
               Fetching activities…
             </div>
           ) : filteredActivities.length === 0 ? (
-            <div style={{ padding: "3rem", textAlign: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.68rem", color: "rgba(232,240,244,0.3)" }}>
+            <div style={{ padding: "3rem", textAlign: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.3)" }}>
               No activities found
             </div>
           ) : filteredActivities.map(a => {
@@ -652,7 +652,7 @@ export default function TrackerStrava() {
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(252,76,2,0.06)", border: "1px solid rgba(252,76,2,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Activity size={22} color="rgba(252,76,2,0.4)" />
                   </div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.63rem", color: "rgba(232,240,244,0.28)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.28)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                     {selectedActivity ? "No route data available" : "Select a run to view route"}
                   </div>
                 </div>
@@ -661,7 +661,7 @@ export default function TrackerStrava() {
             {selectedActivity && (
               <div className="kt-card" style={{ padding: "0.85rem 1.25rem" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.88rem", fontWeight: 500, color: "#e8f0f4" }}>{selectedActivity.name}</div>
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "var(--kt-fs-md)", fontWeight: 500, color: "#e8f0f4" }}>{selectedActivity.name}</div>
                   <div style={{ display: "flex", gap: "1.75rem", flexWrap: "wrap" }}>
                     <Stat label="Distance" value={formatDist(selectedActivity.distance)} color="#FC4C02" />
                     <Stat label="Pace" value={formatPace(selectedActivity.average_speed)} />
@@ -686,13 +686,13 @@ export default function TrackerStrava() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
           <div className="kt-card-label">Weekly km, weight & pace</div>
           <div style={{ display: "flex", gap: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "rgba(252,76,2,0.7)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(252,76,2,0.7)" }}>
               <div style={{ width: 10, height: 10, background: "rgba(252,76,2,0.5)", borderRadius: 2 }} /> km
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#5ad4a0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "#5ad4a0" }}>
               <div style={{ width: 20, height: 2, background: "#5ad4a0", borderRadius: 1 }} /> weight
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.55rem", color: "#a78bfa" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "#a78bfa" }}>
               <div style={{ width: 20, height: 2, background: "#a78bfa", borderRadius: 1 }} /> pace
             </div>
           </div>
@@ -704,7 +704,7 @@ export default function TrackerStrava() {
             ))}
           </div>
         ) : chartData.length === 0 ? (
-          <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.65rem", color: "rgba(232,240,244,0.28)" }}>No data yet</div>
+          <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.28)" }}>No data yet</div>
         ) : (
           <ResponsiveContainer width="100%" height={180}>
             <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
@@ -763,11 +763,11 @@ export default function TrackerStrava() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
               <div className="kt-card-label" style={{ marginBottom: 0 }}>Activity Calendar</div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.5rem", color: "rgba(232,240,244,0.28)" }}>less</span>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.28)" }}>less</span>
                 {[0.08, 0.3, 0.55, 0.8, 1].map(o => (
                   <div key={o} style={{ width: 9, height: 9, borderRadius: 2, background: o < 0.1 ? "rgba(255,255,255,0.05)" : `rgba(252,76,2,${o})` }} />
                 ))}
-                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.5rem", color: "rgba(232,240,244,0.28)" }}>more</span>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.28)" }}>more</span>
               </div>
             </div>
             <div style={{ overflowX: "auto", paddingBottom: 4 }}>
@@ -776,7 +776,7 @@ export default function TrackerStrava() {
                 {weeks.map((_, wi) => {
                   const ml = monthLabels.find(m => m.col === wi);
                   return (
-                    <div key={wi} style={{ width: cellSize, flexShrink: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.48rem", color: "rgba(232,240,244,0.3)" }}>
+                    <div key={wi} style={{ width: cellSize, flexShrink: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)" }}>
                       {ml ? ml.label : ""}
                     </div>
                   );
@@ -786,7 +786,7 @@ export default function TrackerStrava() {
                 {/* Day labels */}
                 <div style={{ display: "flex", flexDirection: "column", gap, marginRight: 2 }}>
                   {["M", "", "W", "", "F", "", "S"].map((d, i) => (
-                    <div key={i} style={{ height: cellSize, width: 14, fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.42rem", color: "rgba(232,240,244,0.22)", display: "flex", alignItems: "center" }}>{d}</div>
+                    <div key={i} style={{ height: cellSize, width: 14, fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.22)", display: "flex", alignItems: "center" }}>{d}</div>
                   ))}
                 </div>
                 {/* Grid */}
@@ -829,11 +829,11 @@ export default function TrackerStrava() {
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div>
                     <div className="kt-card-label">Body Efficiency Index</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.35)", marginTop: 2 }}>speed per kg bodyweight — higher = better</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.35)", marginTop: 2 }}>speed per kg bodyweight — higher = better</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.15rem", fontWeight: 700, color: "#FC4C02" }}>{current.toFixed(1)}</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", color: trend >= 0 ? "#22C55E" : "#EF4444", marginTop: 2 }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: trend >= 0 ? "#22C55E" : "#EF4444", marginTop: 2 }}>
                       {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}% vs baseline
                     </div>
                   </div>
@@ -864,11 +864,11 @@ export default function TrackerStrava() {
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div>
                     <div className="kt-card-label">Aerobic Efficiency Index</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.35)", marginTop: 2 }}>speed per heartbeat — higher = fitter</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.35)", marginTop: 2 }}>speed per heartbeat — higher = fitter</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "1.15rem", fontWeight: 700, color: "#a78bfa" }}>{current.toFixed(1)}</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", color: trend >= 0 ? "#22C55E" : "#EF4444", marginTop: 2 }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: trend >= 0 ? "#22C55E" : "#EF4444", marginTop: 2 }}>
                       {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}% vs baseline
                     </div>
                   </div>
@@ -903,7 +903,7 @@ export default function TrackerStrava() {
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             {([30, 60, 90] as const).map(d => (
               <button key={d} onClick={() => { setAiRange(d); setAiSummary(""); }} style={{
-                fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.58rem", letterSpacing: "0.08em",
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.08em",
                 padding: "0.25rem 0.7rem", border: "1px solid", borderRadius: 20, cursor: "pointer", transition: "all 0.13s",
                 background: aiRange === d ? "rgba(252,76,2,0.1)" : "transparent",
                 color: aiRange === d ? "#FC4C02" : "rgba(232,240,244,0.4)",
@@ -912,7 +912,7 @@ export default function TrackerStrava() {
             ))}
             <button onClick={generateAiSummary} disabled={aiLoading} style={{
               display: "flex", alignItems: "center", gap: "0.4rem",
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", fontWeight: 600,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", fontWeight: 600,
               padding: "0.4rem 1rem", border: "none", borderRadius: 8, cursor: aiLoading ? "not-allowed" : "pointer",
               background: aiLoading ? "rgba(252,76,2,0.1)" : "#FC4C02", color: aiLoading ? "rgba(232,240,244,0.4)" : "#fff",
               opacity: aiLoading ? 0.7 : 1, transition: "all 0.15s",
@@ -923,11 +923,11 @@ export default function TrackerStrava() {
             </button>
           </div>
         </div>
-        {aiError && <div style={{ fontSize: "0.8rem", color: "#EF4444" }}>{aiError}</div>}
+        {aiError && <div style={{ fontSize: "var(--kt-fs-sm)", color: "#EF4444" }}>{aiError}</div>}
         {aiSummary
-          ? <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.88rem", lineHeight: 1.75, color: "rgba(232,240,244,0.85)", margin: 0 }}>{aiSummary}</p>
+          ? <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "var(--kt-fs-md)", lineHeight: 1.75, color: "rgba(232,240,244,0.85)", margin: 0 }}>{aiSummary}</p>
           : !aiLoading && !aiError && (
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.28)", textAlign: "center", padding: "1.5rem 0" }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.28)", textAlign: "center", padding: "1.5rem 0" }}>
               Select a range and analyse your runs
             </div>
           )
@@ -981,13 +981,13 @@ export default function TrackerStrava() {
                     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "1rem", fontWeight: 600, color: "#e8f0f4", marginBottom: 2 }}>
                       {selectedActivity.name}
                     </div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.62rem", color: "rgba(232,240,244,0.35)" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", color: "rgba(232,240,244,0.35)" }}>
                       {(() => { try { const d = parseISO(selectedActivity.start_date_local); return isValid(d) ? format(d, "EEEE, d MMM yyyy") : ""; } catch { return ""; } })()}
                     </div>
                   </div>
                   <button
                     onClick={() => setSelectedId(null)}
-                    style={{ background: "rgba(232,240,244,0.06)", border: "none", borderRadius: 8, padding: "0.35rem 0.75rem", color: "rgba(232,240,244,0.5)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.6rem", cursor: "pointer" }}
+                    style={{ background: "rgba(232,240,244,0.06)", border: "none", borderRadius: 8, padding: "0.35rem 0.75rem", color: "rgba(232,240,244,0.5)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", cursor: "pointer" }}
                   >
                     close
                   </button>
@@ -1004,8 +1004,8 @@ export default function TrackerStrava() {
                     ...(selectedActivity.max_heartrate != null ? [{ label: "Max HR", value: `${Math.round(selectedActivity.max_heartrate)} bpm` }] : []),
                   ].map(s => (
                     <div key={s.label} style={{ background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: 8, padding: "0.65rem 0.75rem" }}>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.52rem", color: "rgba(232,240,244,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.92rem", fontWeight: 700, color: s.accent ?? "#e8f0f4" }}>{s.value}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-md)", fontWeight: 700, color: s.accent ?? "#e8f0f4" }}>{s.value}</div>
                     </div>
                   ))}
                 </div>

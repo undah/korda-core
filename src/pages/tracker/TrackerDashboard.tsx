@@ -183,7 +183,7 @@ export default function TrackerDashboard() {
   }, [paceKgPerWeek, latest, goal]);
 
   if (isLoading) return (
-    <div style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", paddingTop: "4rem", textAlign: "center" }}>
+    <div style={{ color: "var(--kt-dim)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-sm)", paddingTop: "4rem", textAlign: "center" }}>
       loading data...
     </div>
   );
@@ -195,8 +195,8 @@ export default function TrackerDashboard() {
         <h1 className="kt-page-title">Welcome to <em>KordaTracker</em></h1>
       </div>
       <div className="kt-card" style={{ textAlign: "center", padding: "4rem 2rem" }}>
-        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.5rem", marginBottom: "1rem" }}>No data yet.</p>
-        <p style={{ color: "var(--kt-muted)", fontSize: "0.9rem", marginBottom: "2rem" }}>Log your first check-in to start tracking your progress.</p>
+        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "var(--kt-fs-lg)", marginBottom: "1rem" }}>No data yet.</p>
+        <p style={{ color: "var(--kt-muted)", fontSize: "var(--kt-fs-md)", marginBottom: "2rem" }}>Log your first check-in to start tracking your progress.</p>
         <Link to="/tracker/progress" className="kt-btn kt-btn-blue" style={{ textDecoration: "none", display: "inline-block" }}>
           Log first check-in →
         </Link>
@@ -213,20 +213,20 @@ export default function TrackerDashboard() {
           style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(7,9,11,0.96)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "1.5rem" }}
         >
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto" }}>
-            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--kt-accent)", opacity: 0.6, marginBottom: "1rem", textAlign: "center" }}>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--kt-accent)", opacity: 0.6, marginBottom: "1rem", textAlign: "center" }}>
               {lightboxPhotos[0]?.log_date}{lightboxPhotos[0]?.weight_at ? ` · ${lightboxPhotos[0].weight_at} kg` : ""}
             </p>
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
               {lightboxPhotos.map(photo => (
                 <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
                   <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
                     {photo.angle}
                   </p>
                 </div>
               ))}
             </div>
-            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid var(--kt-border)", color: "var(--kt-dim)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
+            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid var(--kt-border)", color: "var(--kt-dim)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
               close ×
             </button>
           </div>
@@ -259,17 +259,17 @@ export default function TrackerDashboard() {
           </div>
 
           {/* Chart */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: "1.5rem", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>
+          <div className="kt-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", gap: "1rem", flexWrap: "wrap" }}>
               <div>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: C.dim }}>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted, marginBottom: "0.3rem" }}>Weight trend</p>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.dim }}>
                   {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg` : "No goal set"}
                 </p>
               </div>
               <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
                 {RANGES.map(r => (
-                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "var(--kt-accent)" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
+                  <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "var(--kt-accent)" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
                 ))}
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function TrackerDashboard() {
             />
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.6rem" }}>
-              <Link to="/tracker/graph" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.75, textDecoration: "none", letterSpacing: "0.06em" }}>Full graph →</Link>
+              <Link to="/tracker/graph" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-accent)", opacity: 0.75, textDecoration: "none", letterSpacing: "0.06em" }}>Full graph →</Link>
             </div>
           </div>
 
@@ -301,36 +301,36 @@ export default function TrackerDashboard() {
                 const delta = prev ? +(c.weight - prev.weight).toFixed(1) : null;
                 return (
                   <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0", borderBottom: "1px solid var(--kt-border2)" }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "var(--kt-dim)", fontSize: "0.68rem" }}>{format(parseISO(c.log_date), "EEE, MMM d")}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: "var(--kt-dim)", fontSize: "var(--kt-fs-2xs)" }}>{format(parseISO(c.log_date), "EEE, MMM d")}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-                      {delta !== null && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: delta <= 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta}</span>}
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: C.accent, fontWeight: 500, fontSize: "0.82rem" }}>{c.weight} kg</span>
+                      {delta !== null && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: delta <= 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta}</span>}
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: C.accent, fontWeight: 500, fontSize: "var(--kt-fs-sm)" }}>{c.weight} kg</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <Link to="/tracker/progress" style={{ display: "block", marginTop: "1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none", letterSpacing: "0.1em" }}>View all →</Link>
+            <Link to="/tracker/progress" style={{ display: "block", marginTop: "1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none", letterSpacing: "0.1em" }}>View all →</Link>
           </div>
         </div>
 
         {/* ── RIGHT PANEL: unified sidebar ── */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div className="kt-card" style={{ padding: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* AI weekly summary */}
           <div style={{ padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aiSummary ? "0.85rem" : "0.5rem" }}>
               <p className="kt-card-label" style={{ marginBottom: 0 }}>Weekly summary</p>
               <button onClick={generateSummary} disabled={aiLoading}
-                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.56rem", letterSpacing: "0.08em", padding: "0.25rem 0.6rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap" }}>
+                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.08em", padding: "0.25rem 0.6rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap" }}>
                 {aiLoading ? "generating..." : aiSummary ? "↺" : "✦ Generate"}
               </button>
             </div>
-            {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: C.red }}>{aiError}</p>}
+            {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.red }}>{aiError}</p>}
             {aiSummary ? (
-              <p style={{ fontSize: "0.76rem", color: "var(--kt-muted)", lineHeight: 1.75 }}>{aiSummary}</p>
+              <p style={{ fontSize: "var(--kt-fs-xs)", color: "var(--kt-muted)", lineHeight: 1.75 }}>{aiSummary}</p>
             ) : !aiLoading && (
-              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "var(--kt-dim)", lineHeight: 1.65 }}>
+              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)", lineHeight: 1.65 }}>
                 AI coach recap of your last 7 days — trend, patterns, one action.
               </p>
             )}
@@ -344,10 +344,10 @@ export default function TrackerDashboard() {
             {paceKgPerWeek !== null ? (
               <>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem", marginBottom: "0.5rem" }}>
-                  <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.8rem", fontWeight: 400, color: paceColor, lineHeight: 1 }}>
+                  <span className="kt-num-lg" style={{ color: paceColor }}>
                     {paceKgPerWeek > 0 ? "+" : ""}{paceKgPerWeek}
                   </span>
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: C.muted }}>kg/wk</span>
+                  <span className="kt-meta" style={{ color: C.muted }}>kg/wk</span>
                 </div>
                 {targetPace !== null && (
                   <>
@@ -355,22 +355,22 @@ export default function TrackerDashboard() {
                       <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: 2, transition: "width 0.6s ease" }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: paceColor }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: paceColor }}>
                         {paceStatus === "ahead" ? "↑ Ahead" : paceStatus === "behind" ? "↓ Behind" : "● On track"}
                       </span>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: C.dim }}>target: −{Math.abs(targetPace)} kg/wk</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: C.dim }}>target: −{Math.abs(targetPace)} kg/wk</span>
                     </div>
                     {paceStatus === "behind" && (
                       <Link to="/tracker/settings" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", marginTop: "0.75rem", padding: "0.5rem 0.7rem", background: "var(--kt-red-bg)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, textDecoration: "none" }}>
-                        <span style={{ fontSize: "0.7rem", color: C.muted }}>Behind pace — adjust your goal?</span>
-                        <span style={{ fontSize: "0.68rem", color: C.red, fontWeight: 600, whiteSpace: "nowrap" }}>Settings →</span>
+                        <span style={{ fontSize: "var(--kt-fs-xs)", color: C.muted }}>Behind pace — adjust your goal?</span>
+                        <span style={{ fontSize: "var(--kt-fs-2xs)", color: C.red, fontWeight: 600, whiteSpace: "nowrap" }}>Settings →</span>
                       </Link>
                     )}
                   </>
                 )}
               </>
             ) : (
-              <p style={{ color: C.dim, fontSize: "0.75rem", fontFamily: "'IBM Plex Mono',monospace" }}>Need more data</p>
+              <p style={{ color: C.dim, fontSize: "var(--kt-fs-xs)", fontFamily: "'IBM Plex Mono',monospace" }}>Need more data</p>
             )}
           </div>
 
@@ -380,7 +380,7 @@ export default function TrackerDashboard() {
           <div style={{ padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <p className="kt-card-label" style={{ marginBottom: 0 }}>Latest photo</p>
-              {latestFrontPhoto && <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.56rem", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none", letterSpacing: "0.06em" }}>all photos →</Link>}
+              {latestFrontPhoto && <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none", letterSpacing: "0.06em" }}>all photos →</Link>}
             </div>
             {latestFrontPhoto ? (
               <>
@@ -388,12 +388,12 @@ export default function TrackerDashboard() {
                   onClick={() => setLightboxPhotos(photosByDate[latestFrontPhoto.log_date] ?? [latestFrontPhoto])}>
                   <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", maxHeight: 240, objectFit: "cover", objectPosition: "top", display: "block" }} />
                 </div>
-                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: C.dim }}>
+                <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: C.dim }}>
                   {format(parseISO(latestFrontPhoto.log_date), "d MMM yyyy")}{latestFrontPhoto.weight_at ? ` · ${latestFrontPhoto.weight_at} kg` : ""}
                 </p>
               </>
             ) : (
-              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none" }}>Add first photo →</Link>
+              <Link to="/tracker/photos" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-accent)", opacity: 0.7, textDecoration: "none" }}>Add first photo →</Link>
             )}
           </div>
 
@@ -405,21 +405,21 @@ export default function TrackerDashboard() {
               <p className="kt-card-label" style={{ marginBottom: "0.75rem" }}>Records</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>LOWEST</p>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: C.accent }}>{records.lowestWeight} kg</p>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)" }}>{format(parseISO(records.lowestDate), "d MMM")}</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>LOWEST</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-md)", fontWeight: 500, color: C.accent }}>{records.lowestWeight} kg</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)" }}>{format(parseISO(records.lowestDate), "d MMM")}</p>
                 </div>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST WEEK</p>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: records.bestWeek7 > 0 ? C.green : C.dim }}>{records.bestWeek7 > 0 ? `−${records.bestWeek7} kg` : "—"}</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST WEEK</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-md)", fontWeight: 500, color: records.bestWeek7 > 0 ? C.green : C.dim }}>{records.bestWeek7 > 0 ? `−${records.bestWeek7} kg` : "—"}</p>
                 </div>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST DROP</p>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: records.biggestDrop > 0 ? C.green : C.dim }}>{records.biggestDrop > 0 ? `−${records.biggestDrop} kg` : "—"}</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>BEST DROP</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-md)", fontWeight: 500, color: records.biggestDrop > 0 ? C.green : C.dim }}>{records.biggestDrop > 0 ? `−${records.biggestDrop} kg` : "—"}</p>
                 </div>
                 <div>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.55rem", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>TOTAL LOGS</p>
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.88rem", fontWeight: 500, color: C.text }}>{sorted.length}</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)", letterSpacing: "0.1em", marginBottom: "0.2rem" }}>TOTAL LOGS</p>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-md)", fontWeight: 500, color: C.text }}>{sorted.length}</p>
                 </div>
               </div>
             </div>
@@ -439,8 +439,8 @@ export default function TrackerDashboard() {
               <Link key={item.to} to={item.to} style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 1.25rem", borderBottom: i < arr.length - 1 ? "1px solid var(--kt-border)" : "none", transition: "background 0.12s" }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--kt-hover)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                <span style={{ fontSize: "0.8rem", color: "var(--kt-muted)", fontWeight: 400 }}>{item.label}</span>
-                <span style={{ color: "var(--kt-accent)", opacity: 0.5, fontSize: "0.75rem" }}>→</span>
+                <span style={{ fontSize: "var(--kt-fs-sm)", color: "var(--kt-muted)", fontWeight: 400 }}>{item.label}</span>
+                <span style={{ color: "var(--kt-accent)", opacity: 0.5, fontSize: "var(--kt-fs-xs)" }}>→</span>
               </Link>
             ))}
           </div>

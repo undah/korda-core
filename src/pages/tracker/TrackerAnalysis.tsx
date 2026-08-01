@@ -38,25 +38,25 @@ function makeTooltip(
       : null;
 
     return (
-      <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 320, pointerEvents: "none" }}>
-        <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "0.68rem" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
-        {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "0.9rem" }}>{w.value} kg</p>}
+      <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 320, pointerEvents: "none" }}>
+        <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "var(--kt-fs-2xs)" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
+        {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "var(--kt-fs-md)" }}>{w.value} kg</p>}
         {pctLoss !== null && (
-          <p style={{ color: pctLoss > 0 ? C.green : C.red, fontSize: "0.7rem", marginTop: "0.15rem" }}>
+          <p style={{ color: pctLoss > 0 ? C.green : C.red, fontSize: "var(--kt-fs-xs)", marginTop: "0.15rem" }}>
             {pctLoss > 0 ? "−" : "+"}{Math.abs(pctLoss)}% from start
           </p>
         )}
         {a && <p style={{ color: "var(--kt-muted)", marginTop: "0.2rem" }}>7d avg: {a.value} kg</p>}
         {dayPhotos.length > 0 && (
           <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid var(--kt-border)" }}>
-            <p style={{ fontSize: "0.52rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.45rem" }}>
+            <p style={{ fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.45rem" }}>
               photos · click dot to open
             </p>
             <div style={{ display: "flex", gap: "0.3rem" }}>
               {dayPhotos.map(photo => (
                 <div key={photo.id} style={{ position: "relative", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
                   <img src={photo.url} alt={photo.angle} style={{ width: 54, height: 72, objectFit: "cover", display: "block" }} />
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "0.46rem", textTransform: "capitalize", color: "var(--kt-text)" }}>
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "var(--kt-fs-3xs)", textTransform: "capitalize", color: "var(--kt-text)" }}>
                     {photo.angle}
                   </div>
                 </div>
@@ -88,8 +88,8 @@ function CorrelationTooltip({ active, payload }: any) {
   const p = payload[0]?.payload;
   if (!p) return null;
   return (
-    <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
-      <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "0.68rem" }}>Week of {format(parseISO(p.week), "MMM d")}</p>
+    <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
+      <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "var(--kt-fs-2xs)" }}>Week of {format(parseISO(p.week), "MMM d")}</p>
       <p style={{ color: "#d4a05a" }}>{p.trainingMin} min training</p>
       {p.weightChange != null && (
         <p style={{ color: p.weightChange <= 0 ? "#5ad4a0" : "#d4705a", marginTop: "0.15rem" }}>
@@ -104,8 +104,8 @@ function MeasureTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const date = payload[0]?.payload?.date;
   return (
-    <div style={{ background: "#0C0C18", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
-      <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "0.68rem" }}>
+    <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
+      <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "var(--kt-fs-2xs)" }}>
         {date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}
       </p>
       {payload.map((p: any) => p.value != null && (
@@ -276,8 +276,8 @@ export default function TrackerAnalysis() {
         <h1 className="kt-page-title">In-depth <em>analysis</em></h1>
       </div>
       <div className="kt-card" style={{ textAlign: "center", padding: "4rem 1.5rem" }}>
-        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", marginBottom: "1rem" }}>Need more data.</p>
-        <p style={{ color: "var(--kt-muted)", fontSize: "0.9rem" }}>Log at least 3 check-ins to see your analysis.</p>
+        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "var(--kt-fs-lg)", marginBottom: "1rem" }}>Need more data.</p>
+        <p style={{ color: "var(--kt-muted)", fontSize: "var(--kt-fs-md)" }}>Log at least 3 check-ins to see your analysis.</p>
       </div>
     </div>
   );
@@ -291,20 +291,20 @@ export default function TrackerAnalysis() {
           style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(7,9,11,0.96)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "1.5rem" }}
         >
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto" }}>
-            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--kt-accent)", opacity: 0.6, marginBottom: "1rem", textAlign: "center" }}>
+            <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--kt-accent)", opacity: 0.6, marginBottom: "1rem", textAlign: "center" }}>
               {lightboxPhotos[0]?.log_date}{lightboxPhotos[0]?.weight_at ? ` · ${lightboxPhotos[0].weight_at} kg` : ""}
             </p>
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
               {lightboxPhotos.map(photo => (
                 <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
                   <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
-                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
+                  <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
                     {photo.angle}
                   </p>
                 </div>
               ))}
             </div>
-            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid var(--kt-border)", color: "var(--kt-dim)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
+            <button onClick={() => setLightboxPhotos(null)} style={{ display: "block", margin: "1.5rem auto 0", background: "none", border: "1px solid var(--kt-border)", color: "var(--kt-dim)", cursor: "pointer", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.1em", padding: "0.5rem 1.5rem" }}>
               close ×
             </button>
           </div>
@@ -356,7 +356,7 @@ export default function TrackerAnalysis() {
       {/* Full weight history chart */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Full weight history</p>
-        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.dim, marginBottom: "1.5rem" }}>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.dim, marginBottom: "1.5rem" }}>
           Raw data + 7-day rolling average{goalVal ? `  ·  Goal: ${goalVal} kg` : ""}
         </p>
 
@@ -430,7 +430,7 @@ export default function TrackerAnalysis() {
           </ResponsiveContainer>
         </div>
         {photos.length > 0 && (
-          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.12em", color: "var(--kt-dim)", marginTop: "0.6rem" }}>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.12em", color: "var(--kt-dim)", marginTop: "0.6rem" }}>
             cyan dots = days with photos · click to open
           </p>
         )}
@@ -449,8 +449,8 @@ export default function TrackerAnalysis() {
               return (
                 <div key={w.week} style={{ padding: "0.75rem", background: "var(--kt-surface2)", borderLeft: "2px solid var(--kt-border)", borderRadius: "0 6px 6px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "var(--kt-dim)" }}>{w.week}</span>
-                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.accent }}>{w.avg} kg</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>{w.week}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.accent }}>{w.avg} kg</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", gap: 3 }}>
@@ -459,7 +459,7 @@ export default function TrackerAnalysis() {
                       ))}
                     </div>
                     {change !== null && (
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem", color: change < 0 ? C.green : C.red }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", color: change < 0 ? C.green : C.red }}>
                         {change > 0 ? "+" : ""}{change} kg
                       </span>
                     )}
@@ -472,11 +472,11 @@ export default function TrackerAnalysis() {
 
         {/* Desktop table */}
         <div className="kt-desktop-only">
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--kt-fs-sm)" }}>
             <thead>
               <tr>
                 {["Week", "Avg weight", "Change", "Entries", "Trend"].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--kt-dim)", borderBottom: "1px solid var(--kt-border)" }}>{h}</th>
+                  <th key={h} style={{ textAlign: "left", padding: "0.5rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--kt-dim)", borderBottom: "1px solid var(--kt-border)" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -486,7 +486,7 @@ export default function TrackerAnalysis() {
                 const change = prev ? +(w.avg - prev.avg).toFixed(1) : null;
                 return (
                   <tr key={w.week} style={{ borderBottom: "1px solid var(--kt-border2)" }}>
-                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "var(--kt-dim)" }}>{w.week}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", color: "var(--kt-dim)" }}>{w.week}</td>
                     <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: C.accent }}>{w.avg} kg</td>
                     <td style={{ padding: "0.6rem 0.75rem", fontFamily: "'IBM Plex Mono',monospace", color: change === null ? "var(--kt-dim)" : change < 0 ? C.green : C.red }}>
                       {change === null ? "—" : `${change > 0 ? "+" : ""}${change} kg`}
@@ -510,18 +510,18 @@ export default function TrackerAnalysis() {
       {/* Training load vs weight */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Training load vs weight</p>
-        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.dim, marginBottom: "1.25rem" }}>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.dim, marginBottom: "1.25rem" }}>
           Weekly training minutes (Strava) next to that week's weight change
         </p>
 
         {!stravaToken ? (
           <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
-            <p style={{ color: "var(--kt-muted)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Connect Strava to see how training load lines up with your weight trend.</p>
-            <Link to="/tracker/strava" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "var(--kt-accent)", textDecoration: "none" }}>Connect Strava →</Link>
+            <p style={{ color: "var(--kt-muted)", fontSize: "var(--kt-fs-md)", marginBottom: "0.75rem" }}>Connect Strava to see how training load lines up with your weight trend.</p>
+            <Link to="/tracker/strava" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-accent)", textDecoration: "none" }}>Connect Strava →</Link>
           </div>
         ) : correlationData.filter(w => w.trainingMin > 0).length < 2 ? (
           <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
-            <p style={{ color: "var(--kt-muted)", fontSize: "0.85rem" }}>Not enough logged training yet — keep syncing runs to unlock this view.</p>
+            <p style={{ color: "var(--kt-muted)", fontSize: "var(--kt-fs-md)" }}>Not enough logged training yet — keep syncing runs to unlock this view.</p>
           </div>
         ) : (
           <>
@@ -549,17 +549,17 @@ export default function TrackerAnalysis() {
             <div style={{ display: "flex", gap: "1.2rem", marginTop: "0.85rem", paddingTop: "0.75rem", borderTop: "1px solid var(--kt-border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <span style={{ width: 10, height: 10, background: "rgba(212,160,90,0.6)", borderRadius: 2, display: "inline-block" }} />
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-dim)" }}>Training (min/wk)</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Training (min/wk)</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <span style={{ width: 16, height: 2, background: "#00C8FF", borderRadius: 2, display: "inline-block" }} />
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-dim)" }}>Weight change (kg/wk)</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Weight change (kg/wk)</span>
               </div>
             </div>
 
             {trainingInsight && (
               <div style={{ marginTop: "1rem", padding: "0.8rem 1rem", background: "var(--kt-surface2)", borderLeft: "2px solid var(--kt-accent)", borderRadius: "0 8px 8px 0" }}>
-                <p style={{ fontSize: "0.82rem", color: "var(--kt-muted)", lineHeight: 1.65 }}>
+                <p style={{ fontSize: "var(--kt-fs-sm)", color: "var(--kt-muted)", lineHeight: 1.65 }}>
                   In weeks above {trainingInsight.median} min of training, your average change was{" "}
                   <strong style={{ color: trainingInsight.highAvg <= 0 ? C.green : C.red }}>{trainingInsight.highAvg > 0 ? "+" : ""}{trainingInsight.highAvg} kg</strong>
                   {" "}vs{" "}
@@ -576,7 +576,7 @@ export default function TrackerAnalysis() {
       {(activeMeasures.length >= 1 || hasBf) && (
         <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
           <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Measurement trends</p>
-          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: C.dim, marginBottom: "1.25rem" }}>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.dim, marginBottom: "1.25rem" }}>
             Body measurements over time (cm){hasBf ? " · body fat on separate scale" : ""}
           </p>
 
@@ -620,7 +620,7 @@ export default function TrackerAnalysis() {
               {activeMeasures.map(k => (
                 <div key={k} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <span style={{ width: 20, height: 2, background: M_COLORS[k], display: "inline-block", borderRadius: 2 }} />
-                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.62rem", color: "var(--kt-dim)", letterSpacing: "0.05em" }}>{M_LABELS[k]}</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)", letterSpacing: "0.05em" }}>{M_LABELS[k]}</span>
                 </div>
               ))}
             </div>
@@ -636,7 +636,7 @@ export default function TrackerAnalysis() {
                   { label: "Body fat now",   val: [...measureData].reverse().find(d => d.body_fat != null)?.body_fat },
                 ].map(({ label, val }) => val != null && (
                   <div key={label}>
-                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.2rem" }}>{label}</p>
+                    <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.2rem" }}>{label}</p>
                     <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: M_COLORS.body_fat }}>{val}%</p>
                   </div>
                 ))}
@@ -647,7 +647,7 @@ export default function TrackerAnalysis() {
                   const delta = +(last - first).toFixed(1);
                   return (
                     <div key="delta">
-                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.2rem" }}>Change</p>
+                      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--kt-dim)", marginBottom: "0.2rem" }}>Change</p>
                       <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1rem", color: delta < 0 ? C.green : C.red }}>{delta > 0 ? "+" : ""}{delta}%</p>
                     </div>
                   );
@@ -663,7 +663,7 @@ export default function TrackerAnalysis() {
       {radarData.length >= 3 && (
         <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
           <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Body shape</p>
-          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "var(--kt-dim)", marginBottom: "1rem" }}>
+          <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)", marginBottom: "1rem" }}>
             Start vs now — smaller shape = more progress
           </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
@@ -678,11 +678,11 @@ export default function TrackerAnalysis() {
           <div style={{ display: "flex", gap: "1.5rem", justifyContent: "center", marginTop: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <span style={{ width: 16, height: 2, background: "rgba(90,180,212,0.5)", display: "inline-block", borderRadius: 2 }} />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "var(--kt-dim)" }}>Start</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Start</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <span style={{ width: 16, height: 2, background: "#00C8FF", display: "inline-block", borderRadius: 2 }} />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "var(--kt-dim)" }}>Now</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Now</span>
             </div>
           </div>
         </div>
@@ -691,7 +691,7 @@ export default function TrackerAnalysis() {
       {/* Streak heatmap */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Check-in heatmap</p>
-        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.68rem", color: "var(--kt-dim)", marginBottom: "1rem" }}>
+        <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)", marginBottom: "1rem" }}>
           Last 26 weeks · green = lost · red = gained · empty = no log
         </p>
         <div style={{ overflowX: "auto" }}>
@@ -724,7 +724,7 @@ export default function TrackerAnalysis() {
           {[["Lost ≥1 kg", "#5ad4a0"], ["Lost <1 kg", "rgba(90,212,160,0.5)"], ["Gained", "rgba(212,112,90,0.7)"], ["First log", "rgba(0,200,255,0.25)"], ["No log", "rgba(0,200,255,0.05)"]].map(([label, color]) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <div style={{ width: 10, height: 10, background: color as string, borderRadius: 2 }} />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.58rem", color: "var(--kt-dim)" }}>{label}</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -736,8 +736,8 @@ export default function TrackerAnalysis() {
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {generateInsights(stats, adherence, sorted).map((insight, i) => (
             <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.8rem 1rem", background: "var(--kt-surface2)", borderLeft: `2px solid ${insight.color}`, borderRadius: "0 8px 8px 0" }}>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.65rem", color: insight.color, flexShrink: 0, marginTop: "0.1rem" }}>{insight.tag}</span>
-              <p style={{ fontSize: "0.82rem", color: "var(--kt-muted)", lineHeight: 1.65 }}>{insight.text}</p>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: insight.color, flexShrink: 0, marginTop: "0.1rem" }}>{insight.tag}</span>
+              <p style={{ fontSize: "var(--kt-fs-sm)", color: "var(--kt-muted)", lineHeight: 1.65 }}>{insight.text}</p>
             </div>
           ))}
         </div>
