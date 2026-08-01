@@ -6,8 +6,9 @@ import { TrackerCheckin, TrackerGoal, ProgressStats } from "../types";
 
 // ─── checkins ────────────────────────────────────────────────────────────────
 
-export function useTrackerCheckins(limit = 90) {
+export function useTrackerCheckins(limit = 90, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ["tracker_checkins", limit],
     queryFn: async (): Promise<TrackerCheckin[]> => {
       const { data, error } = await supabase

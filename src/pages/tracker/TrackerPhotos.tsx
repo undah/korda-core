@@ -6,7 +6,8 @@ import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins"
 import type { TrackerPhoto } from "@/features/tracker/types";
 import { toast } from "sonner";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
-import { generateShareImage, shareOrDownloadBlob } from "@/features/tracker/lib/shareProgressImage";
+import ProgressExport from "@/features/tracker/components/ProgressExport";
+import type { WeighIn } from "@/features/tracker/lib/progress";
 
 const today = () => new Date().toISOString().split("T")[0];
 const ANGLES = ["front", "side", "back", "face"] as const;
@@ -137,7 +138,7 @@ export default function TrackerPhotos() {
   const [flipAngle, setFlipAngle] = useState<Angle>("front");
   const [flipIdx, setFlipIdx] = useState(0);
   const [flipPlaying, setFlipPlaying] = useState(false);
-  const [sharing, setSharing] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const flipTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,29 +213,21 @@ export default function TrackerPhotos() {
   const checkinA = dateA ? checkins.find(c => c.log_date === dateA) : null;
   const checkinB = dateB ? checkins.find(c => c.log_date === dateB) : null;
 
-  const handleShareProgress = async () => {
-    if (!photoA || !photoB || !checkinA?.weight || !checkinB?.weight) return;
-    setSharing(true);
-    try {
-      const blob = await generateShareImage({
-        beforeUrl: photoA.url,
-        afterUrl: photoB.url,
-        beforeDate: dateA,
-        afterDate: dateB,
-        beforeWeight: checkinA.weight,
-        afterWeight: checkinB.weight,
-        beforeBodyFat: checkinA.body_fat ?? null,
-        afterBodyFat:  checkinB.body_fat ?? null,
-        beforeWaist:   checkinA.waist   ?? null,
-        afterWaist:    checkinB.waist   ?? null,
-      });
-      await shareOrDownloadBlob(blob, `progress-${dateA}-${dateB}.png`);
-    } catch {
-      toast.error("Couldn't generate the image — try again.");
-    } finally {
-      setSharing(false);
-    }
-  };
+  // The export card is body-composition led, so both endpoints need a bf% reading.
+  const toWeighIn = (c: typeof checkinA): WeighIn | null =>
+    c && c.body_fat != null
+      ? {
+          log_date: c.log_date,
+          weight: c.weight,
+          body_fat: c.body_fat,
+          fat_mass_kg: c.fat_mass_kg ?? null,
+          lean_mass_kg: c.lean_mass_kg ?? null,
+        }
+      : null;
+
+  const exportBefore = toWeighIn(checkinA);
+  const exportAfter  = toWeighIn(checkinB);
+  const canExport    = !!exportBefore && !!exportAfter;
 
   const handleTabCompare = () => {
     if (dates.length >= 2 && !dateA && !dateB) {
@@ -279,6 +272,17 @@ export default function TrackerPhotos() {
       )}
 
       <ConfirmDeleteModal open={!!confirmDeleteId} label="this photo" onConfirm={handleDelete} onCancel={() => setConfirmDeleteId(null)} loading={deletePhoto.isPending} />
+
+      {/* PROGRESS EXPORT */}
+      {showExport && exportBefore && exportAfter && (
+        <ProgressExport
+          before={exportBefore}
+          after={exportAfter}
+          beforePhotoUrl={photoA?.url}
+          afterPhotoUrl={photoB?.url}
+          onClose={() => setShowExport(false)}
+        />
+      )}
 
       {/* LIGHTBOX */}
       {lightbox && (() => {
@@ -711,13 +715,20 @@ export default function TrackerPhotos() {
                               {(Math.abs(checkinB.weight - checkinA.weight) / (Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000) / 7)).toFixed(2)} kg
                             </p>
                           </div>
-                          {photoA && photoB && (
-                            <div style={{ gridColumn: "1 / -1" }}>
-                              <button className="kt-btn kt-btn-blue" onClick={handleShareProgress} disabled={sharing} style={{ width: "100%" }}>
-                                {sharing ? "Generating..." : "Share progress →"}
-                              </button>
-                            </div>
-                          )}
+                          <div style={{ gridColumn: "1 / -1" }}>
+                            <button
+                              className="kt-btn kt-btn-blue"
+                              onClick={() => setShowExport(true)}
+                              disabled={!canExport}
+                              style={{ width: "100%", opacity: canExport ? 1 : 0.45, cursor: canExport ? "pointer" : "not-allowed" }}>
+                              Share progress →
+                            </button>
+                            {!canExport && (
+                              <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.6rem", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.5rem", lineHeight: 1.6 }}>
+                                add a body fat % to both check-ins to build the card
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
