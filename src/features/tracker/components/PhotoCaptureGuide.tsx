@@ -20,12 +20,15 @@ export default function PhotoCaptureGuide({
   ghostUrl,
   ghostDate,
   angle,
+  progress,
   onCapture,
   onClose,
 }: {
   ghostUrl?: string;
   ghostDate?: string;
   angle: string;
+  /** Set when shooting a run of angles in one session. */
+  progress?: { index: number; total: number; remaining: string[] };
   onCapture: (file: File, previewUrl: string) => void;
   onClose: () => void;
 }) {
@@ -35,6 +38,7 @@ export default function PhotoCaptureGuide({
   const [opacity, setOpacity] = useState(0.4);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [flash, setFlash] = useState(false);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -112,17 +116,28 @@ export default function PhotoCaptureGuide({
     canvas.toBlob(blob => {
       if (!blob) return;
       const file = new File([blob], `${angle}-${Date.now()}.jpg`, { type: "image/jpeg" });
-      stop();
+      // In a multi-angle run the stream stays open for the next angle; only the
+      // single-shot path tears it down here.
+      if (!progress) stop();
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 450);
       onCapture(file, URL.createObjectURL(blob));
     }, "image/jpeg", 0.92);
-  }, [angle, facing, onCapture, stop]);
+  }, [angle, facing, onCapture, stop, progress]);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#07090b", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.85rem 1rem", flexShrink: 0 }}>
-        <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "rgba(255,255,255,0.75)", textTransform: "capitalize" }}>
-          {angle}{ghostDate ? ` · matching ${ghostDate}` : ""}
+        <span style={{ display: "flex", alignItems: "center", gap: "0.6rem", minWidth: 0 }}>
+          {progress && (
+            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "#07090b", background: "#00C8FF", borderRadius: "var(--kt-r-full)", padding: "2px 8px", flexShrink: 0 }}>
+              {progress.index + 1}/{progress.total}
+            </span>
+          )}
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "rgba(255,255,255,0.75)", textTransform: "capitalize", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {angle}{ghostDate ? ` · matching ${ghostDate}` : ""}
+          </span>
         </span>
         <button onClick={() => { stop(); onClose(); }} aria-label="Close camera"
           style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", display: "flex", padding: 4 }}>
@@ -155,6 +170,9 @@ export default function PhotoCaptureGuide({
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity, pointerEvents: "none" }} />
             )}
             {/* Thirds grid + centre line to align against */}
+            {flash && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.75)", pointerEvents: "none", animation: "none" }} />
+            )}
             <svg viewBox="0 0 30 40" preserveAspectRatio="none" aria-hidden
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
               <line x1="10" y1="0" x2="10" y2="40" stroke="rgba(255,255,255,0.16)" strokeWidth="0.15" />
@@ -206,7 +224,9 @@ export default function PhotoCaptureGuide({
         </div>
 
         <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(255,255,255,0.4)", textAlign: "center", marginTop: "0.9rem", lineHeight: 1.6 }}>
-          {ghostUrl
+          {progress?.remaining.length
+            ? `next: ${progress.remaining.join(" → ")}`
+            : ghostUrl
             ? "move until you line up with the faded shot, then capture"
             : "first shot at this angle — it becomes the guide for next time"}
         </p>

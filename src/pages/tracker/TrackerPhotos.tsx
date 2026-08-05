@@ -6,7 +6,7 @@ import { useTrackerCheckins, ALL_CHECKINS } from "@/features/tracker/hooks/useTr
 import type { TrackerPhoto } from "@/features/tracker/types";
 import { toast } from "sonner";
 import { formatISODate } from "@/features/tracker/hooks/useTrackerCheckins";
-import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X, Camera, ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X, Camera, ImageIcon, Layers3, RefreshCw, Check } from "lucide-react";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 import ProgressExport from "@/features/tracker/components/ProgressExport";
 import PhotoFramingGuide from "@/features/tracker/components/PhotoFramingGuide";
@@ -144,13 +144,73 @@ export default function TrackerPhotos() {
   const [flipPlaying, setFlipPlaying] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  // Multi-angle run: a queue of angles plus the shots taken so far, held until
+  // the user reviews them and commits the whole set.
+  const [session, setSession] = useState<{ queue: Angle[]; idx: number } | null>(null);
+  const [shots, setShots] = useState<Partial<Record<Angle, { file: File; url: string }>>>({});
+  const [uploadingAll, setUploadingAll] = useState(false);
   const flipTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleCapture = (f: File, url: string) => {
+    if (session) {
+      const angle = session.queue[session.idx];
+      setShots(prev => {
+        const old = prev[angle];
+        if (old) URL.revokeObjectURL(old.url);
+        return { ...prev, [angle]: { file: f, url } };
+      });
+      const next = session.idx + 1;
+      if (next < session.queue.length) {
+        setSession({ ...session, idx: next });
+        setForm(fm => ({ ...fm, angle: session.queue[next] }));
+      } else {
+        setSession(null);
+        setCapturing(false);
+      }
+      return;
+    }
     if (preview) URL.revokeObjectURL(preview);
     setFile(f);
     setPreview(url);
     setCapturing(false);
+  };
+
+  const startSession = (queue: Angle[]) => {
+    if (!queue.length) return;
+    setForm(fm => ({ ...fm, angle: queue[0] }));
+    setSession({ queue, idx: 0 });
+    setCapturing(true);
+  };
+
+  const retakeAngle = (angle: Angle) => {
+    setForm(fm => ({ ...fm, angle }));
+    setSession({ queue: [angle], idx: 0 });
+    setCapturing(true);
+  };
+
+  const discardShots = () => {
+    Object.values(shots).forEach(s => s && URL.revokeObjectURL(s.url));
+    setShots({});
+  };
+
+  const uploadAllShots = async () => {
+    const entries = (Object.entries(shots) as [Angle, { file: File; url: string }][]);
+    if (!entries.length) return;
+    setUploadingAll(true);
+    let ok = 0;
+    for (const [angle, shot] of entries) {
+      try {
+        await uploadPhoto.mutateAsync({
+          file: shot.file, angle, log_date: form.log_date,
+          weight_at: form.weight_at ? parseFloat(form.weight_at) : undefined,
+        });
+        ok++;
+      } catch { /* reported in aggregate below */ }
+    }
+    setUploadingAll(false);
+    if (ok === entries.length) toast.success(`Uploaded ${ok} photo${ok > 1 ? "s" : ""}.`);
+    else toast.error(`Uploaded ${ok} of ${entries.length}. Try the rest again.`);
+    if (ok > 0) discardShots();
   };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -297,8 +357,13 @@ export default function TrackerPhotos() {
           ghostUrl={ghostPhoto?.url}
           ghostDate={ghostPhoto ? format(parseISO(ghostPhoto.log_date), "d MMM") : undefined}
           angle={form.angle}
+          progress={session && session.queue.length > 1 ? {
+            index: session.idx,
+            total: session.queue.length,
+            remaining: session.queue.slice(session.idx + 1),
+          } : undefined}
           onCapture={handleCapture}
-          onClose={() => setCapturing(false)}
+          onClose={() => { setSession(null); setCapturing(false); }}
         />
       )}
 
@@ -475,12 +540,73 @@ export default function TrackerPhotos() {
                   Choose a file
                   <span className="kt-meta">JPG, PNG, WEBP</span>
                 </button>
+
+                {/* One trip through every angle, each with its own onion-skin. */}
+                <button type="button" onClick={() => startSession([...ANGLES])}
+                  style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", padding: "0.7rem", background: "transparent", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", color: "var(--kt-muted)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", fontWeight: 500 }}>
+                  <Layers3 size={15} />
+                  Shoot all {ANGLES.length} angles in one go
+                </button>
+              </div>
+            )}
+
+            {/* Review strip — a finished multi-angle run, held before committing. */}
+            {Object.keys(shots).length > 0 && (
+              <div style={{ border: "1px solid var(--kt-accent)", borderRadius: "var(--kt-r-sm)", padding: "1rem", marginBottom: "1.5rem", background: "var(--kt-accent-bg)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", fontWeight: 600, color: "var(--kt-text)", margin: 0 }}>
+                    {Object.keys(shots).length} shot{Object.keys(shots).length > 1 ? "s" : ""} ready
+                  </p>
+                  <button type="button" onClick={discardShots}
+                    style={{ background: "none", border: "none", color: "var(--kt-dim)", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", cursor: "pointer", textDecoration: "underline" }}>
+                    discard
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${ANGLES.length}, 1fr)`, gap: "0.5rem", marginBottom: "1rem" }}>
+                  {ANGLES.map(a => {
+                    const shot = shots[a];
+                    const replaces = photos.some(p => p.log_date === form.log_date && p.angle === a);
+                    return (
+                      <div key={a} style={{ textAlign: "center" }}>
+                        <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: "var(--kt-r-sm)", overflow: "hidden", background: "var(--kt-surface2)", border: shot ? "1px solid var(--kt-accent)" : "1px dashed var(--kt-border)" }}>
+                          {shot ? (
+                            <>
+                              <img src={shot.url} alt={a} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                              <span style={{ position: "absolute", top: 4, right: 4, background: "var(--kt-accent)", color: "var(--kt-bg)", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Check size={10} />
+                              </span>
+                            </>
+                          ) : (
+                            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span className="kt-meta">—</span>
+                            </div>
+                          )}
+                        </div>
+                        <button type="button" onClick={() => retakeAngle(a)}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.2rem", width: "100%", marginTop: "0.3rem", background: "none", border: "none", color: shot ? "var(--kt-muted)" : "var(--kt-accent)", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-3xs)", textTransform: "capitalize", cursor: "pointer" }}>
+                          {shot ? <RefreshCw size={9} /> : <Camera size={9} />}
+                          {a}
+                        </button>
+                        {replaces && shot && (
+                          <span className="kt-meta-xs" style={{ display: "block", marginTop: 1 }}>replaces</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button className="kt-btn kt-btn-blue" onClick={uploadAllShots} disabled={uploadingAll} style={{ width: "100%" }}>
+                  {uploadingAll ? "Uploading..." : `Upload ${Object.keys(shots).length} photo${Object.keys(shots).length > 1 ? "s" : ""} →`}
+                </button>
               </div>
             )}
             <input key={fileKey} ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
-            <button className="kt-btn kt-btn-blue" onClick={handleUpload} disabled={!file || uploadPhoto.isPending} style={{ width: "100%" }}>
-              {uploadPhoto.isPending ? "Uploading..." : "Upload photo →"}
-            </button>
+            {Object.keys(shots).length === 0 && (
+              <button className="kt-btn kt-btn-blue" onClick={handleUpload} disabled={!file || uploadPhoto.isPending} style={{ width: "100%" }}>
+                {uploadPhoto.isPending ? "Uploading..." : "Upload photo →"}
+              </button>
+            )}
           </div>
 
           {isLoading ? (
