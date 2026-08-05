@@ -76,7 +76,7 @@ function HRZoneBar({ avgHR, maxHR }: { avgHR: number; maxHR: number }) {
       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(232,240,244,0.3)", marginBottom: "0.6rem" }}>
         HR Zones <span style={{ color: "rgba(232,240,244,0.18)", fontSize: "var(--kt-fs-3xs)" }}>(estimated)</span>
       </div>
-      <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2 }}>
+      <div style={{ display: "flex", height: 7, borderRadius: "var(--kt-r-sm)", overflow: "hidden", gap: 2 }}>
         {zones.map(z => (
           <div key={z.id} style={{ flex: z.pct, background: z.color, opacity: 0.85 }} />
         ))}
@@ -166,7 +166,7 @@ function ActivityCard({ activity, selected, weightKg, onClick }: {
       {badges.length > 0 && (
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.45rem", flexWrap: "wrap" }}>
           {badges.map(b => (
-            <span key={b} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", background: "rgba(255,255,255,0.04)", padding: "1px 6px", borderRadius: 4 }}>{b}</span>
+            <span key={b} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", background: "rgba(255,255,255,0.04)", padding: "1px 6px", borderRadius: "var(--kt-r-sm)" }}>{b}</span>
           ))}
         </div>
       )}
@@ -459,7 +459,7 @@ export default function TrackerStrava() {
             </div>
             <button
               onClick={() => { window.location.href = getStravaAuthUrl(); }}
-              style={{ background: "#FC4C02", color: "#fff", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", fontWeight: 700, letterSpacing: "0.07em", padding: "0.85rem 2rem", border: "none", borderRadius: 6, cursor: "pointer", width: "100%", transition: "opacity 0.2s" }}
+              style={{ background: "#FC4C02", color: "#fff", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-xs)", fontWeight: 700, letterSpacing: "0.07em", padding: "0.85rem 2rem", border: "none", borderRadius: "var(--kt-r-sm)", cursor: "pointer", width: "100%", transition: "opacity 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
             >
@@ -498,7 +498,7 @@ export default function TrackerStrava() {
 
       {/* Athlete bar */}
       {athlete && (
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.5rem", padding: "1rem 1.25rem", background: "#0D0D16", border: "1px solid rgba(0,200,255,0.07)", borderTop: "2px solid rgba(252,76,2,0.25)", borderRadius: 2, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.5rem", padding: "1rem 1.25rem", background: "#0D0D16", border: "1px solid rgba(0,200,255,0.07)", borderTop: "2px solid rgba(252,76,2,0.25)", borderRadius: "var(--kt-r-sm)", flexWrap: "wrap" }}>
           <img
             src={athlete.profile_medium}
             alt={athlete.firstname}
@@ -549,13 +549,13 @@ export default function TrackerStrava() {
             </div>
             {/* Gauge */}
             <div style={{ position: "relative" }}>
-              <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", gap: 1 }}>
+              <div style={{ display: "flex", height: 6, borderRadius: "var(--kt-r-sm)", overflow: "hidden", gap: 1 }}>
                 <div style={{ flex: 0.8,  background: "rgba(232,240,244,0.12)" }} />
                 <div style={{ flex: 0.2,  background: "#60a5fa",  opacity: 0.6 }} />
                 <div style={{ flex: 0.3,  background: "#22c55e",  opacity: 0.7 }} />
                 <div style={{ flex: 0.3,  background: "#ef4444",  opacity: 0.65 }} />
               </div>
-              <div style={{ position: "absolute", top: -3, left: `calc(${markerPct}% - 5px)`, width: 10, height: 12, borderRadius: 2, background: ratioColor, boxShadow: `0 0 6px ${ratioColor}` }} />
+              <div style={{ position: "absolute", top: -3, left: `calc(${markerPct}% - 5px)`, width: 10, height: 12, borderRadius: "var(--kt-r-sm)", background: ratioColor, boxShadow: `0 0 6px ${ratioColor}` }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.4rem" }}>
               {[["< 0.8", "Detraining"], ["0.8", ""], ["1.0", "Building"], ["1.3", "High risk"]].map(([tick, lbl]) => (
@@ -577,7 +577,7 @@ export default function TrackerStrava() {
             { label: "Best Week",     value: records.bestWeekKm.toFixed(1) + " km",          sub: "weekly volume" },
             { label: "Most Elevation",value: Math.round(records.mostElev.total_elevation_gain) + " m", sub: formatDist(records.mostElev.distance) },
           ].map(({ label, value, sub }) => (
-            <div key={label} style={{ background: "#0D0D16", border: "1px solid rgba(252,76,2,0.12)", borderTop: "2px solid rgba(252,76,2,0.3)", borderRadius: 2, padding: "0.75rem 1rem" }}>
+            <div key={label} style={{ background: "#0D0D16", border: "1px solid rgba(252,76,2,0.12)", borderTop: "2px solid rgba(252,76,2,0.3)", borderRadius: "var(--kt-r-sm)", padding: "0.75rem 1rem" }}>
               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,240,244,0.35)", marginBottom: 4 }}>{label}</div>
               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-md)", fontWeight: 600, color: "#FC4C02" }}>{value}</div>
               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.3)", marginTop: 3 }}>{sub}</div>
@@ -687,13 +687,13 @@ export default function TrackerStrava() {
           <div className="kt-card-label">Weekly km, weight & pace</div>
           <div style={{ display: "flex", gap: "1.25rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(252,76,2,0.7)" }}>
-              <div style={{ width: 10, height: 10, background: "rgba(252,76,2,0.5)", borderRadius: 2 }} /> km
+              <div style={{ width: 10, height: 10, background: "rgba(252,76,2,0.5)", borderRadius: "var(--kt-r-sm)" }} /> km
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "#5ad4a0" }}>
-              <div style={{ width: 20, height: 2, background: "#5ad4a0", borderRadius: 1 }} /> weight
+              <div style={{ width: 20, height: 2, background: "#5ad4a0", borderRadius: "var(--kt-r-sm)" }} /> weight
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "#a78bfa" }}>
-              <div style={{ width: 20, height: 2, background: "#a78bfa", borderRadius: 1 }} /> pace
+              <div style={{ width: 20, height: 2, background: "#a78bfa", borderRadius: "var(--kt-r-sm)" }} /> pace
             </div>
           </div>
         </div>
@@ -714,7 +714,7 @@ export default function TrackerStrava() {
               <YAxis yAxisId="weight" orientation="right" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fill: "rgba(90,212,160,0.55)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
               <YAxis yAxisId="pace" hide domain={["dataMax + 0.5", "dataMin - 0.5"]} reversed />
               <Tooltip
-                contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
+                contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: "var(--kt-r-sm)", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
                 labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 4 }}
                 formatter={(val: any, name: string) => {
                   if (name === "pace") { const m = Math.floor(val); return [`${m}:${Math.round((val-m)*60).toString().padStart(2,"0")} /km`, "avg pace"]; }
@@ -765,7 +765,7 @@ export default function TrackerStrava() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.28)" }}>less</span>
                 {[0.08, 0.3, 0.55, 0.8, 1].map(o => (
-                  <div key={o} style={{ width: 9, height: 9, borderRadius: 2, background: o < 0.1 ? "rgba(255,255,255,0.05)" : `rgba(252,76,2,${o})` }} />
+                  <div key={o} style={{ width: 9, height: 9, borderRadius: "var(--kt-r-sm)", background: o < 0.1 ? "rgba(255,255,255,0.05)" : `rgba(252,76,2,${o})` }} />
                 ))}
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.28)" }}>more</span>
               </div>
@@ -801,7 +801,7 @@ export default function TrackerStrava() {
                           key={day}
                           title={km > 0 ? `${day}: ${km.toFixed(1)} km` : day}
                           style={{
-                            width: cellSize, height: cellSize, borderRadius: 2, flexShrink: 0,
+                            width: cellSize, height: cellSize, borderRadius: "var(--kt-r-sm)", flexShrink: 0,
                             background: km > 0 ? `rgba(252,76,2,${0.15 + intensity * 0.85})` : "rgba(255,255,255,0.04)",
                             outline: isToday ? "1px solid rgba(0,200,255,0.5)" : "none",
                           }}
@@ -844,7 +844,7 @@ export default function TrackerStrava() {
                     <XAxis dataKey="label" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                     <Tooltip
-                      contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10 }}
+                      contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: "var(--kt-r-sm)", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10 }}
                       labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 3 }}
                       formatter={(val: any, _: any, props: any) => [`${val} (${props.payload.weight} kg)`, "BEI"]}
                     />
@@ -879,7 +879,7 @@ export default function TrackerStrava() {
                     <XAxis dataKey="label" tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                     <YAxis tick={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, fill: "rgba(232,240,244,0.3)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                     <Tooltip
-                      contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: 2, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10 }}
+                      contentStyle={{ background: "#0D0D16", border: "1px solid rgba(0,200,255,0.12)", borderRadius: "var(--kt-r-sm)", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10 }}
                       labelStyle={{ color: "rgba(232,240,244,0.5)", marginBottom: 3 }}
                       formatter={(val: any, _: any, props: any) => [`${val} (${props.payload.hr} bpm)`, "AEI"]}
                     />
@@ -913,7 +913,7 @@ export default function TrackerStrava() {
             <button onClick={generateAiSummary} disabled={aiLoading} style={{
               display: "flex", alignItems: "center", gap: "0.4rem",
               fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", fontWeight: 600,
-              padding: "0.4rem 1rem", border: "none", borderRadius: 8, cursor: aiLoading ? "not-allowed" : "pointer",
+              padding: "0.4rem 1rem", border: "none", borderRadius: "var(--kt-r-sm)", cursor: aiLoading ? "not-allowed" : "pointer",
               background: aiLoading ? "rgba(252,76,2,0.1)" : "#FC4C02", color: aiLoading ? "rgba(232,240,244,0.4)" : "#fff",
               opacity: aiLoading ? 0.7 : 1, transition: "all 0.15s",
             }}>
@@ -970,7 +970,7 @@ export default function TrackerStrava() {
               onTouchEnd={onDragEnd}
               style={{ display: "flex", justifyContent: "center", padding: "0.75rem 0 0.5rem", cursor: "grab", touchAction: "none" }}
             >
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(232,240,244,0.25)" }} />
+              <div style={{ width: 36, height: 4, borderRadius: "var(--kt-r-sm)", background: "rgba(232,240,244,0.25)" }} />
             </div>
 
             {selectedActivity && (
@@ -987,7 +987,7 @@ export default function TrackerStrava() {
                   </div>
                   <button
                     onClick={() => setSelectedId(null)}
-                    style={{ background: "rgba(232,240,244,0.06)", border: "none", borderRadius: 8, padding: "0.35rem 0.75rem", color: "rgba(232,240,244,0.5)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", cursor: "pointer" }}
+                    style={{ background: "rgba(232,240,244,0.06)", border: "none", borderRadius: "var(--kt-r-sm)", padding: "0.35rem 0.75rem", color: "rgba(232,240,244,0.5)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-2xs)", cursor: "pointer" }}
                   >
                     close
                   </button>
@@ -1003,7 +1003,7 @@ export default function TrackerStrava() {
                     ...(selectedActivity.average_heartrate != null ? [{ label: "Avg HR", value: `${Math.round(selectedActivity.average_heartrate)} bpm` }] : []),
                     ...(selectedActivity.max_heartrate != null ? [{ label: "Max HR", value: `${Math.round(selectedActivity.max_heartrate)} bpm` }] : []),
                   ].map(s => (
-                    <div key={s.label} style={{ background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: 8, padding: "0.65rem 0.75rem" }}>
+                    <div key={s.label} style={{ background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: "var(--kt-r-sm)", padding: "0.65rem 0.75rem" }}>
                       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-3xs)", color: "rgba(232,240,244,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
                       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--kt-fs-md)", fontWeight: 700, color: s.accent ?? "#e8f0f4" }}>{s.value}</div>
                     </div>
@@ -1012,14 +1012,14 @@ export default function TrackerStrava() {
 
                 {/* HR Zones */}
                 {selectedActivity.average_heartrate != null && selectedActivity.max_heartrate != null && (
-                  <div style={{ marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: 10 }}>
+                  <div style={{ marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "rgba(0,200,255,0.03)", border: "1px solid rgba(0,200,255,0.08)", borderRadius: "var(--kt-r-sm)" }}>
                     <HRZoneBar avgHR={selectedActivity.average_heartrate} maxHR={selectedActivity.max_heartrate} />
                   </div>
                 )}
 
                 {/* Map */}
                 {routePositions.length > 0 && (
-                  <div style={{ height: 260, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,200,255,0.08)" }}>
+                  <div style={{ height: 260, borderRadius: "var(--kt-r-sm)", overflow: "hidden", border: "1px solid rgba(0,200,255,0.08)" }}>
                     <MapContainer center={routePositions[0]} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl={false} attributionControl={false}>
                       <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                       <Polyline positions={routePositions as any} pathOptions={{ color: "#FC4C02", weight: 3, opacity: 0.9 }} />

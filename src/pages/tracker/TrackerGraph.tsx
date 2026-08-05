@@ -108,7 +108,7 @@ export default function TrackerGraph() {
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
               {lightboxPhotos.map(photo => (
                 <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
-                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: "var(--kt-r-sm)", display: "block" }} />
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
                     {photo.angle}
                   </p>
@@ -128,7 +128,7 @@ export default function TrackerGraph() {
           <h1 className="kt-page-title">Weight <em>trend</em></h1>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+          <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", overflow: "hidden", flexShrink: 0 }}>
             {RANGES.map(r => (
               <button
                 key={r}

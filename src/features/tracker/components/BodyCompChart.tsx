@@ -32,7 +32,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   return (
     <div style={{
       background: "var(--kt-surface2)", border: "1px solid var(--kt-border)",
-      borderRadius: 6, padding: "0.6rem 0.9rem",
+      borderRadius: "var(--kt-r-sm)", padding: "0.6rem 0.9rem",
       fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", lineHeight: 1.9,
     }}>
       <p style={{ color: "var(--kt-dim)", marginBottom: "0.15rem" }}>{label}</p>

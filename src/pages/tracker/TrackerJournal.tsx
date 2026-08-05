@@ -181,7 +181,7 @@ function JournalCard({ entry, onDelete }: { entry: TrackerJournal; onDelete: (id
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", color: "var(--kt-dim)" }}>{entry.log_date}</span>
-          {entry.mood && <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", padding: "0.2rem 0.6rem", border: "1px solid", borderColor: moodColor(entry.mood) + "50", color: moodColor(entry.mood), background: moodColor(entry.mood) + "12", textTransform: "capitalize", borderRadius: 10 }}>{entry.mood}</span>}
+          {entry.mood && <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", padding: "0.2rem 0.6rem", border: "1px solid", borderColor: moodColor(entry.mood) + "50", color: moodColor(entry.mood), background: moodColor(entry.mood) + "12", textTransform: "capitalize", borderRadius: "var(--kt-r-sm)" }}>{entry.mood}</span>}
           {entry.energy && <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>energy: {entry.energy}</span>}
           {entry.sleep_hrs && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>{entry.sleep_hrs}h sleep</span>}
         </div>

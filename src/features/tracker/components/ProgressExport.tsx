@@ -133,7 +133,7 @@ export default function ProgressExport({
             width: 1080 * scale,
             height: 1350 * scale,
             overflow: "hidden",
-            borderRadius: 12,
+            borderRadius: "var(--kt-r-md)",
             boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
             flexShrink: 0,
           }}
@@ -197,7 +197,7 @@ export default function ProgressExport({
             margin: "1rem auto 0",
             background: "none",
             border: "1px solid var(--kt-border)",
-            borderRadius: 8,
+            borderRadius: "var(--kt-r-sm)",
             color: "var(--kt-dim)",
             cursor: "pointer",
             fontFamily: "'IBM Plex Mono',monospace",

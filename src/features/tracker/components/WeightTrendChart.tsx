@@ -52,7 +52,7 @@ function LineToggle({ active, onClick, icon, label }: { active: boolean; onClick
   return (
     <button
       onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "none", border: "1px solid", borderColor: active ? "var(--kt-border)" : "transparent", borderRadius: 6, padding: "0.2rem 0.55rem", cursor: "pointer", opacity: active ? 1 : 0.35, transition: "all 0.15s" }}
+      style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "none", border: "1px solid", borderColor: active ? "var(--kt-border)" : "transparent", borderRadius: "var(--kt-r-sm)", padding: "0.2rem 0.55rem", cursor: "pointer", opacity: active ? 1 : 0.35, transition: "all 0.15s" }}
     >
       {icon}
       <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-muted)", textDecoration: active ? "none" : "line-through" }}>{label}</span>

@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import { useTrackerCheckins, useAddCheckin, useDeleteCheckin, useTrackerGoal, useUpsertGoal } from "@/features/tracker/hooks/useTrackerCheckins";
 import type { TrackerCheckin } from "@/features/tracker/types";
 import { toast } from "sonner";
+import { ChevronRight, Pencil, X } from "lucide-react";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -26,7 +27,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
   };
 
   const btnBase: React.CSSProperties = {
-    width: 44, height: 44, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)",
+    width: 44, height: 44, borderRadius: "var(--kt-r-sm)", border: "1px solid rgba(255,255,255,0.08)",
     background: "var(--kt-hover)", color: C.text, fontSize: "1.4rem",
     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
     flexShrink: 0, userSelect: "none", WebkitTapHighlightColor: "transparent", transition: "background 0.12s",
@@ -34,7 +35,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-      <div style={{ background: "var(--kt-input-bg)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "1.25rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <div style={{ background: "var(--kt-input-bg)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "var(--kt-r-md)", padding: "1.25rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <button type="button" onClick={() => adjust(-0.1)} style={btnBase}
           onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
           onMouseLeave={e => (e.currentTarget.style.background = "var(--kt-hover)")}>−</button>
@@ -53,7 +54,7 @@ function WeightInput({ value, onChange }: { value: string; onChange: (v: string)
       <div style={{ display: "flex", gap: "0.5rem" }}>
         {[-1, -0.5, +0.5, +1].map(d => (
           <button key={d} type="button" onClick={() => adjust(d)}
-            style={{ flex: 1, padding: "0.5rem 0", background: "var(--kt-border2)", border: "1px solid var(--kt-border)", borderRadius: 8, color: d < 0 ? C.green : C.red, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: "var(--kt-fs-sm)", cursor: "pointer", transition: "background 0.12s", WebkitTapHighlightColor: "transparent" }}
+            style={{ flex: 1, padding: "0.5rem 0", background: "var(--kt-border2)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", color: d < 0 ? C.green : C.red, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: "var(--kt-fs-sm)", cursor: "pointer", transition: "background 0.12s", WebkitTapHighlightColor: "transparent" }}
             onMouseEnter={e => (e.currentTarget.style.background = "var(--kt-border)")}
             onMouseLeave={e => (e.currentTarget.style.background = "var(--kt-border2)")}>
             {d > 0 ? "+" : ""}{d}
@@ -72,7 +73,7 @@ function Modal({ title, sub, accent, confirmLabel, onConfirm, onCancel, loading 
 }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(4,4,10,0.85)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", padding: "1.25rem" }}>
-      <div style={{ background: "var(--kt-surface)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 16, padding: "2rem", maxWidth: 420, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}>
+      <div style={{ background: "var(--kt-surface)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "var(--kt-r-lg)", padding: "2rem", maxWidth: 420, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}>
         <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "var(--kt-fs-lg)", fontWeight: 400, color: C.text, marginBottom: "0.6rem" }}>{title}</h3>
         {sub && <p style={{ fontSize: "var(--kt-fs-sm)", color: C.muted, lineHeight: 1.7, marginBottom: "1.75rem" }}>{sub}</p>}
         <div style={{ display: "flex", gap: "0.65rem" }}>
@@ -224,7 +225,7 @@ export default function TrackerProgress() {
         <div className="kt-card" style={{ borderColor: editingId ? "rgba(0,200,255,0.2)" : C.border }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
             <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-md)", fontWeight: 600, color: C.text, margin: 0 }}>
-              {editingId ? "✎ Editing check-in" : "New check-in"}
+              {editingId ? <><Pencil size={13} style={{ marginRight: "0.4rem", verticalAlign: "-2px" }} />Editing check-in</> : "New check-in"}
             </p>
             {editingId && (
               <button onClick={resetForm} style={{ background: "none", border: "none", fontSize: "var(--kt-fs-xs)", color: C.dim, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
@@ -253,7 +254,7 @@ export default function TrackerProgress() {
 
           {/* Measurement nudge — shown until the user logs their first one */}
           {checkins.length > 0 && !hasAnyMeasurement && !showMeasure && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.7rem 0.9rem", marginBottom: "1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.2)", borderRadius: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.7rem 0.9rem", marginBottom: "1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.2)", borderRadius: "var(--kt-r-sm)" }}>
               <p style={{ fontSize: "var(--kt-fs-xs)", color: C.muted, lineHeight: 1.5, margin: 0 }}>
                 Log your first measurement to unlock trend charts on Analysis.
               </p>
@@ -267,13 +268,13 @@ export default function TrackerProgress() {
           {/* Measurements toggle */}
           <button type="button" onClick={() => setShowMeasure(v => !v)}
             style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "none", border: "none", color: showMeasure ? C.muted : C.dim, fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-sm)", fontWeight: 500, cursor: "pointer", marginBottom: showMeasure ? "0.85rem" : "1.25rem", padding: 0, transition: "color 0.15s" }}>
-            <span style={{ display: "inline-block", transition: "transform 0.2s", transform: showMeasure ? "rotate(90deg)" : "rotate(0deg)", fontSize: "var(--kt-fs-2xs)" }}>▶</span>
+            <ChevronRight size={13} style={{ transition: "transform 0.2s", transform: showMeasure ? "rotate(90deg)" : "rotate(0deg)" }} />
             Body measurements <span style={{ color: C.dim, fontWeight: 400 }}>(optional)</span>
           </button>
 
           {/* Measurements grid */}
           {showMeasure && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem", padding: "1rem", background: "var(--kt-input-bg)", borderRadius: 10, border: "1px solid var(--kt-border2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem", padding: "1rem", background: "var(--kt-input-bg)", borderRadius: "var(--kt-r-sm)", border: "1px solid var(--kt-border2)" }}>
               {measurements.map(({ key, label, unit }) => (
                 <div key={key}>
                   <label className="kt-label">{label}</label>
@@ -335,7 +336,7 @@ export default function TrackerProgress() {
                           </span>
                         )}
                         {hasMeasures && (
-                          <span style={{ fontSize: "var(--kt-fs-2xs)", color: C.dim, background: "var(--kt-border2)", padding: "0.15rem 0.5rem", borderRadius: 6, fontFamily: "'DM Sans',sans-serif" }}>
+                          <span style={{ fontSize: "var(--kt-fs-2xs)", color: C.dim, background: "var(--kt-border2)", padding: "0.15rem 0.5rem", borderRadius: "var(--kt-r-sm)", fontFamily: "'DM Sans',sans-serif" }}>
                             {[c.waist && `W${c.waist}`, c.chest && `C${c.chest}`, c.body_fat && `BF${c.body_fat}%`].filter(Boolean).join(" · ")}
                           </span>
                         )}
@@ -346,16 +347,16 @@ export default function TrackerProgress() {
                     </div>
                     <div style={{ display: "flex", gap: "0.35rem", flexShrink: 0, paddingTop: "0.1rem" }}>
                       <button onClick={() => handleEdit(c)} title="Edit"
-                        style={{ width: 30, height: 30, background: editingId === c.id ? "var(--kt-accent-bg)" : "var(--kt-border2)", border: `1px solid ${editingId === c.id ? "rgba(0,200,255,0.35)" : "var(--kt-border)"}`, borderRadius: 8, color: editingId === c.id ? C.accent : C.dim, cursor: "pointer", fontSize: "var(--kt-fs-sm)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}
+                        style={{ width: 30, height: 30, background: editingId === c.id ? "var(--kt-accent-bg)" : "var(--kt-border2)", border: `1px solid ${editingId === c.id ? "rgba(0,200,255,0.35)" : "var(--kt-border)"}`, borderRadius: "var(--kt-r-sm)", color: editingId === c.id ? C.accent : C.dim, cursor: "pointer", fontSize: "var(--kt-fs-sm)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}
                         onMouseEnter={e => { if (editingId !== c.id) { (e.currentTarget.style.background = "var(--kt-accent-bg)"); (e.currentTarget.style.color = C.accent); } }}
                         onMouseLeave={e => { if (editingId !== c.id) { (e.currentTarget.style.background = "var(--kt-border2)"); (e.currentTarget.style.color = C.dim); } }}>
-                        ✎
+                        <Pencil size={13} />
                       </button>
                       <button onClick={() => setConfirmDeleteId(c.id)}
-                        style={{ width: 30, height: 30, background: "var(--kt-border2)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, color: "rgba(239,68,68,0.4)", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}
+                        style={{ width: 30, height: 30, background: "var(--kt-border2)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "var(--kt-r-sm)", color: "var(--kt-red)", opacity: 0.55, cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}
                         onMouseEnter={e => { (e.currentTarget.style.background = "var(--kt-red-bg)"); (e.currentTarget.style.color = C.red); }}
-                        onMouseLeave={e => { (e.currentTarget.style.background = "var(--kt-border2)"); (e.currentTarget.style.color = "rgba(239,68,68,0.4)"); }}>
-                        ×
+                        onMouseLeave={e => { (e.currentTarget.style.background = "var(--kt-border2)"); (e.currentTarget.style.color = "var(--kt-red)"); }}>
+                        <X size={14} />
                       </button>
                     </div>
                   </div>

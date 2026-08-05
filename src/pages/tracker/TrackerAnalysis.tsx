@@ -38,7 +38,7 @@ function makeTooltip(
       : null;
 
     return (
-      <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 320, pointerEvents: "none" }}>
+      <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: "var(--kt-r-sm)", padding: "0.75rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxWidth: 320, pointerEvents: "none" }}>
         <p style={{ color: C.muted, marginBottom: "0.4rem", fontSize: "var(--kt-fs-2xs)" }}>{date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}</p>
         {w && <p style={{ color: C.accent, fontWeight: 500, fontSize: "var(--kt-fs-md)" }}>{w.value} kg</p>}
         {pctLoss !== null && (
@@ -54,7 +54,7 @@ function makeTooltip(
             </p>
             <div style={{ display: "flex", gap: "0.3rem" }}>
               {dayPhotos.map(photo => (
-                <div key={photo.id} style={{ position: "relative", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
+                <div key={photo.id} style={{ position: "relative", borderRadius: "var(--kt-r-sm)", overflow: "hidden", flexShrink: 0 }}>
                   <img src={photo.url} alt={photo.angle} style={{ width: 54, height: 72, objectFit: "cover", display: "block" }} />
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "2px 0", textAlign: "center", fontSize: "var(--kt-fs-3xs)", textTransform: "capitalize", color: "var(--kt-text)" }}>
                     {photo.angle}
@@ -88,7 +88,7 @@ function CorrelationTooltip({ active, payload }: any) {
   const p = payload[0]?.payload;
   if (!p) return null;
   return (
-    <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
+    <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: "var(--kt-r-sm)", padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
       <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "var(--kt-fs-2xs)" }}>Week of {format(parseISO(p.week), "MMM d")}</p>
       <p style={{ color: "#d4a05a" }}>{p.trainingMin} min training</p>
       {p.weightChange != null && (
@@ -104,7 +104,7 @@ function MeasureTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const date = payload[0]?.payload?.date;
   return (
-    <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: 10, padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
+    <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-accent-bg)", borderRadius: "var(--kt-r-sm)", padding: "0.7rem 1rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-xs)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", pointerEvents: "none" }}>
       <p style={{ color: "var(--kt-dim)", marginBottom: "0.35rem", fontSize: "var(--kt-fs-2xs)" }}>
         {date ? format(parseISO(date), "EEE, MMM d yyyy") : ""}
       </p>
@@ -297,7 +297,7 @@ export default function TrackerAnalysis() {
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
               {lightboxPhotos.map(photo => (
                 <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
-                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: "var(--kt-r-sm)", display: "block" }} />
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
                     {photo.angle}
                   </p>
@@ -317,7 +317,7 @@ export default function TrackerAnalysis() {
       </div>
 
       {/* Top stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 2, marginBottom: 2 }}>
+      <div className="kt-grid-2" style={{ marginBottom: 12 }}>
         <div className="kt-card">
           <p className="kt-card-label">Total lost</p>
           <p className="kt-card-value" style={{ color: stats && stats.totalLost > 0 ? C.green : C.red }}>{stats ? `${Math.abs(stats.totalLost)} kg` : "—"}</p>
@@ -340,7 +340,7 @@ export default function TrackerAnalysis() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 2, marginBottom: "1.5rem" }}>
+      <div className="kt-grid-2" style={{ marginBottom: "1.5rem" }}>
         <div className="kt-card">
           <p className="kt-card-label">Avg weekly loss</p>
           <p className="kt-card-value">{stats ? `${stats.avgWeeklyLoss} kg` : "—"}</p>
@@ -455,7 +455,7 @@ export default function TrackerAnalysis() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", gap: 3 }}>
                       {Array.from({ length: 7 }).map((_, d) => (
-                        <div key={d} style={{ width: 6, height: 6, background: d < w.count ? "rgba(90,180,212,0.6)" : "rgba(90,180,212,0.1)", borderRadius: 1 }} />
+                        <div key={d} style={{ width: 6, height: 6, background: d < w.count ? "rgba(90,180,212,0.6)" : "rgba(90,180,212,0.1)", borderRadius: "var(--kt-r-sm)" }} />
                       ))}
                     </div>
                     {change !== null && (
@@ -495,7 +495,7 @@ export default function TrackerAnalysis() {
                     <td style={{ padding: "0.6rem 0.75rem" }}>
                       <div style={{ display: "flex", gap: 3 }}>
                         {Array.from({ length: 7 }).map((_, d) => (
-                          <div key={d} style={{ width: 7, height: 7, background: d < w.count ? "rgba(90,180,212,0.55)" : "rgba(90,180,212,0.08)", borderRadius: 1 }} />
+                          <div key={d} style={{ width: 7, height: 7, background: d < w.count ? "rgba(90,180,212,0.55)" : "rgba(90,180,212,0.08)", borderRadius: "var(--kt-r-sm)" }} />
                         ))}
                       </div>
                     </td>
@@ -548,11 +548,11 @@ export default function TrackerAnalysis() {
             </div>
             <div style={{ display: "flex", gap: "1.2rem", marginTop: "0.85rem", paddingTop: "0.75rem", borderTop: "1px solid var(--kt-border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <span style={{ width: 10, height: 10, background: "rgba(212,160,90,0.6)", borderRadius: 2, display: "inline-block" }} />
+                <span style={{ width: 10, height: 10, background: "rgba(212,160,90,0.6)", borderRadius: "var(--kt-r-sm)", display: "inline-block" }} />
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Training (min/wk)</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <span style={{ width: 16, height: 2, background: "#00C8FF", borderRadius: 2, display: "inline-block" }} />
+                <span style={{ width: 16, height: 2, background: "#00C8FF", borderRadius: "var(--kt-r-sm)", display: "inline-block" }} />
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Weight change (kg/wk)</span>
               </div>
             </div>
@@ -619,7 +619,7 @@ export default function TrackerAnalysis() {
             <div style={{ display: "flex", gap: "1.2rem", flexWrap: "wrap", marginTop: activeMeasures.length >= 1 ? "0.75rem" : 0, paddingTop: "0.75rem", borderTop: "1px solid var(--kt-border)" }}>
               {activeMeasures.map(k => (
                 <div key={k} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <span style={{ width: 20, height: 2, background: M_COLORS[k], display: "inline-block", borderRadius: 2 }} />
+                  <span style={{ width: 20, height: 2, background: M_COLORS[k], display: "inline-block", borderRadius: "var(--kt-r-sm)" }} />
                   <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)", letterSpacing: "0.05em" }}>{M_LABELS[k]}</span>
                 </div>
               ))}
@@ -677,11 +677,11 @@ export default function TrackerAnalysis() {
           </div>
           <div style={{ display: "flex", gap: "1.5rem", justifyContent: "center", marginTop: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <span style={{ width: 16, height: 2, background: "rgba(90,180,212,0.5)", display: "inline-block", borderRadius: 2 }} />
+              <span style={{ width: 16, height: 2, background: "rgba(90,180,212,0.5)", display: "inline-block", borderRadius: "var(--kt-r-sm)" }} />
               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Start</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <span style={{ width: 16, height: 2, background: "#00C8FF", display: "inline-block", borderRadius: 2 }} />
+              <span style={{ width: 16, height: 2, background: "#00C8FF", display: "inline-block", borderRadius: "var(--kt-r-sm)" }} />
               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>Now</span>
             </div>
           </div>
@@ -712,7 +712,7 @@ export default function TrackerAnalysis() {
                   }
                   return (
                     <div key={date} title={data ? `${date}: ${data.weight} kg${data.delta !== null ? ` (${data.delta > 0 ? "+" : ""}${data.delta})` : ""}` : date}
-                      style={{ width: 12, height: 12, background: bg, borderRadius: 2, outline: isToday ? "1px solid rgba(0,200,255,0.6)" : "none", outlineOffset: 1, cursor: data ? "pointer" : "default" }}
+                      style={{ width: 12, height: 12, background: bg, borderRadius: "var(--kt-r-sm)", outline: isToday ? "1px solid rgba(0,200,255,0.6)" : "none", outlineOffset: 1, cursor: data ? "pointer" : "default" }}
                     />
                   );
                 })}
@@ -723,7 +723,7 @@ export default function TrackerAnalysis() {
         <div style={{ display: "flex", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
           {[["Lost ≥1 kg", "#5ad4a0"], ["Lost <1 kg", "rgba(90,212,160,0.5)"], ["Gained", "rgba(212,112,90,0.7)"], ["First log", "rgba(0,200,255,0.25)"], ["No log", "rgba(0,200,255,0.05)"]].map(([label, color]) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-              <div style={{ width: 10, height: 10, background: color as string, borderRadius: 2 }} />
+              <div style={{ width: 10, height: 10, background: color as string, borderRadius: "var(--kt-r-sm)" }} />
               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: "var(--kt-dim)" }}>{label}</span>
             </div>
           ))}

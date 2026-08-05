@@ -5,6 +5,7 @@ import { useTrackerPhotos, useUploadPhoto, useDeletePhoto } from "@/features/tra
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
 import type { TrackerPhoto } from "@/features/tracker/types";
 import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X } from "lucide-react";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 import ProgressExport from "@/features/tracker/components/ProgressExport";
 import type { WeighIn } from "@/features/tracker/lib/progress";
@@ -29,8 +30,8 @@ function StatDiff({ label, from, to, unit = "", invert = false }: { label: strin
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-sm)", fontWeight: 500, color }}>{diff > 0 ? "+" : ""}{diff}{unit}</span>
         </div>
       </div>
-      <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 10, transition: "width 0.6s ease" }} />
+      <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: "var(--kt-r-sm)", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: "var(--kt-r-sm)", transition: "width 0.6s ease" }} />
       </div>
     </div>
   );
@@ -106,7 +107,7 @@ function CompareSlider({ urlA, urlB }: { urlA: string; urlB: string }) {
       <div style={{ position: "absolute", top: 0, bottom: 0, left: `${pos}%`, width: 2, background: "rgba(0,200,255,0.9)", transform: "translateX(-50%)", pointerEvents: "none" }} />
       {/* Handle */}
       <div style={{ position: "absolute", top: "50%", left: `${pos}%`, transform: "translate(-50%, -50%)", width: 38, height: 38, borderRadius: "50%", background: "#15151E", border: "2px solid #00C8FF", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", boxShadow: "0 0 16px rgba(0,200,255,0.35)" }}>
-        <span style={{ color: "#00C8FF", fontSize: "var(--kt-fs-md)" }}>⇔</span>
+        <MoveHorizontal size={16} color="var(--kt-accent)" />
       </div>
       {/* Corner labels */}
       <div style={{ position: "absolute", top: "0.6rem", left: "0.6rem", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.15em", color: "rgba(232,232,240,0.7)", background: "rgba(21,21,30,0.65)", padding: "0.2rem 0.45rem", pointerEvents: "none" }}>BEFORE</div>
@@ -256,7 +257,7 @@ export default function TrackerPhotos() {
       {/* PHOTO CONFLICT */}
       {showPhotoConflict && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(21,21,30,0.88)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", padding: "1rem" }}>
-          <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-border)", borderRadius: 12, padding: "2rem", maxWidth: 420, width: "100%" }}>
+          <div style={{ background: "var(--kt-surface)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-md)", padding: "2rem", maxWidth: 420, width: "100%" }}>
             <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--kt-accent)", marginBottom: "1rem" }}>// conflict detected</p>
             <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "var(--kt-fs-lg)", fontWeight: 400, color: "#E8E8F0", marginBottom: "0.75rem" }}>Photo already exists</h3>
             <p style={{ fontSize: "var(--kt-fs-md)", color: "var(--kt-muted)", lineHeight: 1.75, marginBottom: "2rem" }}>
@@ -313,7 +314,7 @@ export default function TrackerPhotos() {
                     {cPhoto ? (
                       <img src={cPhoto.url} alt={lightbox.angle} style={{ maxHeight: "72vh", maxWidth: "44vw", objectFit: "contain", display: "block" }} />
                     ) : (
-                      <div style={{ width: "44vw", height: "50vh", background: "var(--kt-surface2)", border: "1px dashed var(--kt-border)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: "44vw", height: "50vh", background: "var(--kt-surface2)", border: "1px dashed var(--kt-border)", borderRadius: "var(--kt-r-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)", textAlign: "center", lineHeight: 1.8 }}>
                           no {lightbox.angle}<br />photo for<br />{lightboxCompareDate}
                         </p>
@@ -331,18 +332,18 @@ export default function TrackerPhotos() {
                   <select
                     value={lightboxCompareDate}
                     onChange={e => setLightboxCompareDate(e.target.value)}
-                    style={{ background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, color: "var(--kt-text)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", padding: "0.3rem 0.5rem", cursor: "pointer" }}>
+                    style={{ background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", color: "var(--kt-text)", fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", padding: "0.3rem 0.5rem", cursor: "pointer" }}>
                     <option value="">— select date —</option>
                     {dates.filter(d => d !== lightbox.log_date).map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
                   {dual && (
-                    <button onClick={() => setLightboxCompareDate("")} style={{ background: "none", border: "none", color: "var(--kt-dim)", cursor: "pointer", fontSize: "var(--kt-fs-md)", lineHeight: 1 }}>×</button>
+                    <button onClick={() => setLightboxCompareDate("")} style={{ background: "none", border: "none", color: "var(--kt-dim)", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}><X size={14} /></button>
                   )}
                 </div>
                 <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(lightbox.id); }}
-                  style={{ background: "none", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "rgba(239,68,68,0.6)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", padding: "0.3rem 0.8rem" }}>
+                  style={{ background: "none", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--kt-r-sm)", color: "rgba(239,68,68,0.6)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", padding: "0.3rem 0.8rem" }}>
                   delete
                 </button>
               </div>
@@ -403,7 +404,7 @@ export default function TrackerPhotos() {
                       setFileKey(k => k + 1);
                     }
                   }}
-                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "var(--kt-accent-bg)" : "transparent", borderColor: form.angle === a ? "var(--kt-accent)" : "var(--kt-border)", color: form.angle === a ? "var(--kt-accent)" : "var(--kt-dim)", transition: "all 0.15s", flex: 1, borderRadius: 8 }}>
+                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", textTransform: "capitalize", padding: "0.5rem 0.9rem", cursor: "pointer", border: "1px solid", background: form.angle === a ? "var(--kt-accent-bg)" : "transparent", borderColor: form.angle === a ? "var(--kt-accent)" : "var(--kt-border)", color: form.angle === a ? "var(--kt-accent)" : "var(--kt-dim)", transition: "all 0.15s", flex: 1, borderRadius: "var(--kt-r-sm)" }}>
                     {a}
                   </button>
                 ))}
@@ -411,7 +412,7 @@ export default function TrackerPhotos() {
             </div>
 
             <div onClick={() => fileRef.current?.click()}
-              style={{ border: "1px dashed rgba(0,200,255,0.2)", borderRadius: 10, padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(0,200,255,0.02)" }}
+              style={{ border: "1px dashed rgba(0,200,255,0.2)", borderRadius: "var(--kt-r-sm)", padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(0,200,255,0.02)" }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.4)")}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.2)")}>
               {preview ? (
@@ -467,7 +468,7 @@ export default function TrackerPhotos() {
                         {ANGLES.map(angle => {
                           const photo = byDate[date].find(p => p.angle === angle);
                           return (
-                            <div key={angle} style={{ position: "relative", aspectRatio: "3/4", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+                            <div key={angle} style={{ position: "relative", aspectRatio: "3/4", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", overflow: "hidden", flexShrink: 0 }}>
                               {photo ? (
                                 <>
                                   <img src={photo.url} alt={angle} onClick={() => setLightbox(photo)}
@@ -475,7 +476,7 @@ export default function TrackerPhotos() {
                                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.4rem 0.5rem", background: "linear-gradient(transparent,rgba(21,21,30,0.85))", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.1em", textTransform: "capitalize", color: "var(--kt-muted)" }}>{angle}</span>
                                     <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(photo.id); }}
-                                      style={{ background: "none", border: "none", color: "rgba(239,68,68,0.6)", cursor: "pointer", fontSize: "var(--kt-fs-xs)", lineHeight: 1, padding: "2px" }}>×</button>
+                                      style={{ background: "none", border: "none", color: "var(--kt-red)", opacity: 0.7, cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}><X size={13} /></button>
                                   </div>
                                 </>
                               ) : (
@@ -496,7 +497,7 @@ export default function TrackerPhotos() {
 
           {/* Floating compare bar */}
           {compareSelections.length > 0 && (
-            <div style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", background: "var(--kt-surface2)", border: "1px solid var(--kt-accent)", borderRadius: 10, padding: "0.75rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", zIndex: 100, boxShadow: "0 4px 32px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
+            <div style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", background: "var(--kt-surface2)", border: "1px solid var(--kt-accent)", borderRadius: "var(--kt-r-sm)", padding: "0.75rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", zIndex: 100, boxShadow: "0 4px 32px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
               {compareSelections.length === 1 ? (
                 <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "var(--kt-muted)" }}>
                   <span style={{ color: "#00C8FF" }}>{compareSelections[0]}</span> — select one more date
@@ -511,7 +512,7 @@ export default function TrackerPhotos() {
                   </button>
                 </>
               )}
-              <button onClick={() => setCompareSelections([])} style={{ background: "none", border: "none", color: "var(--kt-dim)", cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "2px 4px" }}>×</button>
+              <button onClick={() => setCompareSelections([])} style={{ background: "none", border: "none", color: "var(--kt-dim)", cursor: "pointer", display: "flex", alignItems: "center", padding: "2px 4px" }}><X size={15} /></button>
             </div>
           )}
         </>
@@ -524,7 +525,7 @@ export default function TrackerPhotos() {
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
             {ANGLES.map(a => (
               <button key={a} onClick={() => { setFlipAngle(a); setFlipIdx(0); setFlipPlaying(false); }}
-                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", textTransform: "capitalize", padding: "0.5rem 1rem", cursor: "pointer", border: "1px solid", background: flipAngle === a ? "var(--kt-accent-bg)" : "transparent", borderColor: flipAngle === a ? "var(--kt-accent)" : "var(--kt-border)", color: flipAngle === a ? "var(--kt-accent)" : "var(--kt-dim)", flex: 1, transition: "all 0.15s", borderRadius: 8 }}>
+                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", textTransform: "capitalize", padding: "0.5rem 1rem", cursor: "pointer", border: "1px solid", background: flipAngle === a ? "var(--kt-accent-bg)" : "transparent", borderColor: flipAngle === a ? "var(--kt-accent)" : "var(--kt-border)", color: flipAngle === a ? "var(--kt-accent)" : "var(--kt-dim)", flex: 1, transition: "all 0.15s", borderRadius: "var(--kt-r-sm)" }}>
                 {a}
               </button>
             ))}
@@ -562,17 +563,17 @@ export default function TrackerPhotos() {
               {/* Controls */}
               <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(0); }} disabled={safeFlipIdx === 0}
-                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 0.85rem", border: "1px solid var(--kt-border)", borderRadius: 8, background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>⏮</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 0.85rem", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1, display: "flex", alignItems: "center" }}><SkipBack size={14} /></button>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(i => Math.max(0, i - 1)); }} disabled={safeFlipIdx === 0}
-                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 1rem", border: "1px solid var(--kt-border)", borderRadius: 8, background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1 }}>‹ Prev</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 1rem", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === 0 ? "not-allowed" : "pointer", opacity: safeFlipIdx === 0 ? 0.4 : 1, display: "flex", alignItems: "center", gap: "0.35rem" }}><ChevronLeft size={14} />Prev</button>
                 <button onClick={() => setFlipPlaying(p => !p)}
-                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 1.5rem", border: "1px solid rgba(0,200,255,0.35)", borderRadius: 8, background: flipPlaying ? "rgba(0,200,255,0.1)" : "transparent", color: "#00C8FF", cursor: "pointer" }}>
-                  {flipPlaying ? "⏸ Pause" : "▶ Play"}
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 1.5rem", border: "1px solid rgba(0,200,255,0.35)", borderRadius: "var(--kt-r-sm)", background: flipPlaying ? "rgba(0,200,255,0.1)" : "transparent", color: "var(--kt-accent)", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  {flipPlaying ? <><Pause size={14} />Pause</> : <><Play size={14} />Play</>}
                 </button>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(i => Math.min(flipPhotos.length - 1, i + 1)); }} disabled={safeFlipIdx === flipPhotos.length - 1}
-                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 1rem", border: "1px solid var(--kt-border)", borderRadius: 8, background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>Next ›</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 1rem", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1, display: "flex", alignItems: "center", gap: "0.35rem" }}>Next<ChevronRight size={14} /></button>
                 <button onClick={() => { setFlipPlaying(false); setFlipIdx(flipPhotos.length - 1); }} disabled={safeFlipIdx === flipPhotos.length - 1}
-                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 0.85rem", border: "1px solid var(--kt-border)", borderRadius: 8, background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1 }}>⏭</button>
+                  style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", padding: "0.5rem 0.85rem", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", background: "transparent", color: "var(--kt-muted)", cursor: safeFlipIdx === flipPhotos.length - 1 ? "not-allowed" : "pointer", opacity: safeFlipIdx === flipPhotos.length - 1 ? 0.4 : 1, display: "flex", alignItems: "center" }}><SkipForward size={14} /></button>
               </div>
             </>
           )}
@@ -611,7 +612,7 @@ export default function TrackerPhotos() {
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       {ANGLES.map(a => (
                         <button key={a} onClick={() => setCompareAngle(a)}
-                          style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", padding: "0.45rem 0.75rem", cursor: "pointer", border: "1px solid", background: compareAngle === a ? "var(--kt-accent-bg)" : "transparent", borderColor: compareAngle === a ? "var(--kt-accent)" : "var(--kt-border)", color: compareAngle === a ? "var(--kt-accent)" : "var(--kt-dim)", transition: "all 0.15s", flex: 1, borderRadius: 8 }}>
+                          style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", padding: "0.45rem 0.75rem", cursor: "pointer", border: "1px solid", background: compareAngle === a ? "var(--kt-accent-bg)" : "transparent", borderColor: compareAngle === a ? "var(--kt-accent)" : "var(--kt-border)", color: compareAngle === a ? "var(--kt-accent)" : "var(--kt-dim)", transition: "all 0.15s", flex: 1, borderRadius: "var(--kt-r-sm)" }}>
                           {a}
                         </button>
                       ))}
@@ -646,7 +647,7 @@ export default function TrackerPhotos() {
                       {photoA && photoB ? (
                         <CompareSlider urlA={photoA.url} urlB={photoB.url} />
                       ) : (
-                        <div style={{ aspectRatio: "3/4", maxHeight: "clamp(320px, 65vw, 540px)", background: "var(--kt-surface2)", border: "1px dashed var(--kt-border)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
+                        <div style={{ aspectRatio: "3/4", maxHeight: "clamp(320px, 65vw, 540px)", background: "var(--kt-surface2)", border: "1px dashed var(--kt-border)", borderRadius: "var(--kt-r-sm)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
                           {!photoA && <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "var(--kt-dim)" }}>no {compareAngle} photo for {dateA}</p>}
                           {!photoB && <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "var(--kt-dim)" }}>no {compareAngle} photo for {dateB}</p>}
                         </div>
@@ -656,7 +657,7 @@ export default function TrackerPhotos() {
                     /* Side by side */
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "1.5rem" }}>
                       {([{ date: dateA, photo: photoA, label: "Before", checkin: checkinA }, { date: dateB, photo: photoB, label: "After", checkin: checkinB }] as const).map(({ date, photo, label, checkin }) => (
-                        <div key={label} style={{ background: "var(--kt-surface2)", padding: "1.25rem", borderRadius: 12, borderTop: label === "Before" ? "1px solid var(--kt-border)" : "2px solid var(--kt-accent)" }}>
+                        <div key={label} style={{ background: "var(--kt-surface2)", padding: "1.25rem", borderRadius: "var(--kt-r-md)", borderTop: label === "Before" ? "1px solid var(--kt-border)" : "2px solid var(--kt-accent)" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                             <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.2em", textTransform: "uppercase", color: label === "Before" ? "var(--kt-dim)" : "var(--kt-accent)" }}>// {label}</p>
                             <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: "var(--kt-dim)" }}>{date}</span>
@@ -666,7 +667,7 @@ export default function TrackerPhotos() {
                               <img src={photo.url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                             </div>
                           ) : (
-                            <div style={{ aspectRatio: "3/4", background: "var(--kt-surface2)", border: "1px dashed var(--kt-border)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: "clamp(240px, 45vw, 400px)" }}>
+                            <div style={{ aspectRatio: "3/4", background: "var(--kt-surface2)", border: "1px dashed var(--kt-border)", borderRadius: "var(--kt-r-sm)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem", maxHeight: "clamp(240px, 45vw, 400px)" }}>
                               <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "var(--kt-dim)" }}>no {compareAngle} photo</p>
                             </div>
                           )}

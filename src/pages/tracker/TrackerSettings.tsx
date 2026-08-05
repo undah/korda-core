@@ -267,7 +267,7 @@ export default function TrackerSettings() {
 
           {/* BMI display */}
           {bmi && (
-            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10, display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: "var(--kt-r-sm)", display: "flex", alignItems: "center", gap: "1rem" }}>
               <div>
                 <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-3xs)", textTransform: "uppercase", color: C.dim, marginBottom: "0.2rem" }}>Current BMI</p>
                 <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.2rem", fontWeight: 500, color: C.accent }}>{bmi}</p>
@@ -299,7 +299,7 @@ export default function TrackerSettings() {
           </div>
 
           {goalForm.goal_weight && goalForm.weekly_target && checkins.length > 0 && (
-            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: 10 }}>
+            <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: "var(--kt-accent-bg)", border: "1px solid rgba(0,200,255,0.1)", borderRadius: "var(--kt-r-sm)" }}>
               {(() => {
                 const latest = [...checkins].sort((a,b) => b.log_date.localeCompare(a.log_date))[0];
                 const remaining = latest.weight - parseFloat(goalForm.goal_weight);
@@ -343,7 +343,7 @@ export default function TrackerSettings() {
             {/* Toggle */}
             <button
               onClick={handleToggleNotif}
-              style={{ width: 46, height: 26, background: notifForm.enabled ? C.accent : "var(--kt-border)", border: "none", borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
+              style={{ width: 46, height: 26, background: notifForm.enabled ? C.accent : "var(--kt-border)", border: "none", borderRadius: "var(--kt-r-md)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}
               aria-label="Toggle reminder"
             >
               <span style={{ position: "absolute", top: 3, left: notifForm.enabled ? 23 : 3, width: 20, height: 20, background: notifForm.enabled ? C.card : "rgba(232,232,240,0.4)", borderRadius: "50%", transition: "left 0.2s", display: "block" }} />
@@ -399,7 +399,7 @@ export default function TrackerSettings() {
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "#EF4444", padding: "0.7rem 1.4rem", cursor: "pointer", transition: "all 0.2s" }}
+                style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--kt-r-sm)", color: "#EF4444", padding: "0.7rem 1.4rem", cursor: "pointer", transition: "all 0.2s" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.14)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}
               >
@@ -422,7 +422,7 @@ export default function TrackerSettings() {
                   <button
                     onClick={handleDeleteAll}
                     disabled={deleteInput !== "DELETE" || deleteAll.isPending}
-                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", background: deleteInput === "DELETE" ? "rgba(239,68,68,0.15)" : "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, color: "#EF4444", padding: "0.7rem 1.4rem", cursor: deleteInput === "DELETE" ? "pointer" : "not-allowed", opacity: deleteInput === "DELETE" ? 1 : 0.5, transition: "all 0.2s" }}
+                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", background: deleteInput === "DELETE" ? "rgba(239,68,68,0.15)" : "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--kt-r-sm)", color: "#EF4444", padding: "0.7rem 1.4rem", cursor: deleteInput === "DELETE" ? "pointer" : "not-allowed", opacity: deleteInput === "DELETE" ? 1 : 0.5, transition: "all 0.2s" }}
                   >
                     {deleteAll.isPending ? "Deleting..." : "Confirm delete"}
                   </button>

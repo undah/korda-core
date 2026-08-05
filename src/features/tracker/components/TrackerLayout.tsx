@@ -360,7 +360,7 @@ export default function TrackerLayout() {
         <div className="kt-sidebar-bottom">
           <button
             onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
-            style={{ display: "flex", alignItems: "center", gap: "0.55rem", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "0.55rem 0.25rem", color: "var(--kt-dim)", fontSize: "var(--kt-fs-sm)", fontFamily: "'DM Sans',sans-serif", transition: "color 0.15s", marginBottom: "0.85rem", borderRadius: 8 }}
+            style={{ display: "flex", alignItems: "center", gap: "0.55rem", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "0.55rem 0.25rem", color: "var(--kt-dim)", fontSize: "var(--kt-fs-sm)", fontFamily: "'DM Sans',sans-serif", transition: "color 0.15s", marginBottom: "0.85rem", borderRadius: "var(--kt-r-sm)" }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--kt-text)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--kt-dim)")}
           >
@@ -404,7 +404,7 @@ export default function TrackerLayout() {
               className={`kt-bnav-item${active ? " active" : ""}`}
               style={{
                 background: active ? "rgba(0,200,255,0.10)" : "transparent",
-                borderRadius: 14,
+                borderRadius: "var(--kt-r-md)",
                 transition: "background 0.2s, color 0.15s",
                 padding: "5px 10px",
               }}
@@ -423,7 +423,7 @@ export default function TrackerLayout() {
               className={`kt-bnav-item${moreActive || moreOpen ? " active" : ""}`}
               style={{
                 background: moreActive || moreOpen ? "rgba(0,200,255,0.10)" : "transparent",
-                borderRadius: 14,
+                borderRadius: "var(--kt-r-md)",
                 transition: "background 0.2s, color 0.15s",
                 padding: "5px 10px",
               }}

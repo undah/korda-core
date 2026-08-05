@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Sparkles, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO, subDays, addDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
@@ -219,7 +220,7 @@ export default function TrackerDashboard() {
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
               {lightboxPhotos.map(photo => (
                 <div key={photo.id} style={{ flex: "1 1 140px", maxWidth: "30vw", minWidth: 120 }}>
-                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <img src={photo.url} alt={photo.angle} style={{ width: "100%", maxHeight: "70vh", objectFit: "cover", borderRadius: "var(--kt-r-sm)", display: "block" }} />
                   <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", textTransform: "capitalize", color: "var(--kt-dim)", textAlign: "center", marginTop: "0.4rem" }}>
                     {photo.angle}
                   </p>
@@ -267,7 +268,7 @@ export default function TrackerDashboard() {
                   {goal?.goal_weight ? `Goal: ${goal.goal_weight} kg` : "No goal set"}
                 </p>
               </div>
-              <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ display: "flex", background: "var(--kt-surface2)", border: "1px solid var(--kt-border)", borderRadius: "var(--kt-r-sm)", overflow: "hidden", flexShrink: 0 }}>
                 {RANGES.map(r => (
                   <button key={r} onClick={() => setRange(r)} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", letterSpacing: "0.06em", padding: "0.4rem 0.8rem", background: range === r ? "var(--kt-accent)" : "transparent", color: range === r ? "var(--kt-bg)" : "var(--kt-muted)", border: "none", cursor: "pointer", fontWeight: range === r ? 600 : 400, transition: "all 0.15s" }}>{r}</button>
                 ))}
@@ -322,8 +323,8 @@ export default function TrackerDashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aiSummary ? "0.85rem" : "0.5rem" }}>
               <p className="kt-card-label" style={{ marginBottom: 0 }}>Weekly summary</p>
               <button onClick={generateSummary} disabled={aiLoading}
-                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.08em", padding: "0.25rem 0.6rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap" }}>
-                {aiLoading ? "generating..." : aiSummary ? "↺" : "✦ Generate"}
+                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", letterSpacing: "0.08em", padding: "0.25rem 0.6rem", border: "1px solid rgba(0,200,255,0.25)", background: "transparent", color: "#00C8FF", cursor: aiLoading ? "wait" : "pointer", opacity: aiLoading ? 0.6 : 1, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "0.3rem", borderRadius: "var(--kt-r-sm)" }}>
+                {aiLoading ? "generating..." : aiSummary ? <RotateCw size={12} /> : <><Sparkles size={12} />Generate</>}
               </button>
             </div>
             {aiError && <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.red }}>{aiError}</p>}
@@ -351,8 +352,8 @@ export default function TrackerDashboard() {
                 </div>
                 {targetPace !== null && (
                   <>
-                    <div style={{ background: "rgba(255,255,255,0.05)", height: 3, borderRadius: 2, overflow: "hidden", marginBottom: "0.5rem" }}>
-                      <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: 2, transition: "width 0.6s ease" }} />
+                    <div style={{ background: "rgba(255,255,255,0.05)", height: 3, borderRadius: "var(--kt-r-sm)", overflow: "hidden", marginBottom: "0.5rem" }}>
+                      <div style={{ height: "100%", width: `${Math.min(100, (Math.abs(paceKgPerWeek) / Math.abs(targetPace)) * 100)}%`, background: paceColor, borderRadius: "var(--kt-r-sm)", transition: "width 0.6s ease" }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: paceColor }}>
@@ -361,7 +362,7 @@ export default function TrackerDashboard() {
                       <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-3xs)", color: C.dim }}>target: −{Math.abs(targetPace)} kg/wk</span>
                     </div>
                     {paceStatus === "behind" && (
-                      <Link to="/tracker/settings" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", marginTop: "0.75rem", padding: "0.5rem 0.7rem", background: "var(--kt-red-bg)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, textDecoration: "none" }}>
+                      <Link to="/tracker/settings" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", marginTop: "0.75rem", padding: "0.5rem 0.7rem", background: "var(--kt-red-bg)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "var(--kt-r-sm)", textDecoration: "none" }}>
                         <span style={{ fontSize: "var(--kt-fs-xs)", color: C.muted }}>Behind pace — adjust your goal?</span>
                         <span style={{ fontSize: "var(--kt-fs-2xs)", color: C.red, fontWeight: 600, whiteSpace: "nowrap" }}>Settings →</span>
                       </Link>
@@ -384,7 +385,7 @@ export default function TrackerDashboard() {
             </div>
             {latestFrontPhoto ? (
               <>
-                <div style={{ overflow: "hidden", cursor: "pointer", marginBottom: "0.6rem", borderRadius: 2 }}
+                <div style={{ overflow: "hidden", cursor: "pointer", marginBottom: "0.6rem", borderRadius: "var(--kt-r-sm)" }}
                   onClick={() => setLightboxPhotos(photosByDate[latestFrontPhoto.log_date] ?? [latestFrontPhoto])}>
                   <img src={latestFrontPhoto.url} alt="latest front" style={{ width: "100%", maxHeight: 240, objectFit: "cover", objectPosition: "top", display: "block" }} />
                 </div>
