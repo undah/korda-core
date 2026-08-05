@@ -8,6 +8,7 @@
 // One hue, two shades; both marks are direct-labelled and the legend names them,
 // so identity is never carried by color alone.
 import { useMemo } from "react";
+import { format, parseISO } from "date-fns";
 import { Moon, Battery, Smile } from "lucide-react";
 import type { TrackerCheckin, TrackerJournal } from "../types";
 
@@ -19,10 +20,10 @@ const ENERGY_SCORE: Record<string, number> = { high: 3, medium: 2, low: 1 };
 const MIN_WEEKS_PER_COHORT = 3;
 
 function mondayOf(iso: string): string {
-  const d = new Date(iso);
+  const d = parseISO(iso);
   const m = new Date(d);
   m.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return m.toISOString().split("T")[0];
+  return format(m, "yyyy-MM-dd");
 }
 
 const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;

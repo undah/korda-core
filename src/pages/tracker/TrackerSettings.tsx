@@ -6,6 +6,7 @@ import { useTrackerGoal, useUpsertGoal } from "@/features/tracker/hooks/useTrack
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerCalories } from "@/features/tracker/hooks/useTrackerJournal";
 import { toast } from "sonner";
+import { formatISODate } from "@/features/tracker/hooks/useTrackerCheckins";
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -166,7 +167,7 @@ export default function TrackerSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kordatracker-export-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `kordatracker-export-${formatISODate(new Date())}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Data exported.");

@@ -3,9 +3,10 @@ import { format, parseISO } from "date-fns";
 import { useTrackerCheckins, useAddCheckin, useDeleteCheckin, useTrackerGoal, useUpsertGoal } from "@/features/tracker/hooks/useTrackerCheckins";
 import type { TrackerCheckin } from "@/features/tracker/types";
 import { toast } from "sonner";
+import { formatISODate } from "@/features/tracker/hooks/useTrackerCheckins";
 import { ChevronRight, Pencil, X } from "lucide-react";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => formatISODate(new Date());
 
 const C = {
   accent: "var(--kt-accent)",

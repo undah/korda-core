@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { TrackerJournal, TrackerCalories, TrackerPhoto } from "../types";
+import { compressImage } from "../lib/compressImage";
 
 // ─── journal ─────────────────────────────────────────────────────────────────
 
@@ -88,12 +89,18 @@ export function useUploadPhoto() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${log_date}_${angle}.${ext}`;
+      // Downscale before upload — nothing displays these above ~1080px, so a
+      // raw 3–12MB phone photo is bandwidth and storage spent on nothing.
+      // Falls back to the original if compression fails for any reason.
+      const { file: upload } = await compressImage(file);
+
+      // Always .jpg: compressImage re-encodes, and a stable extension keeps the
+      // storage path deterministic so re-uploading a day overwrites in place.
+      const path = `${user.id}/${log_date}_${angle}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("tracker-photos")
-        .upload(path, file, { upsert: true });
+        .upload(path, upload, { upsert: true, contentType: upload.type });
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage

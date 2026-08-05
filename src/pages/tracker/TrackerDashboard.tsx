@@ -2,8 +2,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, RotateCw } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, subDays, addDays } from "date-fns";
-import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
+import { format, parseISO, subDays, addDays, differenceInCalendarDays } from "date-fns";
+import { useTrackerCheckins, useTrackerGoal, useProgressStats, formatISODate, ALL_CHECKINS } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import WeightTrendChart from "@/features/tracker/components/WeightTrendChart";
 import { getUnseenMilestone, markMilestoneSeen } from "@/features/tracker/lib/milestones";
@@ -40,7 +40,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function TrackerDashboard() {
-  const { data: checkins = [], isLoading } = useTrackerCheckins(365);
+  const { data: checkins = [], isLoading } = useTrackerCheckins(ALL_CHECKINS);
   const { data: goal } = useTrackerGoal();
   const stats = useProgressStats();
   const { data: photos = [] } = useTrackerPhotos();
@@ -67,7 +67,7 @@ export default function TrackerDashboard() {
     setAiLoading(true);
     setAiError(null);
     try {
-      const cutoff7 = subDays(new Date(), 7).toISOString().split("T")[0];
+      const cutoff7 = formatISODate(subDays(new Date(), 7));
       const recentCheckins = checkins.filter(c => c.log_date >= cutoff7);
       const res = await fetch("/api/tracker/weekly-summary", {
         method: "POST",
@@ -116,7 +116,7 @@ export default function TrackerDashboard() {
     }
     let bestWeek7 = 0;
     for (let i = 0; i < sorted.length; i++) {
-      const cutStr = addDays(new Date(sorted[i].log_date), 7).toISOString().split("T")[0];
+      const cutStr = formatISODate(addDays(parseISO(sorted[i].log_date), 7));
       const end = sorted.filter(c => c.log_date > sorted[i].log_date && c.log_date <= cutStr).slice(-1)[0];
       if (end) bestWeek7 = Math.max(bestWeek7, +(sorted[i].weight - end.weight).toFixed(1));
     }
@@ -127,7 +127,7 @@ export default function TrackerDashboard() {
   const filteredData = useMemo(() => {
     const days = RANGE_DAYS[range];
     if (!days) return sorted;
-    const cutoff = subDays(new Date(), days).toISOString().split("T")[0];
+    const cutoff = formatISODate(subDays(new Date(), days));
     return sorted.filter(d => d.log_date >= cutoff);
   }, [sorted, range]);
 
@@ -143,8 +143,8 @@ export default function TrackerDashboard() {
   }, [sorted]);
 
   const latest  = sorted[sorted.length - 1];
-  const cutoff7d  = subDays(new Date(), 7).toISOString().split("T")[0];
-  const cutoff14d = subDays(new Date(), 14).toISOString().split("T")[0];
+  const cutoff7d  = formatISODate(subDays(new Date(), 7));
+  const cutoff14d = formatISODate(subDays(new Date(), 14));
   const last7   = sorted.filter(c => c.log_date >= cutoff7d);
   const prev7   = sorted.filter(c => c.log_date >= cutoff14d && c.log_date < cutoff7d);
   const avg7    = last7.length ? +(last7.reduce((s, c) => s + c.weight, 0) / last7.length).toFixed(1) : null;
@@ -152,12 +152,11 @@ export default function TrackerDashboard() {
   const weekChg = avg7 && avgPrev ? +(+avg7 - +avgPrev).toFixed(1) : null;
 
   // 30-day weekly pace
-  const cutoff30 = subDays(new Date(), 30).toISOString().split("T")[0];
+  const cutoff30 = formatISODate(subDays(new Date(), 30));
   const last30 = sorted.filter(c => c.log_date >= cutoff30);
   const paceKgPerWeek: number | null = last30.length >= 2
     ? +((last30[last30.length - 1].weight - last30[0].weight) /
-        ((new Date(last30[last30.length - 1].log_date).getTime() -
-          new Date(last30[0].log_date).getTime()) / (7 * 24 * 60 * 60 * 1000))
+        (differenceInCalendarDays(parseISO(last30[last30.length - 1].log_date), parseISO(last30[0].log_date)) / 7)
       ).toFixed(2)
     : null;
   const targetPace = goal?.weekly_target ? -Math.abs(goal.weekly_target) : null;
@@ -175,7 +174,7 @@ export default function TrackerDashboard() {
     let w = latest.weight;
     const goalW = goal.goal_weight;
     for (let i = 1; i <= 53; i++) {
-      const d = addDays(new Date(latest.log_date), i * 7).toISOString().split("T")[0];
+      const d = formatISODate(addDays(parseISO(latest.log_date), i * 7));
       w = +(w + paceKgPerWeek).toFixed(2);
       if (w <= goalW) { out.push({ date: d, projected: goalW }); break; }
       out.push({ date: d, projected: w });

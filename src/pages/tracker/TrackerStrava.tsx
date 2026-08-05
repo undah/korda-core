@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Activity, LogOut, Mountain, Heart, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { formatISODate } from "@/features/tracker/hooks/useTrackerCheckins";
 import { format, parseISO, startOfWeek, isValid, subDays } from "date-fns";
 import {
   useStravaToken, useStravaActivities, useConnectStrava,
@@ -412,7 +413,7 @@ export default function TrackerStrava() {
     setAiLoading(true);
     setAiError(null);
     try {
-      const cutoff = subDays(new Date(), aiRange).toISOString().split("T")[0];
+      const cutoff = formatISODate(subDays(new Date(), aiRange));
       const recentRuns = activities.filter(a => isRun(a) && a.start_date_local?.slice(0, 10) >= cutoff);
       const res = await fetch("/api/tracker/ai-summary", {
         method: "POST",

@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { subDays } from "date-fns";
-import { useTrackerCheckins, useTrackerGoal, computeWeightProjection } from "@/features/tracker/hooks/useTrackerCheckins";
+import { useTrackerCheckins, useTrackerGoal, computeWeightProjection, formatISODate, ALL_CHECKINS } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
 import WeightTrendChart from "@/features/tracker/components/WeightTrendChart";
 import BodyCompChart from "@/features/tracker/components/BodyCompChart";
@@ -15,7 +15,7 @@ const RANGE_DAYS: Record<Range, number | null> = { "1M": 30, "3M": 90, "6M": 180
 const SHOW_PROJECTION: Record<Range, boolean> = { "1M": false, "3M": true, "6M": true, "1Y": true, "All": true };
 
 export default function TrackerGraph() {
-  const { data: checkins = [], isLoading } = useTrackerCheckins(1000);
+  const { data: checkins = [], isLoading } = useTrackerCheckins(ALL_CHECKINS);
   const { data: goal } = useTrackerGoal();
   const { data: photos = [] } = useTrackerPhotos();
   const [range, setRange] = useState<Range>("6M");
@@ -37,7 +37,7 @@ export default function TrackerGraph() {
   const filtered = useMemo(() => {
     const days = RANGE_DAYS[range];
     if (!days) return sorted;
-    const cutoff = subDays(new Date(), days).toISOString().split("T")[0];
+    const cutoff = formatISODate(subDays(new Date(), days));
     return sorted.filter(c => c.log_date >= cutoff);
   }, [sorted, range]);
 

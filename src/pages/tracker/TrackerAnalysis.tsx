@@ -5,8 +5,8 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine, Legend,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
-import { format, parseISO, subDays } from "date-fns";
-import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
+import { format, parseISO, subDays, differenceInCalendarDays } from "date-fns";
+import { useTrackerCheckins, useTrackerGoal, useProgressStats, formatISODate, ALL_CHECKINS } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import { useStravaToken, useStravaActivities } from "@/features/tracker/hooks/useStrava";
 import JournalCorrelation from "@/features/tracker/components/JournalCorrelation";
@@ -119,7 +119,7 @@ function MeasureTooltip({ active, payload }: any) {
 }
 
 export default function TrackerAnalysis() {
-  const { data: checkins = [] } = useTrackerCheckins(365);
+  const { data: checkins = [] } = useTrackerCheckins(ALL_CHECKINS);
   const { data: goal }          = useTrackerGoal();
   const stats                   = useProgressStats();
   const { data: photos = [] }   = useTrackerPhotos();
@@ -150,7 +150,8 @@ export default function TrackerAnalysis() {
       const d = new Date(a.start_date_local ?? a.start_date);
       const monday = new Date(d);
       monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-      const key = monday.toISOString().split("T")[0];
+      // Must key identically to buildWeekly or the join silently misses weeks.
+      const key = formatISODate(monday);
       map[key] = (map[key] ?? 0) + a.moving_time / 60;
     });
     return map;
@@ -179,7 +180,7 @@ export default function TrackerAnalysis() {
   const firstDate  = sorted[0]?.log_date;
   const lastDate   = sorted[sorted.length - 1]?.log_date;
   const totalDays  = firstDate && lastDate
-    ? Math.round((new Date(lastDate).getTime() - new Date(firstDate).getTime()) / 86400000) + 1
+    ? differenceInCalendarDays(parseISO(lastDate), parseISO(firstDate)) + 1
     : 0;
   const adherence = totalDays > 0 ? Math.round((sorted.length / totalDays) * 100) : 0;
 
@@ -245,7 +246,7 @@ export default function TrackerAnalysis() {
       for (let d = 0; d < 7; d++) {
         const dt = new Date(endSunday);
         dt.setDate(endSunday.getDate() - w * 7 - (6 - d));
-        const dateStr = dt.toISOString().split("T")[0];
+        const dateStr = formatISODate(dt);
         col.push({ date: dateStr, data: checkinMap[dateStr] ?? null });
       }
       weeks.push(col);
@@ -704,7 +705,7 @@ export default function TrackerAnalysis() {
             {heatmapGrid.map((week, wi) => (
               <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 {week.map(({ date, data }) => {
-                  const isToday = date === new Date().toISOString().split("T")[0];
+                  const isToday = date === formatISODate(new Date());
                   let bg = "rgba(0,200,255,0.05)";
                   if (data) {
                     if (data.delta === null) bg = "rgba(0,200,255,0.2)";
@@ -762,10 +763,12 @@ function projectedDate(days: number): string {
 function buildWeekly(sorted: { log_date: string; weight: number }[]) {
   const weeks: Record<string, { weights: number[]; count: number }> = {};
   sorted.forEach(c => {
-    const d = new Date(c.log_date);
+    // parseISO keeps this on the local calendar day; new Date("YYYY-MM-DD")
+    // would parse UTC and could bucket a Monday into the previous week.
+    const d = parseISO(c.log_date);
     const monday = new Date(d);
     monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    const key = monday.toISOString().split("T")[0];
+    const key = formatISODate(monday);
     if (!weeks[key]) weeks[key] = { weights: [], count: 0 };
     weeks[key].weights.push(c.weight);
     weeks[key].count++;

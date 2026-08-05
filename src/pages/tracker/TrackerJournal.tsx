@@ -4,9 +4,10 @@ import { format, parseISO } from "date-fns";
 import { useTrackerJournal, useUpsertJournal, useDeleteJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import type { TrackerJournal } from "@/features/tracker/types";
 import { toast } from "sonner";
+import { formatISODate } from "@/features/tracker/hooks/useTrackerCheckins";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => formatISODate(new Date());
 const MOODS   = ["great","good","okay","low","bad"] as const;
 
 const C = {

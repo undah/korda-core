@@ -1,10 +1,11 @@
 // src/pages/tracker/TrackerPhotos.tsx
 import React, { useState, useRef, useEffect } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInCalendarDays } from "date-fns";
 import { useTrackerPhotos, useUploadPhoto, useDeletePhoto } from "@/features/tracker/hooks/useTrackerJournal";
-import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
+import { useTrackerCheckins, ALL_CHECKINS } from "@/features/tracker/hooks/useTrackerCheckins";
 import type { TrackerPhoto } from "@/features/tracker/types";
 import { toast } from "sonner";
+import { formatISODate } from "@/features/tracker/hooks/useTrackerCheckins";
 import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X, Camera, ImageIcon } from "lucide-react";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 import ProgressExport from "@/features/tracker/components/ProgressExport";
@@ -12,7 +13,7 @@ import PhotoFramingGuide from "@/features/tracker/components/PhotoFramingGuide";
 import PhotoCaptureGuide from "@/features/tracker/components/PhotoCaptureGuide";
 import type { WeighIn } from "@/features/tracker/lib/progress";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => formatISODate(new Date());
 const ANGLES = ["front", "side", "back", "face"] as const;
 type Tab = "timeline" | "compare" | "flipbook";
 type Angle = typeof ANGLES[number];
@@ -120,7 +121,7 @@ function CompareSlider({ urlA, urlB }: { urlA: string; urlB: string }) {
 
 export default function TrackerPhotos() {
   const { data: photos = [], isLoading } = useTrackerPhotos();
-  const { data: checkins = [] } = useTrackerCheckins(365);
+  const { data: checkins = [] } = useTrackerCheckins(ALL_CHECKINS);
   const uploadPhoto = useUploadPhoto();
   const deletePhoto = useDeletePhoto();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -759,13 +760,13 @@ export default function TrackerPhotos() {
                           <div>
                             <p className="kt-card-label">Time period</p>
                             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#E8E8F0" }}>
-                              {Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000)} days
+                              {differenceInCalendarDays(parseISO(dateB), parseISO(dateA))} days
                             </p>
                           </div>
                           <div style={{ gridColumn: "1 / -1" }}>
                             <p className="kt-card-label">Avg per week</p>
                             <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.95rem", color: "#E8E8F0" }}>
-                              {(Math.abs(checkinB.weight - checkinA.weight) / (Math.round((new Date(dateB).getTime() - new Date(dateA).getTime()) / 86400000) / 7)).toFixed(2)} kg
+                              {(Math.abs(checkinB.weight - checkinA.weight) / (differenceInCalendarDays(parseISO(dateB), parseISO(dateA)) / 7)).toFixed(2)} kg
                             </p>
                           </div>
                           <div style={{ gridColumn: "1 / -1" }}>

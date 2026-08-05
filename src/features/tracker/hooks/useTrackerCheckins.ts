@@ -1,8 +1,16 @@
 // src/features/tracker/hooks/useTrackerCheckins.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { subDays, addDays } from "date-fns";
+import { subDays, addDays, parseISO, format, differenceInCalendarDays } from "date-fns";
 import { supabase } from "@/lib/supabaseClient";
 import { TrackerCheckin, TrackerGoal, ProgressStats } from "../types";
+
+/** Local calendar date as "YYYY-MM-DD". Never use toISOString() for this — it
+ *  converts to UTC first, which lands on the wrong day either side of midnight. */
+export const formatISODate = (d: Date) => format(d, "yyyy-MM-dd");
+
+/** `limit` on these hooks is a ROW count, not a number of days. Pages that show
+ *  full history share this so nobody silently truncates the oldest data. */
+export const ALL_CHECKINS = 2000;
 
 // ─── checkins ────────────────────────────────────────────────────────────────
 
@@ -93,35 +101,46 @@ export function useProgressStats(): ProgressStats | null {
 
   if (!checkins || checkins.length === 0) return null;
 
-  const sorted = [...checkins].sort(
-    (a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
-  );
+  const sorted = [...checkins].sort((a, b) => a.log_date.localeCompare(b.log_date));
 
   const latest = sorted[sorted.length - 1].weight;
   const earliest = sorted[0].weight;
   const totalLost = +(earliest - latest).toFixed(1);
 
-  // streak — consecutive days with a checkin
+  // Streak — consecutive calendar days with a check-in.
+  //
+  // Anchored to today OR yesterday: a day you simply haven't weighed in on yet
+  // must not zero a running streak (the old version required today's entry to
+  // exist before it would count anything at all). Dates are de-duplicated so
+  // two check-ins on one day count once, and compared as local calendar days —
+  // new Date("YYYY-MM-DD") parses as UTC midnight, which shifted the diff by a
+  // day for anyone west of Greenwich.
+  const days = [...new Set(sorted.map(c => c.log_date))].sort();
+  const todayStr = formatISODate(new Date());
+  const yesterdayStr = formatISODate(subDays(new Date(), 1));
   let streak = 0;
-  const today = new Date();
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const d = new Date(sorted[i].log_date);
-    const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
-    if (diff === streak) streak++;
-    else break;
+  if (days.length) {
+    const last = days[days.length - 1];
+    if (last === todayStr || last === yesterdayStr) {
+      streak = 1;
+      for (let i = days.length - 1; i > 0; i--) {
+        if (days[i - 1] === formatISODate(subDays(parseISO(days[i]), 1))) streak++;
+        else break;
+      }
+    }
   }
 
   // weekly avg loss — use actual date span, not entry count
   const daySpan = sorted.length > 1
-    ? (new Date(sorted[sorted.length - 1].log_date).getTime() - new Date(sorted[0].log_date).getTime()) / 86400000
+    ? differenceInCalendarDays(parseISO(sorted[sorted.length - 1].log_date), parseISO(sorted[0].log_date))
     : 7;
   const avgWeeklyLoss = +(totalLost / Math.max(1, daySpan / 7)).toFixed(2);
 
   // best week — compare consecutive entries, scale to 7-day equivalent
   let bestWeek = 0;
   for (let i = 1; i < sorted.length; i++) {
-    const days = Math.max(1, (new Date(sorted[i].log_date).getTime() - new Date(sorted[i - 1].log_date).getTime()) / 86400000);
-    const rate = (sorted[i - 1].weight - sorted[i].weight) / days * 7;
+    const gap = Math.max(1, differenceInCalendarDays(parseISO(sorted[i].log_date), parseISO(sorted[i - 1].log_date)));
+    const rate = (sorted[i - 1].weight - sorted[i].weight) / gap * 7;
     if (rate > bestWeek) bestWeek = +rate.toFixed(1);
   }
 
@@ -152,13 +171,13 @@ export function computeWeightProjection(
 ): { paceKgPerWeek: number | null; projectedPoints: { date: string; projected: number }[] } {
   if (sorted.length < 2 || !goal?.goal_weight) return { paceKgPerWeek: null, projectedPoints: [] };
 
-  const cutoff30 = subDays(new Date(), 30).toISOString().split("T")[0];
+  const cutoff30 = formatISODate(subDays(new Date(), 30));
   const last30 = sorted.filter(c => c.log_date >= cutoff30);
-  const paceKgPerWeek = last30.length >= 2
-    ? +((last30[last30.length - 1].weight - last30[0].weight) /
-        ((new Date(last30[last30.length - 1].log_date).getTime() -
-          new Date(last30[0].log_date).getTime()) / (7 * 24 * 60 * 60 * 1000))
-      ).toFixed(2)
+  const spanWeeks = last30.length >= 2
+    ? differenceInCalendarDays(parseISO(last30[last30.length - 1].log_date), parseISO(last30[0].log_date)) / 7
+    : 0;
+  const paceKgPerWeek = spanWeeks > 0
+    ? +((last30[last30.length - 1].weight - last30[0].weight) / spanWeeks).toFixed(2)
     : null;
 
   const latest = sorted[sorted.length - 1];
@@ -168,7 +187,7 @@ export function computeWeightProjection(
   if (paceKgPerWeek && paceKgPerWeek < 0) {
     let w = latest.weight;
     for (let i = 1; i <= 53; i++) {
-      const d = addDays(new Date(latest.log_date), i * 7).toISOString().split("T")[0];
+      const d = formatISODate(addDays(parseISO(latest.log_date), i * 7));
       w = +(w + paceKgPerWeek).toFixed(2);
       if (w <= goalW) { projectedPoints.push({ date: d, projected: goalW }); break; }
       projectedPoints.push({ date: d, projected: w });
