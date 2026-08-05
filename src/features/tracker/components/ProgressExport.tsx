@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties }
 import { toBlob } from "html-to-image";
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
 import { ProgressExportCard } from "./ProgressExportCard";
+import { ProgressExportCardB } from "./ProgressExportCardB";
 import { shareOrDownloadBlob } from "@/features/tracker/lib/shareImage";
 import type { WeighIn } from "@/features/tracker/lib/progress";
 import type { TrackerCheckin } from "@/features/tracker/types";
@@ -21,6 +22,18 @@ import type { TrackerCheckin } from "@/features/tracker/types";
 // ───────────────────────────────────────────────────────────────────────
 
 const PREVIEW_MAX = 460; // px
+
+/** Both cards are 1080x1350, so the toggle only swaps which one renders into
+ *  the shared capture pipeline. Backgrounds differ, hence the lookup. */
+export type ExportFormat = "clinical" | "ledger";
+const FORMATS: [ExportFormat, string][] = [
+  ["clinical", "Clinical"],
+  ["ledger", "Ledger"],
+];
+const BACKDROP: Record<ExportFormat, string> = {
+  clinical: "#0a0e12",
+  ledger: "#07090c",
+};
 
 /** A check-in only qualifies as an endpoint if it has a body-fat reading. */
 function toWeighIn(c: TrackerCheckin): WeighIn | null {
@@ -42,6 +55,7 @@ interface Props {
   afterPhotoUrl?: string;
   /** Rendered as a dismissable overlay when provided. */
   onClose?: () => void;
+  defaultFormat?: ExportFormat;
 }
 
 export default function ProgressExport({
@@ -50,6 +64,7 @@ export default function ProgressExport({
   beforePhotoUrl,
   afterPhotoUrl,
   onClose,
+  defaultFormat = "clinical",
 }: Props) {
   // Only hit the network when the caller didn't hand us an explicit pair.
   const needsFallback = !before || !after;
@@ -57,6 +72,7 @@ export default function ProgressExport({
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [format, setFormat] = useState<ExportFormat>(defaultFormat);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(PREVIEW_MAX / 1080);
@@ -102,18 +118,18 @@ export default function ProgressExport({
         height: 1350,
         pixelRatio: 1, // node is already 1080×1350
         cacheBust: true,
-        backgroundColor: "#0a0e12",
+        backgroundColor: BACKDROP[format],
         // The preview wrapper is transformed; the clone must not inherit it.
         style: { transform: "none", transformOrigin: "top left" },
       });
       if (!blob) throw new Error("Could not render the image.");
-      await shareOrDownloadBlob(blob, `kordatracker-progress-${pair.after.log_date}.png`);
+      await shareOrDownloadBlob(blob, `kordatracker-progress-${format}-${pair.after.log_date}.png`);
     } catch (e) {
       setError((e as Error)?.message ?? "Export failed.");
     } finally {
       setBusy(false);
     }
-  }, [pair]);
+  }, [pair, format]);
 
   const body = (() => {
     if (needsFallback && isLoading)
@@ -128,6 +144,29 @@ export default function ProgressExport({
 
     return (
       <>
+        <div style={{ display: "flex", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--kt-r-sm)", overflow: "hidden", flexShrink: 0 }}>
+          {FORMATS.map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFormat(key)}
+              style={{
+                fontFamily: "'DM Sans',sans-serif",
+                fontSize: "var(--kt-fs-xs)",
+                fontWeight: format === key ? 600 : 400,
+                letterSpacing: "0.04em",
+                padding: "0.4rem 1.1rem",
+                background: format === key ? "var(--kt-accent)" : "transparent",
+                color: format === key ? "#07090c" : "rgba(255,255,255,0.6)",
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div
           style={{
             width: 1080 * scale,
@@ -139,13 +178,23 @@ export default function ProgressExport({
           }}
         >
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-            <ProgressExportCard
-              ref={cardRef}
-              before={pair.before}
-              after={pair.after}
-              beforePhotoUrl={beforePhotoUrl}
-              afterPhotoUrl={afterPhotoUrl}
-            />
+            {format === "clinical" ? (
+              <ProgressExportCard
+                ref={cardRef}
+                before={pair.before}
+                after={pair.after}
+                beforePhotoUrl={beforePhotoUrl}
+                afterPhotoUrl={afterPhotoUrl}
+              />
+            ) : (
+              <ProgressExportCardB
+                ref={cardRef}
+                before={pair.before}
+                after={pair.after}
+                beforePhotoUrl={beforePhotoUrl}
+                afterPhotoUrl={afterPhotoUrl}
+              />
+            )}
           </div>
         </div>
 
