@@ -5,10 +5,11 @@ import { useTrackerPhotos, useUploadPhoto, useDeletePhoto } from "@/features/tra
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
 import type { TrackerPhoto } from "@/features/tracker/types";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X, Camera, ImageIcon } from "lucide-react";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 import ProgressExport from "@/features/tracker/components/ProgressExport";
 import PhotoFramingGuide from "@/features/tracker/components/PhotoFramingGuide";
+import PhotoCaptureGuide from "@/features/tracker/components/PhotoCaptureGuide";
 import type { WeighIn } from "@/features/tracker/lib/progress";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -141,7 +142,15 @@ export default function TrackerPhotos() {
   const [flipIdx, setFlipIdx] = useState(0);
   const [flipPlaying, setFlipPlaying] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const flipTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleCapture = (f: File, url: string) => {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(f);
+    setPreview(url);
+    setCapturing(false);
+  };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -280,6 +289,17 @@ export default function TrackerPhotos() {
       )}
 
       <ConfirmDeleteModal open={!!confirmDeleteId} label="this photo" onConfirm={handleDelete} onCancel={() => setConfirmDeleteId(null)} loading={deletePhoto.isPending} />
+
+      {/* CAMERA WITH ONION-SKIN GUIDE */}
+      {capturing && (
+        <PhotoCaptureGuide
+          ghostUrl={ghostPhoto?.url}
+          ghostDate={ghostPhoto ? format(parseISO(ghostPhoto.log_date), "d MMM") : undefined}
+          angle={form.angle}
+          onCapture={handleCapture}
+          onClose={() => setCapturing(false)}
+        />
+      )}
 
       {/* PROGRESS EXPORT */}
       {showExport && exportBefore && exportAfter && (
@@ -427,24 +447,35 @@ export default function TrackerPhotos() {
               />
             )}
 
-            <div onClick={() => fileRef.current?.click()}
-              style={{ border: "1px dashed rgba(0,200,255,0.2)", borderRadius: "var(--kt-r-sm)", padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(0,200,255,0.02)" }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.4)")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.2)")}>
-              {preview ? (
+            {preview ? (
+              <div style={{ border: "1px dashed var(--kt-border)", borderRadius: "var(--kt-r-sm)", padding: "1.25rem 1rem", marginBottom: "1.5rem" }}>
                 <PhotoFramingGuide
                   previewUrl={preview}
                   ghostUrl={ghostPhoto?.url}
                   ghostDate={ghostPhoto ? format(parseISO(ghostPhoto.log_date), "d MMM") : undefined}
                   angle={form.angle}
+                  onRetake={() => setCapturing(true)}
                 />
-              ) : (
-                <>
-                  <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "var(--kt-accent)", opacity: 0.7, marginBottom: "0.4rem" }}>tap to select photo</p>
-                  <p style={{ fontSize: "var(--kt-fs-xs)", color: "var(--kt-dim)" }}>JPG, PNG, WEBP</p>
-                </>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "1.5rem" }}>
+                {/* Framing can only be fixed while shooting, so the camera leads. */}
+                <button type="button" onClick={() => setCapturing(true)}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.45rem", padding: "1.5rem 0.75rem", background: "var(--kt-accent-bg)", border: "1px solid var(--kt-accent)", borderRadius: "var(--kt-r-sm)", color: "var(--kt-accent)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", fontWeight: 500 }}>
+                  <Camera size={20} />
+                  Camera with guide
+                  <span className="kt-meta" style={{ color: "var(--kt-accent)", opacity: 0.6 }}>
+                    {ghostPhoto ? "line up with last shot" : "sets your baseline"}
+                  </span>
+                </button>
+                <button type="button" onClick={() => fileRef.current?.click()}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.45rem", padding: "1.5rem 0.75rem", background: "transparent", border: "1px dashed var(--kt-border)", borderRadius: "var(--kt-r-sm)", color: "var(--kt-muted)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", fontWeight: 500 }}>
+                  <ImageIcon size={20} />
+                  Choose a file
+                  <span className="kt-meta">JPG, PNG, WEBP</span>
+                </button>
+              </div>
+            )}
             <input key={fileKey} ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
             <button className="kt-btn kt-btn-blue" onClick={handleUpload} disabled={!file || uploadPhoto.isPending} style={{ width: "100%" }}>
               {uploadPhoto.isPending ? "Uploading..." : "Upload photo →"}
