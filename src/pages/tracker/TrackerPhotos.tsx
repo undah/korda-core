@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, SkipBack, SkipForward, Play, Pause, MoveHorizontal, X } from "lucide-react";
 import ConfirmDeleteModal from "@/components/tracker/ConfirmDeleteModal";
 import ProgressExport from "@/features/tracker/components/ProgressExport";
+import PhotoFramingGuide from "@/features/tracker/components/PhotoFramingGuide";
 import type { WeighIn } from "@/features/tracker/lib/progress";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -208,6 +209,12 @@ export default function TrackerPhotos() {
       return weight != null ? { date, weight } : null;
     })
     .filter((p): p is { date: string; weight: number } => p !== null);
+
+  // Framing reference: latest photo at the angle being uploaded, excluding the
+  // date being logged so re-shooting today doesn't ghost against itself.
+  const ghostPhoto = photos
+    .filter(p => p.angle === form.angle && p.log_date !== form.log_date)
+    .sort((a, b) => b.log_date.localeCompare(a.log_date))[0] ?? null;
 
   const photoA = dateA ? byDate[dateA]?.find(p => p.angle === compareAngle) : null;
   const photoB = dateB ? byDate[dateB]?.find(p => p.angle === compareAngle) : null;
@@ -411,12 +418,26 @@ export default function TrackerPhotos() {
               </div>
             </div>
 
+            {!preview && (
+              <PhotoFramingGuide
+                previewUrl={null}
+                ghostUrl={ghostPhoto?.url}
+                ghostDate={ghostPhoto ? format(parseISO(ghostPhoto.log_date), "d MMM yyyy") : undefined}
+                angle={form.angle}
+              />
+            )}
+
             <div onClick={() => fileRef.current?.click()}
               style={{ border: "1px dashed rgba(0,200,255,0.2)", borderRadius: "var(--kt-r-sm)", padding: "1.75rem 1rem", textAlign: "center", cursor: "pointer", marginBottom: "1.5rem", transition: "border-color 0.2s", background: preview ? "transparent" : "rgba(0,200,255,0.02)" }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.4)")}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(0,200,255,0.2)")}>
               {preview ? (
-                <img src={preview} alt="preview" style={{ maxHeight: 200, maxWidth: "100%", objectFit: "contain", display: "block", margin: "0 auto" }} />
+                <PhotoFramingGuide
+                  previewUrl={preview}
+                  ghostUrl={ghostPhoto?.url}
+                  ghostDate={ghostPhoto ? format(parseISO(ghostPhoto.log_date), "d MMM") : undefined}
+                  angle={form.angle}
+                />
               ) : (
                 <>
                   <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "var(--kt-fs-xs)", color: "var(--kt-accent)", opacity: 0.7, marginBottom: "0.4rem" }}>tap to select photo</p>

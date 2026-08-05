@@ -7,8 +7,9 @@ import {
 } from "recharts";
 import { format, parseISO, subDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats } from "@/features/tracker/hooks/useTrackerCheckins";
-import { useTrackerPhotos } from "@/features/tracker/hooks/useTrackerJournal";
+import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import { useStravaToken, useStravaActivities } from "@/features/tracker/hooks/useStrava";
+import JournalCorrelation from "@/features/tracker/components/JournalCorrelation";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
 const C = {
@@ -122,6 +123,7 @@ export default function TrackerAnalysis() {
   const { data: goal }          = useTrackerGoal();
   const stats                   = useProgressStats();
   const { data: photos = [] }   = useTrackerPhotos();
+  const { data: journal = [] }  = useTrackerJournal(365);
   const { data: stravaToken }   = useStravaToken();
   const { data: activities = [] } = useStravaActivities();
   const [lightboxPhotos, setLightboxPhotos] = useState<TrackerPhoto[] | null>(null);
@@ -687,6 +689,9 @@ export default function TrackerAnalysis() {
           </div>
         </div>
       )}
+
+      {/* Journal vs weight — the daily journal finally read back */}
+      <JournalCorrelation checkins={sorted} journal={journal} />
 
       {/* Streak heatmap */}
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
