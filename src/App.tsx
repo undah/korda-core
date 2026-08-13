@@ -36,6 +36,10 @@ import OutreachNicheForm from "./pages/outreach/OutreachNicheForm";
 import OutreachBusiness from "./pages/outreach/OutreachBusiness";
 import OutreachRuns from "./pages/outreach/OutreachRuns";
 import OutreachSuppression from "./pages/outreach/OutreachSuppression";
+import OutreachCampaigns from "./pages/outreach/OutreachCampaigns";
+import OutreachCampaign from "./pages/outreach/OutreachCampaign";
+import OutreachCampaignNew from "./pages/outreach/OutreachCampaignNew";
+import OutreachTemplates from "./pages/outreach/OutreachTemplates";
 
 import Demo from "./pages/Demo";
 import KordaTrading from "./pages/KordaTrading";
@@ -155,6 +159,10 @@ function AnimatedRoutes() {
               <Route path="/outreach/niches/new" element={<OutreachNicheForm />} />
               <Route path="/outreach/niches/:id" element={<OutreachNicheForm />} />
               <Route path="/outreach/businesses/:id" element={<OutreachBusiness />} />
+              <Route path="/outreach/campaigns" element={<OutreachCampaigns />} />
+              <Route path="/outreach/campaigns/new" element={<OutreachCampaignNew />} />
+              <Route path="/outreach/campaigns/:id" element={<OutreachCampaign />} />
+              <Route path="/outreach/templates" element={<OutreachTemplates />} />
               <Route path="/outreach/runs" element={<OutreachRuns />} />
               <Route path="/outreach/suppression" element={<OutreachSuppression />} />
             </Route>

@@ -117,6 +117,54 @@ export interface OutreachReadyRow {
   last_contacted_at: string | null;
 }
 
+// ── email manager ─────────────────────────────────────────────────────────────
+
+export type CampaignStatus = 'draft' | 'sending' | 'sent' | 'paused';
+export type MessageStatus = 'queued' | 'sending' | 'sent' | 'failed' | 'skipped' | 'canceled';
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  template_id: string | null;
+  status: CampaignStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachMessage {
+  id: string;
+  campaign_id: string;
+  contact_id: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  status: MessageStatus;
+  skip_reason: string | null;
+  error: string | null;
+  provider_message_id: string | null;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
+
+/** What /api/outreach/send reports back per batch. */
+export interface SendResult {
+  sent: number;
+  skipped: number;
+  failed: number;
+  remaining: number;
+  done: boolean;
+}
+
 export interface LeadsFilter {
   niche?: string;
   minConfidence?: number;
