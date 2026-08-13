@@ -76,7 +76,7 @@ export default function OutreachBusiness() {
 
       <div className="mt-3">
         <PageHeader
-          path="businesses"
+          eyebrow="Business"
           title={business.name}
           sub={business.formatted_address ?? 'No address on record'}
           actions={business.domain ? (

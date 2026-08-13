@@ -1,212 +1,223 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Users, Layers, Send, History, Ban, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
-// Tabs live in a top command bar, not a left rail — the first thing that sets
-// this console apart from the other Korda sections.
-const TABS = [
-  { path: '/outreach/leads',       label: 'leads',       match: ['/outreach/leads', '/outreach/businesses'] },
-  { path: '/outreach/niches',      label: 'niches',      match: ['/outreach/niches'] },
-  { path: '/outreach/runs',        label: 'runs',        match: ['/outreach/runs'] },
-  { path: '/outreach/suppression', label: 'suppression', match: ['/outreach/suppression'] },
+const NAV_ITEMS = [
+  { path: '/outreach/leads',       label: 'Leads',       icon: Users,   match: ['/outreach/leads', '/outreach/businesses'] },
+  { path: '/outreach/niches',      label: 'Niches',      icon: Layers,  match: ['/outreach/niches'] },
+  { path: '/outreach/campaigns',   label: 'Campaigns',   icon: Send,    match: ['/outreach/campaigns', '/outreach/templates'] },
+  { path: '/outreach/runs',        label: 'Runs',        icon: History, match: ['/outreach/runs'] },
+  { path: '/outreach/suppression', label: 'Suppression', icon: Ban,     match: ['/outreach/suppression'] },
 ];
 
 const OUTREACH_CSS = `
-/* ── Korda Outreach — amber-phosphor operator console ─────────────────────── */
+/* ── Korda Outreach — glass + gradient console ────────────────────────────── */
 
 body.outreach-active {
-  /* Shadcn tokens, retuned warm/amber so the installed components inherit this
-     console's identity instead of the cool-blue Suite defaults. */
-  --background: 36 30% 4%;
-  --foreground: 40 30% 85%;
-  --card: 34 26% 6%;
-  --card-foreground: 40 30% 85%;
-  --popover: 34 30% 5%;
-  --popover-foreground: 40 30% 85%;
-  --primary: 30 80% 59%;
-  --primary-foreground: 36 40% 6%;
-  --secondary: 34 20% 10%;
-  --secondary-foreground: 40 30% 85%;
-  --muted: 34 18% 10%;
-  --muted-foreground: 38 18% 52%;
-  --accent: 30 40% 14%;
-  --accent-foreground: 40 40% 88%;
-  --destructive: 8 74% 58%;
+  /* Scoped Shadcn tokens: translucent surfaces + amber accent, so the installed
+     Table/Switch/Select/Dialog inherit this section's look automatically. */
+  --background: 28 20% 5%;
+  --foreground: 36 24% 92%;
+  --card: 28 18% 9%;
+  --card-foreground: 36 24% 92%;
+  --popover: 28 20% 8%;
+  --popover-foreground: 36 24% 92%;
+  --primary: 28 92% 60%;
+  --primary-foreground: 28 30% 8%;
+  --secondary: 28 14% 14%;
+  --secondary-foreground: 36 24% 92%;
+  --muted: 28 12% 15%;
+  --muted-foreground: 32 12% 62%;
+  --accent: 28 22% 18%;
+  --accent-foreground: 36 30% 94%;
+  --destructive: 4 78% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 32 40% 16%;
-  --input: 32 30% 14%;
-  --ring: 30 80% 59%;
-  --radius: 2px;
-  background-color: #0b0a07 !important;
-  color: #e8ddc9 !important;
+  --border: 30 16% 20%;
+  --input: 30 16% 20%;
+  --ring: 28 92% 60%;
+  --radius: 0.85rem;
+  background-color: #0c0a09 !important;
+  color: #f0e9e2 !important;
 }
 
 .o-app {
-  --o-bg:        #0b0a07;
-  --o-bg-2:      #100d09;
-  --o-bg-3:      #16110b;
-  --o-line:      rgba(232,150,68,0.16);
-  --o-line-soft: rgba(232,150,68,0.08);
-  --o-amber:     #e89644;
-  --o-amber-hi:  #f5ad57;
-  --o-amber-dim: rgba(232,150,68,0.45);
-  --o-text:      #e8ddc9;
-  --o-dim:       rgba(232,221,201,0.5);
-  --o-faint:     rgba(232,221,201,0.28);
-  --o-green:     #63cf8e;
-  --o-red:       #e8705a;
-
-  --o-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --o-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --o-accent:     #f7a14a;
+  --o-accent-2:   #ef6f5a;
+  --o-text:       #f0e9e2;
+  --o-dim:        rgba(240,233,226,0.62);
+  --o-faint:      rgba(240,233,226,0.38);
+  --o-glass:      rgba(255,255,255,0.045);
+  --o-glass-2:    rgba(255,255,255,0.07);
+  --o-hairline:   rgba(255,255,255,0.09);
+  --o-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   min-height: 100vh;
-  background: var(--o-bg);
+  background: #0c0a09;
   color: var(--o-text);
   font-family: var(--o-sans);
   position: relative;
+  display: flex;
 }
 .o-app *, .o-app *::before, .o-app *::after { box-sizing: border-box; }
 
-/* Background layers: warm grid, faint scanlines, top vignette. All barely there. */
-.o-bg-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-.o-bg-grid {
-  background-image:
-    linear-gradient(var(--o-line-soft) 1px, transparent 1px),
-    linear-gradient(90deg, var(--o-line-soft) 1px, transparent 1px);
-  background-size: 52px 52px;
-  opacity: 0.5;
-  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 40%, transparent 100%);
-  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 40%, transparent 100%);
-}
-.o-bg-scan {
-  background: repeating-linear-gradient(to bottom, rgba(232,150,68,0.025) 0, rgba(232,150,68,0.025) 1px, transparent 1px, transparent 3px);
-  opacity: 0.5;
-}
-.o-bg-glow { background: radial-gradient(ellipse 60% 40% at 50% -5%, rgba(232,150,68,0.08), transparent 70%); }
+/* Ambient gradient blooms — the "premium" depth, kept slow and subtle. */
+.o-aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.o-blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.5; }
+.o-blob-1 { width: 620px; height: 620px; top: -220px; left: -140px; background: radial-gradient(circle, rgba(247,161,74,0.30), transparent 70%); animation: o-drift-1 26s ease-in-out infinite; }
+.o-blob-2 { width: 520px; height: 520px; top: 30%; right: -180px; background: radial-gradient(circle, rgba(239,111,90,0.22), transparent 70%); animation: o-drift-2 32s ease-in-out infinite; }
+.o-blob-3 { width: 460px; height: 460px; bottom: -200px; left: 35%; background: radial-gradient(circle, rgba(180,120,255,0.13), transparent 70%); animation: o-drift-1 38s ease-in-out infinite reverse; }
+@keyframes o-drift-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(60px,50px) scale(1.1); } }
+@keyframes o-drift-2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-70px,40px) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .o-blob { animation: none !important; } }
 
-/* ── Top command bar ──────────────────────────────────────────────────────── */
-.o-bar {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 60;
-  height: 52px;
-  display: flex; align-items: center; gap: 2rem;
-  padding: 0 1.5rem;
-  background: rgba(11,10,7,0.86);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--o-line);
+/* ── Glass sidebar ────────────────────────────────────────────────────────── */
+.o-side {
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 60;
+  width: 244px; padding: 1.5rem 0.85rem;
+  display: flex; flex-direction: column;
+  background: rgba(20,16,14,0.62);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border-right: 1px solid var(--o-hairline);
+  transition: transform 0.32s cubic-bezier(0.16,1,0.3,1);
 }
-.o-brand {
-  font-family: var(--o-mono); font-size: 0.82rem; font-weight: 600;
-  letter-spacing: 0.06em; color: var(--o-text); white-space: nowrap;
-  display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
-}
-.o-brand-glyph { color: var(--o-amber); font-size: 0.9rem; }
-.o-brand-sep { color: var(--o-amber); opacity: 0.6; }
-.o-brand-dim { color: var(--o-faint); }
 
-.o-tabs { display: flex; align-items: stretch; gap: 0.25rem; height: 100%; overflow-x: auto; scrollbar-width: none; }
-.o-tabs::-webkit-scrollbar { display: none; }
-.o-tab {
+.o-logo { display: flex; align-items: center; gap: 0.65rem; padding: 0 0.65rem 1.35rem; text-decoration: none; }
+.o-logo-mark {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--o-accent), var(--o-accent-2));
+  box-shadow: 0 6px 18px rgba(247,161,74,0.35);
+  display: flex; align-items: center; justify-content: center;
+  color: #241405; font-weight: 700; font-size: 0.82rem;
+}
+.o-logo-text { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.02em; color: var(--o-text); line-height: 1.15; }
+.o-logo-sub { font-size: 0.64rem; color: var(--o-faint); letter-spacing: 0.04em; }
+
+.o-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.o-nav-item {
   position: relative;
-  display: flex; align-items: center;
-  padding: 0 0.9rem;
-  font-family: var(--o-mono); font-size: 0.72rem; letter-spacing: 0.08em;
-  color: var(--o-faint); text-decoration: none; white-space: nowrap;
-  transition: color 0.15s; border: none; background: none;
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.6rem 0.75rem; border-radius: 0.7rem;
+  font-size: 0.855rem; font-weight: 450; color: var(--o-dim);
+  text-decoration: none; transition: color 0.16s, background 0.16s;
 }
-.o-tab::before { content: '['; margin-right: 0.35rem; opacity: 0; transition: opacity 0.15s; color: var(--o-amber); }
-.o-tab::after  { content: ']'; margin-left: 0.35rem;  opacity: 0; transition: opacity 0.15s; color: var(--o-amber); }
-.o-tab:hover { color: var(--o-dim); }
-.o-tab.active { color: var(--o-amber-hi); }
-.o-tab.active::before, .o-tab.active::after { opacity: 1; }
-.o-tab.active .o-tab-underline {
-  position: absolute; left: 0.5rem; right: 0.5rem; bottom: 0; height: 2px;
-  background: var(--o-amber); box-shadow: 0 0 8px rgba(232,150,68,0.7);
+.o-nav-item:hover { color: var(--o-text); background: var(--o-glass); }
+.o-nav-item.active { color: #fff; background: linear-gradient(100deg, rgba(247,161,74,0.20), rgba(239,111,90,0.10)); box-shadow: inset 0 0 0 1px rgba(247,161,74,0.25); }
+.o-nav-item.active svg { color: var(--o-accent); }
+
+.o-side-foot { padding: 0.85rem 0.35rem 0; border-top: 1px solid var(--o-hairline); display: flex; flex-direction: column; gap: 0.5rem; }
+.o-side-link {
+  display: flex; align-items: center; gap: 0.55rem;
+  font-size: 0.78rem; color: var(--o-faint); text-decoration: none;
+  background: none; border: none; cursor: pointer; padding: 0.3rem 0.4rem; border-radius: 0.5rem;
+  transition: color 0.15s, background 0.15s; text-align: left; font-family: inherit;
+}
+.o-side-link:hover { color: var(--o-text); background: var(--o-glass); }
+
+/* ── Topbar (mobile) ──────────────────────────────────────────────────────── */
+.o-topbar {
+  display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 65; height: 58px;
+  align-items: center; justify-content: space-between; padding: 0 1rem;
+  background: rgba(20,16,14,0.75);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--o-hairline);
+}
+.o-icon-btn { background: var(--o-glass); border: 1px solid var(--o-hairline); color: var(--o-text); cursor: pointer; width: 36px; height: 36px; border-radius: 0.6rem; display: flex; align-items: center; justify-content: center; }
+.o-scrim { display: none; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); }
+
+/* ── Main ─────────────────────────────────────────────────────────────────── */
+.o-main { position: relative; z-index: 1; margin-left: 244px; flex: 1; padding: 2.25rem 2.25rem 5rem; max-width: 1500px; }
+
+/* ── Glass surfaces ───────────────────────────────────────────────────────── */
+.o-panel, .o-card {
+  background: linear-gradient(155deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02));
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  border: 1px solid var(--o-hairline);
+  border-radius: 1rem;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
 }
 
-.o-sys { margin-left: auto; display: flex; align-items: center; gap: 0.9rem; font-family: var(--o-mono); font-size: 0.66rem; color: var(--o-faint); white-space: nowrap; }
-.o-sys-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--o-green); box-shadow: 0 0 6px var(--o-green); animation: o-pulse 2.4s ease-in-out infinite; }
-@keyframes o-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-.o-sys-exit { font-family: var(--o-mono); font-size: 0.66rem; letter-spacing: 0.06em; color: var(--o-faint); background: none; border: none; cursor: pointer; transition: color 0.15s; padding: 0; }
-.o-sys-exit:hover { color: var(--o-red); }
-
-/* ── Main / HUD viewport ──────────────────────────────────────────────────── */
-.o-main { position: relative; z-index: 1; padding: calc(52px + 1.75rem) 1.75rem 4rem; max-width: 1400px; margin: 0 auto; }
-.o-viewport { position: relative; border: 1px solid var(--o-line); background: rgba(16,13,9,0.35); padding: 1.75rem; min-height: calc(100vh - 52px - 5.75rem); }
-.o-corner { position: absolute; width: 11px; height: 11px; border: 1px solid var(--o-amber); pointer-events: none; }
-.o-corner-tl { top: -1px; left: -1px;  border-right: 0; border-bottom: 0; }
-.o-corner-tr { top: -1px; right: -1px; border-left: 0;  border-bottom: 0; }
-.o-corner-bl { bottom: -1px; left: -1px;  border-right: 0; border-top: 0; }
-.o-corner-br { bottom: -1px; right: -1px; border-left: 0;  border-top: 0; }
-
-/* ── Prompt-style page header (redefines the old classes so pages need no JSX change) ── */
-.outreach-page-title {
-  font-family: var(--o-sans); font-size: 1.4rem; font-weight: 600;
-  color: var(--o-text); letter-spacing: -0.01em; line-height: 1.1;
-}
-.outreach-page-sub { font-family: var(--o-mono); font-size: 0.72rem; color: var(--o-dim); margin-top: 0.4rem; line-height: 1.6; max-width: 620px; }
-.o-prompt { font-family: var(--o-mono); font-size: 0.66rem; letter-spacing: 0.05em; color: var(--o-amber-dim); margin-bottom: 0.55rem; }
-.o-prompt b { color: var(--o-amber); font-weight: 500; }
-.o-prompt .o-caret { color: var(--o-amber); animation: o-blink 1.1s steps(1) infinite; }
-@keyframes o-blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
-
-.o-mono, .outreach-mono { font-family: var(--o-mono); font-variant-numeric: tabular-nums; }
-
-/* ── Panels + table re-skin (sharp corners, mono headers, cursor-hover rows) ── */
-.o-panel { border: 1px solid var(--o-line); background: rgba(16,13,9,0.4); }
+/* Table inside glass: airy rows, no heavy chrome. */
 .o-app table { width: 100%; border-collapse: collapse; }
 .o-app thead th {
-  font-family: var(--o-mono) !important; text-transform: uppercase;
-  letter-spacing: 0.1em; font-size: 0.6rem !important; font-weight: 500;
-  color: var(--o-faint) !important; height: auto; padding: 0.7rem 1rem;
-  border-bottom: 1px solid var(--o-line);
+  font-size: 0.68rem !important; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--o-faint) !important;
+  padding: 0.85rem 1.1rem; height: auto;
+  border-bottom: 1px solid var(--o-hairline);
+  background: rgba(255,255,255,0.022);
 }
-.o-app tbody td { padding: 0.75rem 1rem; vertical-align: top; border-bottom: 1px solid var(--o-line-soft); }
-.o-app tbody tr { transition: background 0.12s, box-shadow 0.12s; }
-.o-app tbody tr:hover { background: var(--o-bg-3); box-shadow: inset 2px 0 0 var(--o-amber); }
+.o-app tbody td { padding: 0.9rem 1.1rem; vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.875rem; }
+.o-app tbody tr { transition: background 0.16s; }
+.o-app tbody tr:hover { background: rgba(255,255,255,0.035); }
 .o-app tbody tr:last-child td { border-bottom: 0; }
 
-/* ── Bracketed status + source tags ───────────────────────────────────────── */
-.o-tag { font-family: var(--o-mono); font-size: 0.62rem; letter-spacing: 0.05em; white-space: nowrap; }
-.o-tag-verified   { color: var(--o-green); }
-.o-tag-guessed    { color: var(--o-amber); }
-.o-tag-bounced    { color: var(--o-red); }
-.o-tag-unverified { color: var(--o-faint); }
-.o-src { font-family: var(--o-mono); font-size: 0.64rem; color: var(--o-dim); }
-.o-src::before { content: '» '; color: var(--o-amber-dim); }
+.o-num { font-variant-numeric: tabular-nums; }
+.o-mono, .outreach-mono { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
 
-/* ── ASCII confidence meter ───────────────────────────────────────────────── */
-.o-meter { font-family: var(--o-mono); font-size: 0.72rem; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 0.5rem; }
-.o-meter-empty { color: rgba(232,150,68,0.15); }
-.o-meter-num { letter-spacing: 0; font-size: 0.68rem; color: var(--o-dim); }
+/* ── Page header ──────────────────────────────────────────────────────────── */
+.outreach-page-title { font-size: 1.6rem; font-weight: 650; letter-spacing: -0.025em; color: var(--o-text); line-height: 1.15; }
+.outreach-page-sub { font-size: 0.875rem; color: var(--o-dim); margin-top: 0.4rem; line-height: 1.6; max-width: 640px; }
+.o-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--o-accent); margin-bottom: 0.6rem;
+}
+.o-eyebrow::before { content: ''; width: 14px; height: 1px; background: linear-gradient(to right, var(--o-accent), transparent); }
 
-/* ── Terminal empty / error readouts ──────────────────────────────────────── */
-.o-readout { font-family: var(--o-mono); border: 1px solid var(--o-line); background: rgba(16,13,9,0.5); padding: 2.5rem 1.75rem; }
-.o-readout-line { font-size: 0.8rem; color: var(--o-text); }
-.o-readout-hint { font-size: 0.7rem; color: var(--o-dim); margin-top: 0.5rem; }
-.o-readout-err  { font-size: 0.72rem; color: var(--o-red); }
+/* ── Pills / meters ───────────────────────────────────────────────────────── */
+.o-pill {
+  display: inline-flex; align-items: center; gap: 0.32rem;
+  padding: 0.16rem 0.55rem; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 500; letter-spacing: 0.005em;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.o-pill-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.o-pill-verified   { background: rgba(52,211,153,0.13); color: #6ee7b7; border-color: rgba(52,211,153,0.26); }
+.o-pill-guessed    { background: rgba(247,161,74,0.14); color: #fbbf6e; border-color: rgba(247,161,74,0.28); }
+.o-pill-bounced    { background: rgba(248,113,113,0.13); color: #fca5a5; border-color: rgba(248,113,113,0.26); }
+.o-pill-unverified { background: rgba(255,255,255,0.05); color: var(--o-faint); border-color: var(--o-hairline); }
+.o-pill-neutral    { background: rgba(255,255,255,0.05); color: var(--o-dim); border-color: var(--o-hairline); }
 
-/* ── Shadcn primitive nudges within the console ───────────────────────────── */
-.o-app input, .o-app [role="combobox"], .o-app textarea { font-family: var(--o-mono); }
-.o-app .outreach-page-title { font-family: var(--o-sans); }
+.o-meter { display: flex; align-items: center; gap: 0.55rem; }
+.o-meter-track { width: 68px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; flex-shrink: 0; }
+.o-meter-fill { height: 100%; border-radius: 999px; transition: width 0.5s cubic-bezier(0.16,1,0.3,1); }
+.o-meter-num { font-size: 0.75rem; color: var(--o-dim); font-variant-numeric: tabular-nums; }
 
-@media (max-width: 820px) {
-  .o-bar { gap: 1rem; padding: 0 1rem; }
-  .o-brand-full { display: none; }
-  .o-sys-label { display: none; }
-  .o-main { padding: calc(52px + 1rem) 0.75rem 3rem; }
-  .o-viewport { padding: 1rem; }
+/* ── States ───────────────────────────────────────────────────────────────── */
+.o-state { text-align: center; padding: 3.25rem 1.5rem; }
+.o-state-icon {
+  width: 42px; height: 42px; border-radius: 12px; margin: 0 auto 1rem;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(247,161,74,0.16), rgba(239,111,90,0.09));
+  border: 1px solid rgba(247,161,74,0.22); color: var(--o-accent);
+}
+.o-state-title { font-size: 0.95rem; font-weight: 550; color: var(--o-text); }
+.o-state-hint { font-size: 0.82rem; color: var(--o-dim); margin-top: 0.35rem; }
+
+@media (max-width: 900px) {
+  .o-topbar { display: flex; }
+  .o-scrim { display: block; }
+  .o-side { transform: translateX(-100%); width: 270px; }
+  .o-side.open { transform: translateX(0); }
+  .o-main { margin-left: 0; padding: calc(58px + 1.1rem) 1rem 4rem; }
 }
 `;
 
 export default function OutreachLayout() {
   const { pathname } = useLocation();
   const { signOut } = useAuth();
-  const [now, setNow] = useState(() => new Date());
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => { setNavOpen(false); }, [pathname]);
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
+    document.body.style.overflow = navOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [navOpen]);
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -214,61 +225,74 @@ export default function OutreachLayout() {
     style.textContent = OUTREACH_CSS;
     document.head.appendChild(style);
     document.body.classList.add('outreach-active');
-
-    const font = document.createElement('link');
-    font.id = 'outreach-fonts';
-    font.rel = 'stylesheet';
-    font.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap';
-    document.head.appendChild(font);
-
     return () => {
       document.body.classList.remove('outreach-active');
       document.getElementById('outreach-global-styles')?.remove();
-      document.getElementById('outreach-fonts')?.remove();
     };
   }, []);
 
-  const clock = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const nav = (
+    <>
+      <Link to="/outreach" className="o-logo">
+        <span className="o-logo-mark">K</span>
+        <span>
+          <span className="o-logo-text">Outreach</span>
+          <span className="o-logo-sub" style={{ display: 'block' }}>Lead engine</span>
+        </span>
+      </Link>
+
+      <nav className="o-nav">
+        {NAV_ITEMS.map(item => {
+          const active = item.match.some(m => pathname.startsWith(m));
+          return (
+            <Link key={item.path} to={item.path} className={`o-nav-item${active ? ' active' : ''}`}>
+              <item.icon size={16} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="o-side-foot">
+        <Link to="/" className="o-side-link">← Back to Korda</Link>
+        <button className="o-side-link" onClick={() => { void signOut(); }}>
+          <LogOut size={13} /> Sign out
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div className="o-app">
-      <div className="o-bg-layer o-bg-glow" />
-      <div className="o-bg-layer o-bg-grid" />
-      <div className="o-bg-layer o-bg-scan" />
+      <div className="o-aurora">
+        <span className="o-blob o-blob-1" />
+        <span className="o-blob o-blob-2" />
+        <span className="o-blob o-blob-3" />
+      </div>
 
-      <header className="o-bar">
-        <Link to="/outreach" className="o-brand">
-          <span className="o-brand-glyph">◈</span>
-          <span className="o-brand-full">KORDA<span className="o-brand-sep">·</span>OUTREACH</span>
+      <div className="o-topbar">
+        <Link to="/outreach" className="o-logo" style={{ padding: 0 }}>
+          <span className="o-logo-mark">K</span>
+          <span className="o-logo-text">Outreach</span>
         </Link>
+        <button className="o-icon-btn" onClick={() => setNavOpen(v => !v)} aria-label="Toggle menu">
+          {navOpen ? <X size={17} /> : <Menu size={17} />}
+        </button>
+      </div>
 
-        <nav className="o-tabs">
-          {TABS.map(tab => {
-            const active = tab.match.some(m => pathname.startsWith(m));
-            return (
-              <Link key={tab.path} to={tab.path} className={`o-tab${active ? ' active' : ''}`}>
-                {tab.label}
-                {active && <span className="o-tab-underline" />}
-              </Link>
-            );
-          })}
-        </nav>
+      {navOpen && <div className="o-scrim" onClick={() => setNavOpen(false)} />}
 
-        <div className="o-sys">
-          <span className="o-sys-dot" />
-          <span className="o-sys-label o-mono">{clock}</span>
-          <button className="o-sys-exit" onClick={() => { void signOut(); }}>exit_</button>
-        </div>
-      </header>
+      <aside className={`o-side${navOpen ? ' open' : ''}`}>{nav}</aside>
 
       <main className="o-main">
-        <div className="o-viewport">
-          <span className="o-corner o-corner-tl" />
-          <span className="o-corner o-corner-tr" />
-          <span className="o-corner o-corner-bl" />
-          <span className="o-corner o-corner-br" />
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        >
           <Outlet />
-        </div>
+        </motion.div>
       </main>
     </div>
   );

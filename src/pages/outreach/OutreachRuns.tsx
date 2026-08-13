@@ -34,7 +34,7 @@ export default function OutreachRuns() {
   return (
     <div>
       <PageHeader
-        path="runs"
+        eyebrow="Observability"
         title="Runs"
         sub="Every pipeline run, newest first — what it found and anything that broke."
       />

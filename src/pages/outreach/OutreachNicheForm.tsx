@@ -120,7 +120,7 @@ export default function OutreachNicheForm() {
   return (
     <div className="max-w-3xl">
       <PageHeader
-        path={isEdit ? 'niches/edit' : 'niches/new'}
+        eyebrow={isEdit ? 'Edit config' : 'New config'}
         title={isEdit ? 'Edit niche' : 'New niche'}
         sub="Discovery source, targets, and which enrichment steps the pipeline should run."
       />

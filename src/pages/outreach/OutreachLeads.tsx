@@ -68,7 +68,7 @@ export default function OutreachLeads() {
   return (
     <div>
       <PageHeader
-        path="leads"
+        eyebrow="Pipeline output"
         title="Leads"
         sub="Contacts ready to work — already filtered for suppression, bounces, and do-not-contact."
       />

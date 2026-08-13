@@ -38,7 +38,7 @@ export default function OutreachNiches() {
   return (
     <div>
       <PageHeader
-        path="niches"
+        eyebrow="Discovery configs"
         title="Niches"
         sub="Each niche is one discovery + enrichment config. Toggles save immediately."
         actions={

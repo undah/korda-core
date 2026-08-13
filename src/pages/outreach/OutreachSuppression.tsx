@@ -56,7 +56,7 @@ export default function OutreachSuppression() {
   return (
     <div>
       <PageHeader
-        path="suppression"
+        eyebrow="Compliance"
         title="Suppression"
         sub="Addresses and domains that must never be contacted. Unsubscribes and bounces land here automatically when the pipeline logs them — this list is also editable by hand."
       />
