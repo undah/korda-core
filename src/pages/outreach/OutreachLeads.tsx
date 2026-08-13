@@ -12,7 +12,7 @@ import {
   useAddSuppression, useLeads, useNiches,
 } from '@/features/outreach/hooks/useOutreach';
 import {
-  ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, SourceBadge,
+  ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, PageHeader, SourceBadge,
 } from '@/features/outreach/components/indicators';
 import { LEADS_PAGE_SIZE, type EmailStatus, type LeadsFilter } from '@/features/outreach/types';
 
@@ -67,12 +67,11 @@ export default function OutreachLeads() {
 
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 className="outreach-page-title">Leads</h1>
-        <p className="outreach-page-sub">
-          Contacts ready to work — already filtered for suppression, bounces, and do-not-contact.
-        </p>
-      </div>
+      <PageHeader
+        path="leads"
+        title="Leads"
+        sub="Contacts ready to work — already filtered for suppression, bounces, and do-not-contact."
+      />
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -137,7 +136,7 @@ export default function OutreachLeads() {
         />
       ) : (
         <>
-          <div className="rounded-lg border border-border/60">
+          <div className="o-panel">
             <Table>
               <TableHeader>
                 <TableRow>

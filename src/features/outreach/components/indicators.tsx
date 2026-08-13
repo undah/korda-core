@@ -1,50 +1,67 @@
-import { Badge } from '@/components/ui/badge';
+import type { ReactNode } from 'react';
 import type { ContactSource, EmailStatus } from '../types';
 
-/** Email status carries risk, so it carries colour. */
+/** Status reads as a machine code — bracketed, uppercase, coloured by risk. */
 export function EmailStatusBadge({ status }: { status: EmailStatus }) {
-  const styles: Record<EmailStatus, string> = {
-    verified:   'border-transparent bg-emerald-500/15 text-emerald-400',
-    guessed:    'border-transparent bg-amber-500/15 text-amber-400',
-    bounced:    'border-transparent bg-red-500/15 text-red-400',
-    unverified: 'border-transparent bg-muted text-muted-foreground',
-  };
-  return <Badge className={`${styles[status]} font-normal`}>{status}</Badge>;
+  return <span className={`o-tag o-tag-${status}`}>[{status.toUpperCase()}]</span>;
 }
 
-/** Source is provenance, not risk — keep it quiet. */
+/** Provenance is quieter than status — a dim mono readout with a » lead-in. */
 export function SourceBadge({ source }: { source: ContactSource }) {
+  return <span className="o-src">{source}</span>;
+}
+
+/**
+ * Confidence as an ASCII meter: `███████░░░ 0.70`. Filled cells are coloured by
+ * tier so a column of them scans instantly; the number stays for precision.
+ */
+export function ConfidenceBar({ value }: { value: number }) {
+  const clamped = Math.min(1, Math.max(0, value));
+  const filled = Math.round(clamped * 10);
+  const tone = value >= 0.7 ? 'var(--o-green)' : value >= 0.4 ? 'var(--o-amber)' : 'var(--o-dim)';
   return (
-    <Badge variant="outline" className="font-normal text-muted-foreground">
-      {source}
-    </Badge>
+    <span className="o-meter">
+      <span>
+        <span style={{ color: tone }}>{'█'.repeat(filled)}</span>
+        <span className="o-meter-empty">{'█'.repeat(10 - filled)}</span>
+      </span>
+      <span className="o-meter-num">{value.toFixed(2)}</span>
+    </span>
   );
 }
 
 /**
- * Confidence as a thin bar: scannable down a column in a way a decimal isn't.
+ * Prompt-style page header. `path` renders as the terminal location so every
+ * screen announces where you are: operator@outreach:~/leads
  */
-export function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
-  const tone =
-    value >= 0.7 ? 'bg-emerald-400' : value >= 0.4 ? 'bg-amber-400' : 'bg-muted-foreground';
-
+export function PageHeader({
+  path, title, sub, actions,
+}: { path: string; title: string; sub?: string; actions?: ReactNode }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-1 w-16 overflow-hidden rounded-full bg-white/8">
-        <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+      <div>
+        <p className="o-prompt">
+          operator@outreach:<b>~/{path}</b> <span className="o-caret">▊</span>
+        </p>
+        <h1 className="outreach-page-title">{title}</h1>
+        {sub && <p className="outreach-page-sub">{sub}</p>}
       </div>
-      <span className="outreach-mono text-[0.7rem] text-muted-foreground">{value.toFixed(2)}</span>
+      {actions && <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>{actions}</div>}
     </div>
   );
 }
 
-/** Consistent "nothing here yet" treatment: what happened, what to do next. */
+export function Panel({ children, style }: { children: ReactNode; style?: React.CSSProperties }) {
+  return <div className="o-panel" style={style}>{children}</div>;
+}
+
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-border/60 py-14 text-center">
-      <p className="text-sm text-foreground/80">{title}</p>
-      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
+    <div className="o-readout">
+      <p className="o-readout-line">
+        <span style={{ color: 'var(--o-amber)' }}>›</span> {title}
+      </p>
+      {hint && <p className="o-readout-hint">{hint}</p>}
     </div>
   );
 }
@@ -52,11 +69,11 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
 export function ErrorState({ error }: { error: unknown }) {
   const message = error instanceof Error ? error.message : String(error);
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-      <p className="text-sm text-destructive">Couldn't load this.</p>
-      <p className="outreach-mono mt-1 text-xs text-muted-foreground">{message}</p>
-      <p className="mt-2 text-xs text-muted-foreground">
-        If this says permission denied, apply the outreach RLS patch to Supabase.
+    <div className="o-readout">
+      <p className="o-readout-err">✗ read failed</p>
+      <p className="o-readout-hint" style={{ marginTop: '0.6rem' }}>{message}</p>
+      <p className="o-readout-hint">
+        permission denied? apply the outreach RLS patch to Supabase.
       </p>
     </div>
   );

@@ -3,7 +3,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useNiches, useRuns } from '@/features/outreach/hooks/useOutreach';
-import { EmptyState, ErrorState } from '@/features/outreach/components/indicators';
+import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 
 function formatDateTime(value: string | null): string {
   if (!value) return '—';
@@ -33,12 +33,11 @@ export default function OutreachRuns() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="outreach-page-title">Runs</h1>
-        <p className="outreach-page-sub">
-          Every pipeline run, newest first — what it found and anything that broke.
-        </p>
-      </div>
+      <PageHeader
+        path="runs"
+        title="Runs"
+        sub="Every pipeline run, newest first — what it found and anything that broke."
+      />
 
       {error ? (
         <ErrorState error={error} />
@@ -50,7 +49,7 @@ export default function OutreachRuns() {
           hint="Run a niche from the pipeline repo and it'll show up here."
         />
       ) : (
-        <div className="rounded-lg border border-border/60">
+        <div className="o-panel">
           <Table>
             <TableHeader>
               <TableRow>

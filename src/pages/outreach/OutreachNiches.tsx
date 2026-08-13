@@ -9,7 +9,7 @@ import {
 import {
   useNicheLeadCounts, useNiches, useUpdateNiche,
 } from '@/features/outreach/hooks/useOutreach';
-import { EmptyState, ErrorState } from '@/features/outreach/components/indicators';
+import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import type { Niche } from '@/features/outreach/types';
 
 type ToggleKey = 'active' | 'enrich_website' | 'enrich_kvk' | 'guess_email' | 'verify_email';
@@ -37,17 +37,16 @@ export default function OutreachNiches() {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="outreach-page-title">Niches</h1>
-          <p className="outreach-page-sub">
-            Each niche is one discovery + enrichment config. Toggles save immediately.
-          </p>
-        </div>
-        <Button asChild size="sm">
-          <Link to="/outreach/niches/new">New niche</Link>
-        </Button>
-      </div>
+      <PageHeader
+        path="niches"
+        title="Niches"
+        sub="Each niche is one discovery + enrichment config. Toggles save immediately."
+        actions={
+          <Button asChild size="sm">
+            <Link to="/outreach/niches/new">New niche</Link>
+          </Button>
+        }
+      />
 
       {error ? (
         <ErrorState error={error} />
@@ -59,7 +58,7 @@ export default function OutreachNiches() {
           hint="Create one to tell the pipeline what to look for and where."
         />
       ) : (
-        <div className="rounded-lg border border-border/60">
+        <div className="o-panel">
           <Table>
             <TableHeader>
               <TableRow>

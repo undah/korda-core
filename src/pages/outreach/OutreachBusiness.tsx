@@ -9,7 +9,7 @@ import {
   useAddSuppression, useBusiness, useBusinessContacts, useDeleteContact, useUpdateContact,
 } from '@/features/outreach/hooks/useOutreach';
 import {
-  ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, SourceBadge,
+  ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, PageHeader, SourceBadge,
 } from '@/features/outreach/components/indicators';
 import type { Contact } from '@/features/outreach/types';
 
@@ -70,24 +70,25 @@ export default function OutreachBusiness() {
 
   return (
     <div>
-      <Link to="/outreach/leads" className="text-xs text-muted-foreground hover:text-foreground">
-        ← Back to leads
+      <Link to="/outreach/leads" className="o-mono text-xs text-muted-foreground hover:text-foreground">
+        ← back to leads
       </Link>
 
-      <div className="mb-6 mt-3 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="outreach-page-title">{business.name}</h1>
-          <p className="outreach-page-sub">{business.formatted_address ?? 'No address on record'}</p>
-        </div>
-        {business.domain && (
-          <Button variant="outline" size="sm" disabled={suppress.isPending}
-            onClick={() => void suppressDomain()}>
-            Suppress domain
-          </Button>
-        )}
+      <div className="mt-3">
+        <PageHeader
+          path="businesses"
+          title={business.name}
+          sub={business.formatted_address ?? 'No address on record'}
+          actions={business.domain ? (
+            <Button variant="outline" size="sm" disabled={suppress.isPending}
+              onClick={() => void suppressDomain()}>
+              Suppress domain
+            </Button>
+          ) : undefined}
+        />
       </div>
 
-      <div className="mb-6 grid gap-5 rounded-lg border border-border/60 p-4 sm:grid-cols-3">
+      <div className="o-panel mb-6 grid gap-5 p-4 sm:grid-cols-3">
         <Fact label="Phone">
           <span className="outreach-mono text-xs">{business.phone ?? '—'}</span>
         </Fact>
@@ -126,7 +127,7 @@ export default function OutreachBusiness() {
           hint="Enrichment found no email or owner name on the site."
         />
       ) : (
-        <div className="rounded-lg border border-border/60">
+        <div className="o-panel">
           <Table>
             <TableHeader>
               <TableRow>

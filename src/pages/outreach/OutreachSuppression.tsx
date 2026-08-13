@@ -9,7 +9,7 @@ import {
 import {
   useAddSuppression, useRemoveSuppression, useSuppression,
 } from '@/features/outreach/hooks/useOutreach';
-import { EmptyState, ErrorState } from '@/features/outreach/components/indicators';
+import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString(undefined, {
@@ -55,15 +55,13 @@ export default function OutreachSuppression() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="outreach-page-title">Suppression</h1>
-        <p className="outreach-page-sub">
-          Addresses and domains that must never be contacted. Unsubscribes and bounces land here
-          automatically when the pipeline logs them — this list is also editable by hand.
-        </p>
-      </div>
+      <PageHeader
+        path="suppression"
+        title="Suppression"
+        sub="Addresses and domains that must never be contacted. Unsubscribes and bounces land here automatically when the pipeline logs them — this list is also editable by hand."
+      />
 
-      <div className="mb-6 rounded-lg border border-border/60 p-4">
+      <div className="o-panel mb-6 p-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
             <Label htmlFor="sup-email">Email</Label>
@@ -96,7 +94,7 @@ export default function OutreachSuppression() {
           hint="That's fine — entries appear here when someone opts out or an address hard-bounces."
         />
       ) : (
-        <div className="rounded-lg border border-border/60">
+        <div className="o-panel">
           <Table>
             <TableHeader>
               <TableRow>

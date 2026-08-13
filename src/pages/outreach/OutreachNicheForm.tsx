@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   useCreateNiche, useDeleteNiche, useNiche, useUpdateNiche,
 } from '@/features/outreach/hooks/useOutreach';
-import { EmptyState, ErrorState } from '@/features/outreach/components/indicators';
+import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import type { NicheDraft, NicheProvider } from '@/features/outreach/types';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -119,16 +119,15 @@ export default function OutreachNicheForm() {
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-6">
-        <h1 className="outreach-page-title">{isEdit ? 'Edit niche' : 'New niche'}</h1>
-        <p className="outreach-page-sub">
-          Discovery source, targets, and which enrichment steps the pipeline should run.
-        </p>
-      </div>
+      <PageHeader
+        path={isEdit ? 'niches/edit' : 'niches/new'}
+        title={isEdit ? 'Edit niche' : 'New niche'}
+        sub="Discovery source, targets, and which enrichment steps the pipeline should run."
+      />
 
       <div className="space-y-6">
         {/* Identity */}
-        <section className="space-y-4 rounded-lg border border-border/60 p-4">
+        <section className="o-panel space-y-4 p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="name">Name</Label>
@@ -161,7 +160,7 @@ export default function OutreachNicheForm() {
         </section>
 
         {/* Targets — provider-aware */}
-        <section className="space-y-4 rounded-lg border border-border/60 p-4">
+        <section className="o-panel space-y-4 p-4">
           {isGoogle ? (
             <div className="space-y-1.5">
               <Label htmlFor="queries">Search queries</Label>
@@ -220,7 +219,7 @@ export default function OutreachNicheForm() {
         </section>
 
         {/* Quality gates */}
-        <section className="space-y-4 rounded-lg border border-border/60 p-4">
+        <section className="o-panel space-y-4 p-4">
           {isGoogle ? (
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
@@ -260,7 +259,7 @@ export default function OutreachNicheForm() {
         </section>
 
         {/* Enrichment */}
-        <section className="space-y-4 rounded-lg border border-border/60 p-4">
+        <section className="o-panel space-y-4 p-4">
           <div className="flex flex-wrap gap-6">
             {([
               ['enrich_website', 'Crawl website'],
