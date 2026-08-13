@@ -50,6 +50,12 @@ export function useLeads(filter: LeadsFilter) {
       if (error) throw error;
       return { rows: (data ?? []) as OutreachReadyRow[], total: count ?? 0 };
     },
+    // Each filter combination is its own cache entry, and the pipeline adds rows
+    // from outside the browser. On the app-wide 5 minute staleTime, picking a
+    // niche fetched fresh (new key) while "all niches" kept serving a pre-run
+    // total — the filtered view legitimately showed more leads than the
+    // unfiltered one. Keep this short so a filter round-trip reflects reality.
+    staleTime: 15_000,
   });
 }
 
@@ -106,6 +112,7 @@ export function useNicheLeadCounts() {
       }
       return counts;
     },
+    staleTime: 15_000,
   });
 }
 
@@ -219,6 +226,7 @@ export function useDeleteContact() {
 // ── runs ──────────────────────────────────────────────────────────────────────
 
 export function useRuns() {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['outreach-runs'],
     queryFn: async (): Promise<RunLogEntry[]> => {
@@ -228,7 +236,23 @@ export function useRuns() {
         .order('started_at', { ascending: false })
         .limit(100);
       if (error) throw error;
-      return (data ?? []) as RunLogEntry[];
+      const rows = (data ?? []) as RunLogEntry[];
+
+      // A run writes businesses and contacts from the pipeline host, so no
+      // mutation in this app ever marks that data stale. Watch for a run we had
+      // seen open closing, and refresh what it just wrote — otherwise the leads
+      // list silently keeps showing pre-run totals.
+      const previous = qc.getQueryData<RunLogEntry[]>(['outreach-runs']);
+      const justFinished = previous?.some(
+        before => before.finished_at === null &&
+          rows.some(now => now.id === before.id && now.finished_at !== null),
+      );
+      if (justFinished) {
+        qc.invalidateQueries({ queryKey: ['outreach-leads'] });
+        qc.invalidateQueries({ queryKey: ['outreach-niche-counts'] });
+        qc.invalidateQueries({ queryKey: ['outreach-business'] });
+      }
+      return rows;
     },
     // A run takes minutes and writes its result straight to run_log, so poll
     // while one is open and fall idle again once everything has finished.
