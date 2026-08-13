@@ -28,6 +28,7 @@ import TrainingRules from "./pages/training/TrainingRules";
 import TrainingFinetune from "./pages/training/TrainingFinetune";
 import TrainingChat from "./pages/training/TrainingChat";
 
+import KordaOutreach from "./pages/KordaOutreach";
 import OutreachLayout from "./features/outreach/components/OutreachLayout";
 import OutreachLeads from "./pages/outreach/OutreachLeads";
 import OutreachNiches from "./pages/outreach/OutreachNiches";
@@ -143,10 +144,12 @@ function AnimatedRoutes() {
             <Route path="/training/chat"               element={<TrainingChat />} />
           </Route>
 
-          {/* Korda Outreach — protected, own layout */}
+          {/* Korda Outreach — public landing + sign-in */}
+          <Route path="/outreach" element={<KordaOutreach />} />
+
+          {/* Korda Outreach — protected console */}
           <Route element={<ProtectedRoute />}>
             <Route element={<OutreachLayout />}>
-              <Route path="/outreach" element={<Navigate to="/outreach/leads" replace />} />
               <Route path="/outreach/leads" element={<OutreachLeads />} />
               <Route path="/outreach/niches" element={<OutreachNiches />} />
               <Route path="/outreach/niches/new" element={<OutreachNicheForm />} />

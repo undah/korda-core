@@ -21,7 +21,7 @@ body.outreach-active {
   --card-foreground: 210 40% 90%;
   --popover: 240 15% 8%;
   --popover-foreground: 210 40% 90%;
-  --primary: 193 100% 50%;
+  --primary: 30 78% 59%;
   --primary-foreground: 240 20% 5%;
   --secondary: 240 15% 10%;
   --secondary-foreground: 210 40% 90%;
@@ -33,7 +33,7 @@ body.outreach-active {
   --destructive-foreground: 0 0% 100%;
   --border: 240 15% 15%;
   --input: 240 15% 15%;
-  --ring: 193 100% 50%;
+  --ring: 30 78% 59%;
   --radius: 0.5rem;
   background-color: #0A0A0F !important;
   color: #dde8ed !important;
@@ -73,7 +73,7 @@ body.outreach-active {
   align-items: center;
   gap: 0.6rem;
 }
-.outreach-logo span { color: #00C8FF; }
+.outreach-logo span { color: #E89644; }
 
 .outreach-nav-item {
   display: flex;
@@ -88,7 +88,7 @@ body.outreach-active {
   margin: 1px 0;
 }
 .outreach-nav-item:hover { color: rgba(240,246,252,0.85); background: rgba(255,255,255,0.03); }
-.outreach-nav-item.active { color: #00C8FF; border-left-color: #00C8FF; background: rgba(0,200,255,0.07); font-weight: 500; }
+.outreach-nav-item.active { color: #E89644; border-left-color: #E89644; background: rgba(232,150,68,0.07); font-weight: 500; }
 
 .outreach-sidebar-bottom {
   margin-top: auto;
@@ -191,7 +191,7 @@ export default function OutreachLayout() {
     <div className="outreach-app">
       <div className="outreach-topbar">
         <span style={{ fontWeight: 700, fontSize: '1rem', color: '#f0f6fc', letterSpacing: '-0.02em' }}>
-          Korda<span style={{ color: '#00C8FF' }}>Outreach</span>
+          Korda<span style={{ color: '#E89644' }}>Outreach</span>
         </span>
         <button
           className={`outreach-hamburger${drawerOpen ? ' open' : ''}`}

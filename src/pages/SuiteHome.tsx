@@ -37,7 +37,8 @@ export default function SuiteHome() {
       .suite-scroll-hint { margin-top: 3.5rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(232,230,225,0.15); display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
       .suite-scroll-hint::after { content: ''; display: block; width: 1px; height: 40px; background: linear-gradient(to bottom, rgba(232,230,225,0.15), transparent); }
       .suite-cards-section { position: relative; z-index: 1; padding: 2rem 4rem 8rem; max-width: 1300px; margin: 0 auto; }
-      .suite-cards-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
+      /* Four products no longer fit across one row at a readable width — 2x2. */
+      .suite-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
       .suite-card { position: relative; padding: 3.5rem; min-height: 520px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; transition: transform 0.4s cubic-bezier(0.16,1,0.3,1); cursor: pointer; text-decoration: none; color: inherit; }
       .suite-card:hover { transform: translateY(-4px); }
       .suite-card-top-line { position: absolute; top: 0; left: 0; right: 0; height: 1px; }
@@ -75,6 +76,18 @@ export default function SuiteHome() {
       .suite-card-crm .suite-card-cta { color: rgba(59,130,246,0.9); border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.05); }
       .suite-card-crm:hover .suite-card-cta { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.5); }
       .suite-card-crm .suite-card-name { color: #d0d8f0; }
+
+      /* ── OUTREACH — amber ── */
+      .suite-card-outreach { background: #0b0906; }
+      .suite-card-outreach .suite-card-top-line { background: linear-gradient(to right, transparent, rgba(232,150,68,0.7), transparent); }
+      .suite-card-outreach:hover { background: #14100a; }
+      .suite-card-outreach .suite-card-tag { color: rgba(232,150,68,0.8); border-color: rgba(232,150,68,0.2); background: rgba(232,150,68,0.04); }
+      .suite-card-outreach .suite-card-tagline { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: rgba(232,150,68,0.45); }
+      .suite-card-outreach .suite-card-desc { color: rgba(236,231,224,0.4); }
+      .suite-card-outreach .suite-feat-dot { background: rgba(232,150,68,0.6); }
+      .suite-card-outreach .suite-card-cta { color: rgba(232,150,68,0.9); border-color: rgba(232,150,68,0.25); background: rgba(232,150,68,0.06); }
+      .suite-card-outreach:hover .suite-card-cta { background: rgba(232,150,68,0.12); border-color: rgba(232,150,68,0.5); }
+      .suite-card-outreach .suite-card-name { color: #ece7e0; }
 
       .suite-card-tag { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.3rem 0.8rem; margin-bottom: 2rem; border: 1px solid; }
       .suite-card-icon { width: 48px; height: 48px; margin-bottom: 2rem; }
@@ -141,7 +154,6 @@ export default function SuiteHome() {
           <div className="suite-nav-links">
             <Link to="/about" className="suite-nav-links">About</Link>
 <Link to="/pricing" className="suite-nav-links">Pricing</Link>
-            <Link to="/outreach" className="suite-nav-links">Outreach</Link>
           </div>
         </nav>
 
@@ -273,6 +285,43 @@ export default function SuiteHome() {
                 <rect x="90" y="35" width="30" height="85" rx="1" fill="rgba(59,130,246,0.35)" />
                 <rect x="130" y="60" width="30" height="60" rx="1" fill="rgba(59,130,246,0.2)" />
                 <rect x="170" y="10" width="30" height="110" rx="1" fill="rgba(59,130,246,0.45)" />
+              </svg>
+            </Link>
+
+            <Link to="/outreach" className="suite-card suite-card-outreach suite-anim-5">
+              <div className="suite-card-top-line" />
+              <div>
+                <div className="suite-card-icon">
+                  <svg viewBox="0 0 48 48" fill="none" style={{ width: 48, height: 48 }}>
+                    <circle cx="14" cy="16" r="5" stroke="rgba(232,150,68,0.55)" strokeWidth="1.3" />
+                    <path d="M6 34 c0 -5 4 -8 8 -8 s8 3 8 8" stroke="rgba(232,150,68,0.4)" strokeWidth="1.2" />
+                    <line x1="26" y1="14" x2="42" y2="14" stroke="rgba(232,150,68,0.5)" strokeWidth="1.2" />
+                    <line x1="26" y1="20" x2="38" y2="20" stroke="rgba(232,150,68,0.3)" strokeWidth="1.2" />
+                    <line x1="26" y1="26" x2="40" y2="26" stroke="rgba(232,150,68,0.2)" strokeWidth="1.2" />
+                    <circle cx="35" cy="34" r="6" stroke="rgba(232,150,68,0.5)" strokeWidth="1.2" />
+                    <path d="M32.5 34 l2 2 l4 -4" stroke="rgba(232,150,68,0.85)" strokeWidth="1.4" />
+                  </svg>
+                </div>
+                <span className="suite-card-tag">Lead Engine</span>
+                <h2 className="suite-card-name">KordaOutreach</h2>
+                <p className="suite-card-tagline">// find_them.verify_them()</p>
+                <p className="suite-card-desc">A B2B lead engine for local markets. A pipeline finds the businesses, reads the public web for the owner and their email, and scores what it finds — you review and decide who's worth contacting.</p>
+                <ul className="suite-card-features">
+                  {["Niche configs — one row per market, no code","Owner + email pulled from the public web","Confidence scored: personal beats generic info@","Provenance URL stored on every single contact","Opt-outs and bounces suppress themselves"].map(f => (
+                    <li key={f}><span className="suite-feat-dot" />{f}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="suite-card-cta">Open KordaOutreach <span className="suite-cta-arrow">→</span></div>
+              <svg className="suite-card-deco" viewBox="0 0 220 140" fill="none">
+                <circle cx="40" cy="70" r="8" fill="rgba(232,150,68,0.35)" />
+                <circle cx="100" cy="40" r="6" fill="rgba(232,150,68,0.25)" />
+                <circle cx="110" cy="100" r="6" fill="rgba(232,150,68,0.25)" />
+                <circle cx="170" cy="65" r="10" fill="rgba(232,150,68,0.45)" />
+                <line x1="48" y1="66" x2="94" y2="43" stroke="rgba(232,150,68,0.3)" strokeWidth="1.5" />
+                <line x1="48" y1="74" x2="104" y2="97" stroke="rgba(232,150,68,0.3)" strokeWidth="1.5" />
+                <line x1="106" y1="44" x2="162" y2="61" stroke="rgba(232,150,68,0.25)" strokeWidth="1.5" />
+                <line x1="116" y1="97" x2="162" y2="72" stroke="rgba(232,150,68,0.25)" strokeWidth="1.5" />
               </svg>
             </Link>
 
