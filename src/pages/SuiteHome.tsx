@@ -141,6 +141,7 @@ export default function SuiteHome() {
           <div className="suite-nav-links">
             <Link to="/about" className="suite-nav-links">About</Link>
 <Link to="/pricing" className="suite-nav-links">Pricing</Link>
+            <Link to="/outreach" className="suite-nav-links">Outreach</Link>
           </div>
         </nav>
 

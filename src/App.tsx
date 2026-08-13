@@ -28,6 +28,14 @@ import TrainingRules from "./pages/training/TrainingRules";
 import TrainingFinetune from "./pages/training/TrainingFinetune";
 import TrainingChat from "./pages/training/TrainingChat";
 
+import OutreachLayout from "./features/outreach/components/OutreachLayout";
+import OutreachLeads from "./pages/outreach/OutreachLeads";
+import OutreachNiches from "./pages/outreach/OutreachNiches";
+import OutreachNicheForm from "./pages/outreach/OutreachNicheForm";
+import OutreachBusiness from "./pages/outreach/OutreachBusiness";
+import OutreachRuns from "./pages/outreach/OutreachRuns";
+import OutreachSuppression from "./pages/outreach/OutreachSuppression";
+
 import Demo from "./pages/Demo";
 import KordaTrading from "./pages/KordaTrading";
 import Index from "./pages/Index";
@@ -133,6 +141,20 @@ function AnimatedRoutes() {
             <Route path="/training/rules"               element={<TrainingRules />} />
             <Route path="/training/finetune"            element={<TrainingFinetune />} />
             <Route path="/training/chat"               element={<TrainingChat />} />
+          </Route>
+
+          {/* Korda Outreach — protected, own layout */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<OutreachLayout />}>
+              <Route path="/outreach" element={<Navigate to="/outreach/leads" replace />} />
+              <Route path="/outreach/leads" element={<OutreachLeads />} />
+              <Route path="/outreach/niches" element={<OutreachNiches />} />
+              <Route path="/outreach/niches/new" element={<OutreachNicheForm />} />
+              <Route path="/outreach/niches/:id" element={<OutreachNicheForm />} />
+              <Route path="/outreach/businesses/:id" element={<OutreachBusiness />} />
+              <Route path="/outreach/runs" element={<OutreachRuns />} />
+              <Route path="/outreach/suppression" element={<OutreachSuppression />} />
+            </Route>
           </Route>
 
           {/* KordaCRM — public landing */}
