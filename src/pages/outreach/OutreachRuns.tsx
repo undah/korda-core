@@ -37,6 +37,14 @@ export default function OutreachRuns() {
         eyebrow="Observability"
         title="Runs"
         sub="Every pipeline run, newest first — what it found and anything that broke."
+        actions={
+          (runs ?? []).some(r => r.finished_at === null) ? (
+            <span className="o-pill o-pill-guessed">
+              <span className="o-pill-dot" style={{ background: '#f7a14a' }} />
+              run in progress — live
+            </span>
+          ) : undefined
+        }
       />
 
       {error ? (

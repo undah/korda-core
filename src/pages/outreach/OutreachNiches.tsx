@@ -6,8 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { Play } from 'lucide-react';
 import {
-  useNicheLeadCounts, useNiches, useUpdateNiche,
+  useNicheLeadCounts, useNiches, useTriggerRun, useUpdateNiche,
 } from '@/features/outreach/hooks/useOutreach';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import type { Niche } from '@/features/outreach/types';
@@ -26,12 +27,22 @@ export default function OutreachNiches() {
   const { data: niches, isLoading, error } = useNiches();
   const { data: counts } = useNicheLeadCounts();
   const updateNiche = useUpdateNiche();
+  const triggerRun = useTriggerRun();
 
   const toggle = async (niche: Niche, key: ToggleKey) => {
     try {
       await updateNiche.mutateAsync({ id: niche.id, [key]: !niche[key] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : `Could not update ${key}.`);
+    }
+  };
+
+  const run = async (niche: Niche) => {
+    try {
+      await triggerRun.mutateAsync({ slug: niche.slug });
+      toast.success(`Run started for ${niche.name}`, { description: 'Watch progress on the Runs page.' });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not start that run.');
     }
   };
 
@@ -70,6 +81,7 @@ export default function OutreachNiches() {
                 {TOGGLES.map(t => (
                   <TableHead key={t.key} className="text-center">{t.label}</TableHead>
                 ))}
+                <TableHead className="text-right">Run</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -81,9 +93,7 @@ export default function OutreachNiches() {
                       <Link to={`/outreach/niches/${niche.id}`} className="text-foreground hover:text-primary">
                         {niche.name}
                       </Link>
-                      <div className="outreach-mono mt-0.5 text-[0.7rem] text-muted-foreground">
-                        npm run run:niche -- {niche.slug}
-                      </div>
+                      <div className="mt-0.5 text-[0.7rem] text-muted-foreground">{niche.slug}</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal text-muted-foreground">
@@ -117,6 +127,12 @@ export default function OutreachNiches() {
                         />
                       </TableCell>
                     ))}
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" disabled={triggerRun.isPending}
+                        onClick={() => void run(niche)}>
+                        <Play size={12} /> Run
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -126,7 +142,8 @@ export default function OutreachNiches() {
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Runs happen in the pipeline repo, not here — this console only configures and reviews.
+        A run discovers businesses and enriches them — it takes a few minutes and costs API calls.
+        Watch progress on the <Link to="/outreach/runs" className="text-primary">Runs</Link> page.
       </p>
     </div>
   );

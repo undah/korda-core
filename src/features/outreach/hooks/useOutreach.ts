@@ -230,6 +230,36 @@ export function useRuns() {
       if (error) throw error;
       return (data ?? []) as RunLogEntry[];
     },
+    // A run takes minutes and writes its result straight to run_log, so poll
+    // while one is open and fall idle again once everything has finished.
+    refetchInterval: query => {
+      const rows = query.state.data as RunLogEntry[] | undefined;
+      return rows?.some(r => r.finished_at === null) ? 4000 : false;
+    },
+  });
+}
+
+/**
+ * Ask the hosted pipeline to run a niche. The request goes through our own
+ * Cloudflare function, which holds the pipeline URL and shared secret.
+ */
+export function useTriggerRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { slug: string; maxResultsOverride?: number }) => {
+      const res = await fetch('/api/outreach/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? `Run request failed (${res.status})`);
+      return data as { accepted: boolean; slug: string; maxResults?: number };
+    },
+    onSuccess: () => {
+      // Give the pipeline a moment to open its run_log row, then start polling.
+      setTimeout(() => qc.invalidateQueries({ queryKey: ['outreach-runs'] }), 1200);
+    },
   });
 }
 
