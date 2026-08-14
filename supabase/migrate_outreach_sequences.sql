@@ -71,11 +71,13 @@ begin
   join pg_class rel on rel.oid = con.conrelid
   where rel.relname = 'outreach_messages'
     and con.contype = 'u'
+    -- attname is `name`, not `text`, and there is no name[] = text[] operator,
+    -- so both sides are cast explicitly.
     and (
-      select array_agg(att.attname order by att.attname)
+      select array_agg(att.attname::text order by att.attname::text)
       from unnest(con.conkey) as k(attnum)
       join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
-    ) = array['campaign_id', 'contact_id']
+    ) = array['campaign_id', 'contact_id']::text[]
   limit 1;
 
   if v_name is not null then
