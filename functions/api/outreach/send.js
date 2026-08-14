@@ -17,9 +17,96 @@
  * calls repeatedly until `remaining` is 0.
  */
 
-import { sendMail } from './_providers.js';
-
 const DEFAULT_BATCH = 25;
+
+/*
+ * ── sending adapters ────────────────────────────────────────────────────────
+ *
+ * Deliberately inlined rather than imported from a sibling module. Cloudflare
+ * Pages treats files under functions/ as routes and special-cases the `_`
+ * prefix, and a shared `_providers.js` here coincided with every function in
+ * the project going dead — bare 404/405/500s with no body, which is the static
+ * handler answering, not our code. Not worth the risk for one import.
+ *
+ * The shape still keeps the vendor swappable, which matters: Resend's
+ * Acceptable Use Policy bans "cold outreach, purchased lists, or scraped
+ * contact data" and requires recipients to have "explicitly opted in" — so a
+ * system built on scraped leads has to be able to move providers without the
+ * send path being rewritten around it.
+ *
+ * SMTP cannot live here at all: Workers cannot open raw TCP sockets. Moving to
+ * SMTP mailboxes means relocating this loop to the pipeline host, which already
+ * runs the scheduler. The interface below is transport-agnostic so that is a
+ * relocation rather than a rewrite.
+ */
+
+function formatFrom(mail) {
+  return mail.fromName ? `${mail.fromName} <${mail.from}>` : mail.from;
+}
+
+async function sendViaResend(mail, credential) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${credential}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: formatFrom(mail),
+      to: [mail.to],
+      reply_to: mail.replyTo || undefined,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
+      headers: mail.headers,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Resend ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  return { id: data.id ?? null };
+}
+
+/**
+ * Generic JSON-over-HTTP adapter for vendors that permit cold outreach.
+ * Configured by env so a new vendor needs no code change:
+ *   OUTREACH_HTTP_ENDPOINT, OUTREACH_HTTP_AUTH_STYLE (bearer|header|query),
+ *   OUTREACH_HTTP_AUTH_NAME
+ */
+async function sendViaHttp(mail, credential, env) {
+  if (!env.OUTREACH_HTTP_ENDPOINT) throw new Error('OUTREACH_HTTP_ENDPOINT is not configured');
+
+  const style = env.OUTREACH_HTTP_AUTH_STYLE ?? 'bearer';
+  const name = env.OUTREACH_HTTP_AUTH_NAME ?? 'Authorization';
+  const url = new URL(env.OUTREACH_HTTP_ENDPOINT);
+  const headers = { 'Content-Type': 'application/json' };
+
+  if (style === 'query') url.searchParams.set(name, credential);
+  else if (style === 'header') headers[name] = credential;
+  else headers.Authorization = `Bearer ${credential}`;
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      from: mail.from, from_name: mail.fromName ?? undefined, to: mail.to,
+      reply_to: mail.replyTo || undefined, subject: mail.subject,
+      text: mail.text, html: mail.html,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Provider ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  return { id: data.id ?? data.message_id ?? data.messageId ?? null };
+}
+
+const ADAPTERS = { resend: sendViaResend, http: sendViaHttp };
+
+async function sendMail(provider, mail, credential, env) {
+  const adapter = ADAPTERS[provider];
+  if (!adapter) throw new Error(`Unknown sending provider "${provider}"`);
+  if (!credential) throw new Error(`No credential configured for provider "${provider}"`);
+  return adapter(mail, credential, env);
+}
 
 function sb(env, path, init = {}) {
   return fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
