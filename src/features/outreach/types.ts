@@ -3,7 +3,7 @@
 // This app only reads/edits through the authed anon client — RLS is the guard.
 
 export type EmailStatus = 'unverified' | 'guessed' | 'verified' | 'bounced';
-export type ContactSource = 'website' | 'kvk' | 'manual' | 'email-guess' | 'osm';
+export type ContactSource = 'website' | 'kvk' | 'manual' | 'email-guess' | 'osm' | 'hunter';
 export type NicheProvider = 'google' | 'overpass';
 
 export interface Niche {
@@ -31,6 +31,7 @@ export interface Niche {
   included_type: string | null;
   enrich_website: boolean;
   enrich_kvk: boolean;
+  enrich_hunter: boolean;
   guess_email: boolean;
   verify_email: boolean;
   send_cap_per_day: number | null;

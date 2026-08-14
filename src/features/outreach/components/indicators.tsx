@@ -18,9 +18,14 @@ export function EmailStatusBadge({ status }: { status: EmailStatus }) {
   );
 }
 
-/** Provenance is context, not risk — kept neutral. */
+/**
+ * Provenance is context, not risk — kept neutral, with one exception. Hunter is
+ * the only source that returns a named person with a job title, so those rows
+ * are the ones worth picking out of a column of info@ addresses.
+ */
 export function SourceBadge({ source }: { source: ContactSource }) {
-  return <span className="o-pill o-pill-neutral">{source}</span>;
+  const accent = source === 'hunter' ? 'o-pill-verified' : 'o-pill-neutral';
+  return <span className={`o-pill ${accent}`}>{source}</span>;
 }
 
 /** Confidence as a gradient meter — scannable down a column, precise on read. */

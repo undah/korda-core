@@ -62,9 +62,10 @@ export function useLeads(filter: LeadsFilter) {
 // ── niches ────────────────────────────────────────────────────────────────────
 
 /**
- * `provider` and `osm_filters` were added after the original schema. Fill them
- * in on read so the UI behaves sanely against an un-migrated database instead
- * of treating an absent provider as "not google" and showing the wrong form.
+ * `provider`, `osm_filters` and `enrich_hunter` were added after the original
+ * schema. Fill them in on read so the UI behaves sanely against an un-migrated
+ * database instead of treating an absent provider as "not google" and showing
+ * the wrong form, or rendering a toggle as indeterminate.
  */
 function normaliseNiche(row: Partial<Niche>): Niche {
   return {
@@ -72,6 +73,7 @@ function normaliseNiche(row: Partial<Niche>): Niche {
     provider: row.provider ?? 'google',
     osm_filters: row.osm_filters ?? [],
     search_queries: row.search_queries ?? [],
+    enrich_hunter: row.enrich_hunter ?? false,
   };
 }
 

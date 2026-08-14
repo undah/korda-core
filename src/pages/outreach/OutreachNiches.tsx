@@ -13,12 +13,15 @@ import {
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import type { Niche } from '@/features/outreach/types';
 
-type ToggleKey = 'active' | 'enrich_website' | 'enrich_kvk' | 'guess_email' | 'verify_email';
+type ToggleKey =
+  | 'active' | 'enrich_website' | 'enrich_kvk' | 'enrich_hunter'
+  | 'guess_email' | 'verify_email';
 
 const TOGGLES: { key: ToggleKey; label: string }[] = [
   { key: 'active',         label: 'Active' },
   { key: 'enrich_website', label: 'Website' },
   { key: 'enrich_kvk',     label: 'KVK' },
+  { key: 'enrich_hunter',  label: 'Hunter' },
   { key: 'guess_email',    label: 'Guess' },
   { key: 'verify_email',   label: 'Verify' },
 ];

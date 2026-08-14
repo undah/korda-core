@@ -26,7 +26,8 @@ const EMPTY: NicheDraft = {
   radius_m: 15000, language_code: 'nl', region_code: 'NL', max_results: 60,
   min_rating: null, min_ratings_total: null,
   require_website: true, require_phone: false, included_type: null,
-  enrich_website: true, enrich_kvk: false, guess_email: false, verify_email: false,
+  enrich_website: true, enrich_kvk: false, enrich_hunter: false,
+  guess_email: false, verify_email: false,
   send_cap_per_day: null, recrawl_after_days: 30,
 };
 
@@ -264,6 +265,7 @@ export default function OutreachNicheForm() {
             {([
               ['enrich_website', 'Crawl website'],
               ['enrich_kvk', 'KVK lookup'],
+              ['enrich_hunter', 'Hunter.io'],
               ['guess_email', 'Guess emails'],
               ['verify_email', 'Verify (MX)'],
             ] as const).map(([key, label]) => (
@@ -276,6 +278,12 @@ export default function OutreachNicheForm() {
           <p className="text-xs text-muted-foreground">
             Guessed addresses are marked <span className="outreach-mono">guessed</span> and are not verified —
             expect bounces if you send to them unchecked.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Hunter.io finds the name and job title behind a domain, which is how you get an owner
+            instead of another <span className="outreach-mono">info@</span>. It costs one credit per
+            business looked up, so it skips any business that already has a named contact and stops
+            at the per-run cap set on the pipeline.
           </p>
         </section>
 
