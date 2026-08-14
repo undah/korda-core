@@ -74,6 +74,7 @@ function normaliseNiche(row: Partial<Niche>): Niche {
     osm_filters: row.osm_filters ?? [],
     search_queries: row.search_queries ?? [],
     enrich_hunter: row.enrich_hunter ?? false,
+    hunter_max_lookups: row.hunter_max_lookups ?? null,
   };
 }
 

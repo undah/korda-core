@@ -27,7 +27,7 @@ const EMPTY: NicheDraft = {
   min_rating: null, min_ratings_total: null,
   require_website: true, require_phone: false, included_type: null,
   enrich_website: true, enrich_kvk: false, enrich_hunter: false,
-  guess_email: false, verify_email: false,
+  hunter_max_lookups: null, guess_email: false, verify_email: false,
   send_cap_per_day: null, recrawl_after_days: 30,
 };
 
@@ -279,11 +279,22 @@ export default function OutreachNicheForm() {
             Guessed addresses are marked <span className="outreach-mono">guessed</span> and are not verified —
             expect bounces if you send to them unchecked.
           </p>
+          {draft.enrich_hunter && (
+            <div className="max-w-xs space-y-1.5">
+              <Label htmlFor="hunterCap">Hunter lookups per run</Label>
+              <Input id="hunterCap" className="outreach-mono"
+                value={draft.hunter_max_lookups ?? ''}
+                onChange={e => set('hunter_max_lookups', toNum(e.target.value))}
+                placeholder="pipeline default" />
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Hunter.io finds the name and job title behind a domain, which is how you get an owner
             instead of another <span className="outreach-mono">info@</span>. It costs one credit per
-            business looked up, so it skips any business that already has a named contact and stops
-            at the per-run cap set on the pipeline.
+            business looked up, so it skips any business that already has a named contact. Leave the
+            cap blank to use the pipeline default; <span className="outreach-mono">0</span> looks
+            nothing up. Credits are billed per business searched, found or not — on Hunter's free
+            tier the whole month is 25.
           </p>
         </section>
 

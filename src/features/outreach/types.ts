@@ -32,6 +32,8 @@ export interface Niche {
   enrich_website: boolean;
   enrich_kvk: boolean;
   enrich_hunter: boolean;
+  /** Null falls back to the pipeline's HUNTER_MAX_LOOKUPS_PER_RUN. */
+  hunter_max_lookups: number | null;
   guess_email: boolean;
   verify_email: boolean;
   send_cap_per_day: number | null;
