@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { useCampaigns, useDeleteCampaign, useSendCampaign } from '@/features/outreach/hooks/useEmail';
+import { useCampaignControl, useCampaigns, useDeleteCampaign } from '@/features/outreach/hooks/useEmail';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import type { CampaignStatus } from '@/features/outreach/types';
 
@@ -24,15 +24,15 @@ function formatDate(value: string): string {
 
 export default function OutreachCampaigns() {
   const { data: campaigns, isLoading, error } = useCampaigns();
-  const send = useSendCampaign();
+  const control = useCampaignControl();
   const remove = useDeleteCampaign();
 
-  const handleSend = async (id: string, name: string) => {
+  const handleControl = async (id: string, name: string, action: 'start' | 'pause') => {
     try {
-      const r = await send.mutateAsync(id);
-      toast.success(`${name}: ${r.sent} sent, ${r.skipped} skipped, ${r.failed} failed`);
+      await control.mutateAsync({ campaignId: id, action });
+      toast.success(action === 'start' ? `${name} started — sending is paced.` : `${name} paused.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Send failed.');
+      toast.error(e instanceof Error ? e.message : `Could not ${action} that campaign.`);
     }
   };
 
@@ -99,12 +99,17 @@ export default function OutreachCampaigns() {
                   <TableCell className={`o-num text-right ${c.failed ? 'text-red-400' : 'text-muted-foreground'}`}>{c.failed}</TableCell>
                   <TableCell className="o-num text-xs text-muted-foreground">{formatDate(c.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    {c.queued > 0 && (
-                      <Button size="sm" disabled={send.isPending}
-                        onClick={() => void handleSend(c.id, c.name)}>
-                        {send.isPending ? 'Sending…' : `Send ${c.queued}`}
+                    {c.status === 'sending' ? (
+                      <Button variant="outline" size="sm" disabled={control.isPending}
+                        onClick={() => void handleControl(c.id, c.name, 'pause')}>
+                        Pause
                       </Button>
-                    )}
+                    ) : c.queued > 0 ? (
+                      <Button size="sm" disabled={control.isPending}
+                        onClick={() => void handleControl(c.id, c.name, 'start')}>
+                        {c.status === 'paused' ? 'Resume' : 'Start'}
+                      </Button>
+                    ) : null}
                     <Button variant="ghost" size="sm" className="text-destructive"
                       disabled={remove.isPending} onClick={() => void handleDelete(c.id)}>
                       Delete

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { useCampaign, useCampaignMessages, useSendCampaign } from '@/features/outreach/hooks/useEmail';
+import { useCampaign, useCampaignControl, useCampaignMessages } from '@/features/outreach/hooks/useEmail';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import type { MessageStatus } from '@/features/outreach/types';
 
@@ -28,17 +28,26 @@ export default function OutreachCampaign() {
   const { id } = useParams<{ id: string }>();
   const { data: campaign, isLoading, error } = useCampaign(id);
   const { data: messages } = useCampaignMessages(id);
-  const send = useSendCampaign();
+  const control = useCampaignControl();
 
-  const queued = (messages ?? []).filter(m => m.status === 'queued').length;
+  const rows = messages ?? [];
+  const queued = rows.filter(m => m.status === 'queued').length;
+  const sent = rows.filter(m => m.status === 'sent').length;
+  const replied = rows.filter(m => m.skip_reason === 'replied').length;
+  const steps = [...new Set(rows.map(m => m.step_number))].sort((a, b) => a - b);
+  const running = campaign?.status === 'sending';
 
-  const handleSend = async () => {
+  const handleControl = async (action: 'start' | 'pause') => {
     if (!id) return;
     try {
-      const r = await send.mutateAsync(id);
-      toast.success(`${r.sent} sent, ${r.skipped} skipped, ${r.failed} failed`);
+      await control.mutateAsync({ campaignId: id, action });
+      toast.success(
+        action === 'start'
+          ? 'Campaign started — sending is paced over business hours.'
+          : 'Campaign paused.',
+      );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Send failed.');
+      toast.error(e instanceof Error ? e.message : `Could not ${action} the campaign.`);
     }
   };
 
@@ -56,13 +65,30 @@ export default function OutreachCampaign() {
         <PageHeader
           eyebrow="Campaign"
           title={campaign.name}
-          sub={`${messages?.length ?? 0} recipient${(messages?.length ?? 0) === 1 ? '' : 's'} · status: ${campaign.status}`}
-          actions={queued > 0 ? (
-            <Button disabled={send.isPending} onClick={() => void handleSend()}>
-              {send.isPending ? 'Sending…' : `Send ${queued} queued`}
-            </Button>
-          ) : undefined}
+          sub={
+            `${sent} sent · ${queued} queued · ${replied} replied` +
+            (steps.length > 1 ? ` · ${steps.length} steps` : '') +
+            ` · status: ${campaign.status}`
+          }
+          actions={
+            running ? (
+              <Button variant="outline" disabled={control.isPending}
+                onClick={() => void handleControl('pause')}>
+                {control.isPending ? 'Pausing…' : 'Pause'}
+              </Button>
+            ) : queued > 0 ? (
+              <Button disabled={control.isPending} onClick={() => void handleControl('start')}>
+                {control.isPending ? 'Starting…' : campaign.status === 'paused' ? 'Resume' : 'Start sending'}
+              </Button>
+            ) : undefined
+          }
         />
+        {running && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Sending is paced by the pipeline — a couple at a time during Dutch business hours, with
+            follow-ups days apart. You can close this page; it keeps going.
+          </p>
+        )}
       </div>
 
       {!messages || messages.length === 0 ? (
@@ -73,9 +99,10 @@ export default function OutreachCampaign() {
             <TableHeader>
               <TableRow>
                 <TableHead>Recipient</TableHead>
+                {steps.length > 1 && <TableHead className="w-14">Step</TableHead>}
                 <TableHead>Subject</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Sent</TableHead>
+                <TableHead>Due / sent</TableHead>
                 <TableHead>Detail</TableHead>
               </TableRow>
             </TableHeader>
@@ -83,9 +110,20 @@ export default function OutreachCampaign() {
               {messages.map(m => (
                 <TableRow key={m.id}>
                   <TableCell className="text-sm">{m.to_email}</TableCell>
+                  {steps.length > 1 && (
+                    <TableCell className="o-num text-xs text-muted-foreground">{m.step_number}</TableCell>
+                  )}
                   <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground">{m.subject}</TableCell>
                   <TableCell><span className={`o-pill ${PILL[m.status]}`}>{m.status}</span></TableCell>
-                  <TableCell className="o-num text-xs text-muted-foreground">{formatTime(m.sent_at)}</TableCell>
+                  <TableCell className="o-num text-xs text-muted-foreground">
+                    {/* Once sent that time is the fact; before then, when it comes
+                        due is what the user actually wants to know. */}
+                    {m.sent_at
+                      ? formatTime(m.sent_at)
+                      : m.scheduled_at
+                        ? `due ${formatTime(m.scheduled_at)}`
+                        : m.status === 'queued' ? 'waiting' : '—'}
+                  </TableCell>
                   <TableCell className="max-w-[260px] text-xs text-muted-foreground">
                     {/* Skip reasons and provider errors are the whole point of this
                         view when something didn't land — show them in full. */}

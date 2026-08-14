@@ -143,6 +143,23 @@ export interface Campaign {
   updated_at: string;
 }
 
+/** One step of a campaign's follow-up sequence. Step 1 is the initial mail. */
+export interface SequenceStep {
+  id: string;
+  campaign_id: string;
+  step_number: number;
+  template_id: string | null;
+  /** Days after the previous step actually sent. Always 0 for step 1. */
+  delay_days: number;
+  created_at: string;
+}
+
+/** A step as edited in the campaign builder, before it has an id. */
+export interface SequenceStepDraft {
+  template_id: string;
+  delay_days: number;
+}
+
 export interface OutreachMessage {
   id: string;
   campaign_id: string;
@@ -151,9 +168,12 @@ export interface OutreachMessage {
   subject: string;
   body: string;
   status: MessageStatus;
+  step_number: number;
+  niche_id: string | null;
   skip_reason: string | null;
   error: string | null;
   provider_message_id: string | null;
+  /** Null means a later step whose turn has not come yet. */
   scheduled_at: string | null;
   sent_at: string | null;
   created_at: string;

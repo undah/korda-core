@@ -173,33 +173,74 @@ export function useCampaignMessages(campaignId: string | undefined) {
   });
 }
 
-/** Create a campaign and queue one rendered message per selected lead. */
+/**
+ * Create a campaign and queue every step for every selected lead.
+ *
+ * All steps are rendered and inserted now rather than generated as the sequence
+ * progresses. That keeps the existing promise that what you previewed is what
+ * goes out even if a template is edited later, lets the whole sequence be
+ * reviewed before committing, and keeps rendering in one place — the sender
+ * never has to know about merge fields.
+ *
+ * Every message starts with `scheduled_at = null`, meaning "not due". Starting
+ * the campaign stamps step 1; each send stamps the step after it. So a draft is
+ * inert no matter what else goes wrong.
+ */
 export function useCreateCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
       name: string;
-      template: EmailTemplate;
+      steps: { template: EmailTemplate; delay_days: number }[];
       recipients: OutreachReadyRow[];
     }): Promise<Campaign> => {
+      if (input.steps.length === 0) throw new Error('A campaign needs at least one step.');
+
       const { data: campaign, error } = await supabase
         .from('campaigns')
-        .insert({ name: input.name, template_id: input.template.id, status: 'draft' })
+        // template_id still points at step 1, so anything reading the campaign
+        // without knowing about steps keeps working.
+        .insert({ name: input.name, template_id: input.steps[0].template.id, status: 'draft' })
         .select().single();
       if (error) throw error;
 
       const created = campaign as Campaign;
+
+      const { error: sErr } = await supabase.from('sequence_steps').insert(
+        input.steps.map((step, i) => ({
+          campaign_id: created.id,
+          step_number: i + 1,
+          template_id: step.template.id,
+          // The first mail goes out when the campaign starts, by definition.
+          delay_days: i === 0 ? 0 : step.delay_days,
+        })),
+      );
+      if (sErr) throw sErr;
+
+      // outreach_ready exposes the niche slug; the messages table wants the id,
+      // so the daily cap can count per niche without a three-table join.
+      const { data: niches } = await supabase.from('niches').select('id,slug');
+      const nicheIdBySlug = new Map(
+        ((niches ?? []) as { id: string; slug: string }[]).map(n => [n.slug, n.id]),
+      );
+
       // Enforced here rather than trusting the caller: queueing is the only way
       // a message is ever created, so this is the one place that can guarantee a
       // campaign never contains the same business or address twice.
-      const messages = dedupeRecipients(input.recipients).map(lead => ({
-        campaign_id: created.id,
-        contact_id: lead.contact_id,
-        to_email: lead.email,
-        subject: renderTemplate(input.template.subject, lead),
-        body: renderTemplate(input.template.body, lead),
-        status: 'queued',
-      }));
+      const recipients = dedupeRecipients(input.recipients);
+      const messages = recipients.flatMap(lead =>
+        input.steps.map((step, i) => ({
+          campaign_id: created.id,
+          contact_id: lead.contact_id,
+          niche_id: lead.niche ? nicheIdBySlug.get(lead.niche) ?? null : null,
+          to_email: lead.email,
+          step_number: i + 1,
+          subject: renderTemplate(step.template.subject, lead),
+          body: renderTemplate(step.template.body, lead),
+          status: 'queued',
+          scheduled_at: null,
+        })),
+      );
 
       if (messages.length) {
         const { error: mErr } = await supabase.from('outreach_messages').insert(messages);
@@ -228,34 +269,50 @@ export function useDeleteCampaign() {
  * Drive the server-side sender. It works in batches (Cloudflare request time
  * limits), so loop until it reports nothing queued left.
  */
-export function useSendCampaign() {
+/**
+ * Start or pause a campaign.
+ *
+ * This replaces a browser loop that drained the whole queue as fast as it
+ * could. Sending is now paced by the scheduler on the pipeline host: it only
+ * sends inside business hours, a couple at a time, and follow-ups land days
+ * apart — none of which can be driven from a page the user might close.
+ *
+ * Starting stamps `scheduled_at` on step 1 so it becomes due; later steps are
+ * activated as the step before them sends. Pausing just flips the status — the
+ * scheduler re-reads it every tick and stops picking the campaign up.
+ */
+export function useCampaignControl() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (campaignId: string): Promise<SendResult> => {
-      const totals: SendResult = { sent: 0, skipped: 0, failed: 0, remaining: 0, done: false };
-
-      for (let pass = 0; pass < 40; pass++) {
-        const res = await fetch('/api/outreach/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaignId }),
-        });
-        if (!res.ok) {
-          const detail = await res.json().catch(() => ({}));
-          throw new Error(detail?.error ?? `Send failed (${res.status})`);
-        }
-        const batch = (await res.json()) as SendResult;
-        totals.sent += batch.sent;
-        totals.skipped += batch.skipped;
-        totals.failed += batch.failed;
-        totals.remaining = batch.remaining;
-        totals.done = batch.done;
-        if (batch.done) break;
+    mutationFn: async ({ campaignId, action }: {
+      campaignId: string;
+      action: 'start' | 'pause';
+    }): Promise<void> => {
+      if (action === 'pause') {
+        const { error } = await supabase
+          .from('campaigns').update({ status: 'paused' }).eq('id', campaignId);
+        if (error) throw error;
+        return;
       }
-      return totals;
+
+      // Make step 1 due. Only messages still queued and not yet scheduled, so
+      // resuming a paused campaign never re-stamps work already in flight.
+      const { error: mErr } = await supabase
+        .from('outreach_messages')
+        .update({ scheduled_at: new Date().toISOString() })
+        .eq('campaign_id', campaignId)
+        .eq('step_number', 1)
+        .eq('status', 'queued')
+        .is('scheduled_at', null);
+      if (mErr) throw mErr;
+
+      const { error } = await supabase
+        .from('campaigns').update({ status: 'sending' }).eq('id', campaignId);
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outreach-campaigns'] });
+      qc.invalidateQueries({ queryKey: ['outreach-campaign'] });
       qc.invalidateQueries({ queryKey: ['outreach-campaign-messages'] });
       qc.invalidateQueries({ queryKey: ['outreach-leads'] });
     },
