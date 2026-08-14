@@ -15,6 +15,7 @@ import {
   useCreateNiche, useDeleteNiche, useNiche, useUpdateNiche,
 } from '@/features/outreach/hooks/useOutreach';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { NicheDraft, NicheProvider } from '@/features/outreach/types';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -94,7 +95,7 @@ export default function OutreachNicheForm() {
       }
       navigate('/outreach/niches');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save the niche.');
+      toast.error(errorMessage(e, 'Could not save the niche.'));
     }
   };
 
@@ -105,7 +106,7 @@ export default function OutreachNicheForm() {
       toast.success('Niche deleted.');
       navigate('/outreach/niches');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not delete the niche.');
+      toast.error(errorMessage(e, 'Could not delete the niche.'));
     }
   };
 

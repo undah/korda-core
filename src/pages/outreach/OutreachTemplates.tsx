@@ -8,6 +8,7 @@ import {
   MERGE_FIELDS, renderTemplate, useDeleteTemplate, useSaveTemplate, useTemplates,
 } from '@/features/outreach/hooks/useEmail';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { EmailTemplate, OutreachReadyRow } from '@/features/outreach/types';
 
 /** Stand-in lead so the preview shows real merge output while you type. */
@@ -41,7 +42,7 @@ export default function OutreachTemplates() {
       toast.success(draft.id ? 'Template saved.' : 'Template created.');
       setDraft(BLANK);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save the template.');
+      toast.error(errorMessage(e, 'Could not save the template.'));
     }
   };
 
@@ -51,7 +52,7 @@ export default function OutreachTemplates() {
       toast.success('Template deleted.');
       if (draft.id === id) setDraft(BLANK);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not delete that template.');
+      toast.error(errorMessage(e, 'Could not delete that template.'));
     }
   };
 

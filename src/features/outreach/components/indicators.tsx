@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Inbox, AlertTriangle } from 'lucide-react';
 import type { ContactSource, EmailStatus } from '../types';
+import { errorMessage } from '../errors';
 
 /** Deliverability state — a soft pill, coloured by risk. */
 export function EmailStatusBadge({ status }: { status: EmailStatus }) {
@@ -76,7 +77,9 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
 }
 
 export function ErrorState({ error }: { error: unknown }) {
-  const message = error instanceof Error ? error.message : String(error);
+  // Not String(error): a Supabase error is a plain object, so that rendered a
+  // literal "[object Object]" where the reason should have been.
+  const message = errorMessage(error, 'Unknown error.');
   return (
     <div className="o-panel o-state">
       <div className="o-state-icon" style={{ background: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.25)', color: '#fca5a5' }}>

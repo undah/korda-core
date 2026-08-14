@@ -14,6 +14,7 @@ import {
 import {
   ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, PageHeader, SourceBadge,
 } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import { LEADS_PAGE_SIZE, type EmailStatus, type LeadsFilter } from '@/features/outreach/types';
 
 const ANY = '__any__';
@@ -56,7 +57,7 @@ export default function OutreachLeads() {
       await suppress.mutateAsync({ email, reason: 'manual' });
       toast.success(`Suppressed ${email}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not suppress that address.');
+      toast.error(errorMessage(e, 'Could not suppress that address.'));
     }
   };
 

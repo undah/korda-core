@@ -11,6 +11,7 @@ import {
 import {
   ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, PageHeader, SourceBadge,
 } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { Contact } from '@/features/outreach/types';
 
 function formatDateTime(value: string | null): string {
@@ -41,7 +42,7 @@ export default function OutreachBusiness() {
     try {
       await updateContact.mutateAsync({ id: contact.id, do_not_contact: !contact.do_not_contact });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not update that contact.');
+      toast.error(errorMessage(e, 'Could not update that contact.'));
     }
   };
 
@@ -50,7 +51,7 @@ export default function OutreachBusiness() {
       await deleteContact.mutateAsync(contactId);
       toast.success('Contact deleted.');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not delete that contact.');
+      toast.error(errorMessage(e, 'Could not delete that contact.'));
     }
   };
 
@@ -60,7 +61,7 @@ export default function OutreachBusiness() {
       await suppress.mutateAsync({ domain: business.domain, reason: 'manual — domain' });
       toast.success(`Suppressed everything at ${business.domain}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not suppress that domain.');
+      toast.error(errorMessage(e, 'Could not suppress that domain.'));
     }
   };
 

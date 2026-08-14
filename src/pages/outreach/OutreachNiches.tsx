@@ -11,6 +11,7 @@ import {
   useNicheLeadCounts, useNiches, useTriggerRun, useUpdateNiche,
 } from '@/features/outreach/hooks/useOutreach';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { Niche } from '@/features/outreach/types';
 
 type ToggleKey =
@@ -36,7 +37,7 @@ export default function OutreachNiches() {
     try {
       await updateNiche.mutateAsync({ id: niche.id, [key]: !niche[key] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : `Could not update ${key}.`);
+      toast.error(errorMessage(e, `Could not update ${key}.`));
     }
   };
 
@@ -45,7 +46,7 @@ export default function OutreachNiches() {
       await triggerRun.mutateAsync({ slug: niche.slug });
       toast.success(`Run started for ${niche.name}`, { description: 'Watch progress on the Runs page.' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not start that run.');
+      toast.error(errorMessage(e, 'Could not start that run.'));
     }
   };
 

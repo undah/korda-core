@@ -15,6 +15,7 @@ import {
 import {
   EmailStatusBadge, EmptyState, ErrorState, PageHeader,
 } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { EmailStatus, SequenceStepDraft } from '@/features/outreach/types';
 
 const ANY = '__any__';
@@ -91,7 +92,7 @@ export default function OutreachCampaignNew() {
       );
       navigate(`/outreach/campaigns/${campaign.id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create the campaign.');
+      toast.error(errorMessage(e, 'Could not create the campaign.'));
     }
   };
 

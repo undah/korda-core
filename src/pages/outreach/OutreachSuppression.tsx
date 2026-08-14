@@ -10,6 +10,7 @@ import {
   useAddSuppression, useRemoveSuppression, useSuppression,
 } from '@/features/outreach/hooks/useOutreach';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString(undefined, {
@@ -40,7 +41,7 @@ export default function OutreachSuppression() {
       toast.success('Added to the suppression list.');
       setEmail(''); setDomain(''); setReason('');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not add that entry.');
+      toast.error(errorMessage(e, 'Could not add that entry.'));
     }
   };
 
@@ -49,7 +50,7 @@ export default function OutreachSuppression() {
       await remove.mutateAsync(id);
       toast.success('Removed from the suppression list.');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not remove that entry.');
+      toast.error(errorMessage(e, 'Could not remove that entry.'));
     }
   };
 

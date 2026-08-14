@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/table';
 import { useCampaign, useCampaignControl, useCampaignMessages } from '@/features/outreach/hooks/useEmail';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { MessageStatus } from '@/features/outreach/types';
 
 const PILL: Record<MessageStatus, string> = {
@@ -47,7 +48,7 @@ export default function OutreachCampaign() {
           : 'Campaign paused.',
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : `Could not ${action} the campaign.`);
+      toast.error(errorMessage(e, `Could not ${action} the campaign.`));
     }
   };
 

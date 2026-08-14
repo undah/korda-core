@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/table';
 import { useCampaignControl, useCampaigns, useDeleteCampaign } from '@/features/outreach/hooks/useEmail';
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
+import { errorMessage } from '@/features/outreach/errors';
 import type { CampaignStatus } from '@/features/outreach/types';
 
 function StatusPill({ status }: { status: CampaignStatus }) {
@@ -32,7 +33,7 @@ export default function OutreachCampaigns() {
       await control.mutateAsync({ campaignId: id, action });
       toast.success(action === 'start' ? `${name} started — sending is paced.` : `${name} paused.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : `Could not ${action} that campaign.`);
+      toast.error(errorMessage(e, `Could not ${action} that campaign.`));
     }
   };
 
@@ -41,7 +42,7 @@ export default function OutreachCampaigns() {
       await remove.mutateAsync(id);
       toast.success('Campaign deleted.');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not delete that campaign.');
+      toast.error(errorMessage(e, 'Could not delete that campaign.'));
     }
   };
 
