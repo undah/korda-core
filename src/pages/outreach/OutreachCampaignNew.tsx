@@ -9,7 +9,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useLeads, useNiches } from '@/features/outreach/hooks/useOutreach';
-import { renderTemplate, useCreateCampaign, useTemplates } from '@/features/outreach/hooks/useEmail';
+import {
+  dedupeRecipients, renderTemplate, useCreateCampaign, useTemplates,
+} from '@/features/outreach/hooks/useEmail';
 import {
   EmailStatusBadge, EmptyState, ErrorState, PageHeader,
 } from '@/features/outreach/components/indicators';
@@ -43,10 +45,16 @@ export default function OutreachCampaignNew() {
   const pool = useMemo(() => data?.rows ?? [], [data]);
   const template = templates?.find(t => t.id === templateId);
 
-  const recipients = useMemo(
+  const eligible = useMemo(
     () => pool.filter(r => !excluded.has(r.contact_id) && !r.last_contacted_at),
     [pool, excluded],
   );
+  // One lead is one contact, not one company, so the pool can hold the same
+  // business (or the same address) more than once. Collapse here as well as at
+  // queue time so the count on the button is the count that actually sends.
+  const recipients = useMemo(() => dedupeRecipients(eligible), [eligible]);
+  const collapsed = eligible.length - recipients.length;
+  const keptIds = useMemo(() => new Set(recipients.map(r => r.contact_id)), [recipients]);
   const alreadyContacted = pool.filter(r => r.last_contacted_at).length;
 
   const toggle = (id: string) =>
@@ -160,12 +168,16 @@ export default function OutreachCampaignNew() {
                 {pool.map(lead => {
                   const contacted = Boolean(lead.last_contacted_at);
                   const on = !excluded.has(lead.contact_id) && !contacted;
+                  // Ticked but losing the de-dup to a higher-confidence row for
+                  // the same business or address. Still togglable — unticking
+                  // the winner promotes this one.
+                  const duplicate = on && !keptIds.has(lead.contact_id);
                   return (
                     <label key={lead.contact_id}
                       className="flex cursor-pointer items-center gap-3 border-b border-white/5 px-3 py-2 last:border-b-0 hover:bg-white/[0.03]">
-                      <Checkbox checked={on} disabled={contacted}
+                      <Checkbox checked={on && !duplicate} disabled={contacted}
                         onCheckedChange={() => toggle(lead.contact_id)} />
-                      <span className="min-w-0 flex-1">
+                      <span className={`min-w-0 flex-1 ${duplicate ? 'opacity-50' : ''}`}>
                         <span className="block truncate text-sm">{lead.business_name}</span>
                         <span className="block truncate text-xs text-muted-foreground">
                           {lead.full_name ? `${lead.full_name} · ` : ''}{lead.email}
@@ -173,7 +185,9 @@ export default function OutreachCampaignNew() {
                       </span>
                       {contacted
                         ? <span className="o-pill o-pill-neutral">already contacted</span>
-                        : <EmailStatusBadge status={lead.email_status} />}
+                        : duplicate
+                          ? <span className="o-pill o-pill-neutral">duplicate</span>
+                          : <EmailStatusBadge status={lead.email_status} />}
                     </label>
                   );
                 })}
@@ -199,6 +213,12 @@ export default function OutreachCampaignNew() {
                 <dt className="text-muted-foreground">Already contacted</dt>
                 <dd className="o-num text-muted-foreground">{alreadyContacted}</dd>
               </div>
+              {collapsed > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Duplicate business or address</dt>
+                  <dd className="o-num text-muted-foreground">{collapsed}</dd>
+                </div>
+              )}
             </dl>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
               Suppressed, bounced, and do-not-contact leads are already excluded from this pool, and

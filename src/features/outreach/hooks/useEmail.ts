@@ -32,6 +32,40 @@ export function renderTemplate(text: string, lead: OutreachReadyRow): string {
 
 export const MERGE_FIELDS = ['first_name', 'full_name', 'business_name', 'domain', 'role', 'city'] as const;
 
+// ── recipient de-duplication ──────────────────────────────────────────────────
+
+/**
+ * Reduce leads to one message per business, never reusing an address.
+ *
+ * A lead is one *contact*, not one company, and the same company reaches us
+ * twice over:
+ *  - enrichment keeps every address it finds, so one business can surface as
+ *    several leads (`Garage van der Wind` has verkoop@, werkplaats@ and info@);
+ *  - Places lists some companies as two separate places that share an address
+ *    (`Watertaxi Rotterdam` and `Watertaxi - SS Rotterdam (56)` are both
+ *    info@watertaxirotterdam.nl), so deduping on business alone is not enough.
+ *
+ * Either one mails the same person twice in a single send, which is how a
+ * sending domain gets burned. Highest confidence wins; ties keep the earlier
+ * lead so the caller's ordering survives.
+ */
+export function dedupeRecipients(leads: OutreachReadyRow[]): OutreachReadyRow[] {
+  const byConfidence = [...leads].sort((a, b) => b.confidence - a.confidence);
+
+  const seenBusiness = new Set<string>();
+  const seenEmail = new Set<string>();
+  const kept: OutreachReadyRow[] = [];
+
+  for (const lead of byConfidence) {
+    const email = lead.email.trim().toLowerCase();
+    if (seenBusiness.has(lead.business_id) || seenEmail.has(email)) continue;
+    seenBusiness.add(lead.business_id);
+    seenEmail.add(email);
+    kept.push(lead);
+  }
+  return kept;
+}
+
 // ── templates ─────────────────────────────────────────────────────────────────
 
 export function useTemplates() {
@@ -155,7 +189,10 @@ export function useCreateCampaign() {
       if (error) throw error;
 
       const created = campaign as Campaign;
-      const messages = input.recipients.map(lead => ({
+      // Enforced here rather than trusting the caller: queueing is the only way
+      // a message is ever created, so this is the one place that can guarantee a
+      // campaign never contains the same business or address twice.
+      const messages = dedupeRecipients(input.recipients).map(lead => ({
         campaign_id: created.id,
         contact_id: lead.contact_id,
         to_email: lead.email,

@@ -97,6 +97,9 @@ export async function onRequestPost(context) {
     const supDomains = new Set(suppressed.map(s => (s.domain || '').toLowerCase()).filter(Boolean));
 
     let sent = 0, skipped = 0, failed = 0;
+    // Addresses sent during this invocation, so duplicates inside one batch are
+    // caught without re-querying for a row we only just wrote.
+    const sentAddresses = new Set();
 
     for (const msg of queued) {
       const email = (msg.to_email || '').toLowerCase();
@@ -133,6 +136,25 @@ export async function onRequestPost(context) {
       );
       if (priorSent.length) {
         await markMessage(env, msg.id, { status: 'skipped', skip_reason: 'already contacted' });
+        skipped++;
+        continue;
+      }
+
+      // ── guard: never send twice to the same address ──
+      // The contact check above is not enough: Places lists some companies as
+      // two separate places, so two distinct contact rows can carry the same
+      // address and each would pass its own already-sent check.
+      if (sentAddresses.has(email)) {
+        await markMessage(env, msg.id, { status: 'skipped', skip_reason: 'duplicate address in batch' });
+        skipped++;
+        continue;
+      }
+      const priorToAddress = await sbJson(
+        env,
+        `outreach_messages?to_email=ilike.${encodeURIComponent(msg.to_email)}&status=eq.sent&select=id&limit=1`,
+      );
+      if (priorToAddress.length) {
+        await markMessage(env, msg.id, { status: 'skipped', skip_reason: 'address already contacted' });
         skipped++;
         continue;
       }
@@ -192,6 +214,7 @@ export async function onRequestPost(context) {
           meta: { provider_message_id: data.id ?? null },
         }),
       });
+      sentAddresses.add(email);
       sent++;
     }
 
