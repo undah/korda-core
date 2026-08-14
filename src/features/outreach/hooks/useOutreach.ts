@@ -226,6 +226,105 @@ export function useDeleteContact() {
   });
 }
 
+// ── bulk contact actions ──────────────────────────────────────────────────────
+
+/** Every list the contact tables feed, refreshed after a bulk change. */
+function invalidateContactViews(qc: ReturnType<typeof useQueryClient>): void {
+  qc.invalidateQueries({ queryKey: ['outreach-leads'] });
+  qc.invalidateQueries({ queryKey: ['outreach-business-contacts'] });
+  qc.invalidateQueries({ queryKey: ['outreach-niche-counts'] });
+  qc.invalidateQueries({ queryKey: ['outreach-suppression'] });
+}
+
+/**
+ * Suppress addresses, skipping any already on the list.
+ *
+ * Deliberately not an upsert: suppression's uniqueness comes from a *partial
+ * expression* index — `unique(lower(email)) where email is not null` — and
+ * PostgREST's on_conflict can only name plain columns, so an upsert targeting
+ * `email` fails with "no unique or exclusion constraint matching". Reading the
+ * existing rows first is unambiguous and costs one query.
+ *
+ * Returns how many were actually added, so callers can report honestly when
+ * some of the selection was already suppressed.
+ */
+async function suppressEmails(emails: string[], reason: string): Promise<number> {
+  const wanted = [...new Set(emails.map(e => (e ?? '').trim().toLowerCase()).filter(Boolean))];
+  if (wanted.length === 0) return 0;
+
+  const { data: existing, error: readError } = await supabase
+    .from('suppression_list').select('email').in('email', wanted);
+  if (readError) throw readError;
+
+  const already = new Set(
+    ((existing ?? []) as { email: string | null }[]).map(r => (r.email ?? '').toLowerCase()),
+  );
+  const fresh = wanted.filter(e => !already.has(e));
+  if (fresh.length === 0) return 0;
+
+  const { error } = await supabase
+    .from('suppression_list')
+    .insert(fresh.map(email => ({ email, reason })));
+  if (error) throw error;
+  return fresh.length;
+}
+
+/**
+ * Delete contacts, optionally suppressing their addresses first.
+ *
+ * Deleting alone is not durable: the pipeline re-crawls the same businesses and
+ * will happily re-create a contact it finds again, so a lead deleted to get rid
+ * of it can reappear after the next run. Suppression is what actually keeps it
+ * gone, which is why the caller is offered both together.
+ *
+ * Suppression is written first — if the delete then fails, the address is still
+ * protected, whereas the reverse order could delete the row and lose the only
+ * record of what to suppress.
+ */
+export function useBulkDeleteContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, emails, suppress }: {
+      ids: string[];
+      emails: string[];
+      suppress: boolean;
+    }) => {
+      if (ids.length === 0) return;
+
+      if (suppress) await suppressEmails(emails, 'deleted from leads');
+
+      const { error } = await supabase.from('contacts').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateContactViews(qc),
+  });
+}
+
+/** Patch the same fields across many contacts — used for do-not-contact. */
+export function useBulkUpdateContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<Contact> }) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase.from('contacts').update(updates).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateContactViews(qc),
+  });
+}
+
+/**
+ * Suppress many addresses at once, leaving the contact rows in place.
+ * Resolves to the number newly added, which may be fewer than asked for.
+ */
+export function useBulkSuppress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (emails: string[]) => suppressEmails(emails, 'manual'),
+    onSuccess: () => invalidateContactViews(qc),
+  });
+}
+
 // ── runs ──────────────────────────────────────────────────────────────────────
 
 export function useRuns() {

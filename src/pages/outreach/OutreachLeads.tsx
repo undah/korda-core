@@ -1,6 +1,8 @@
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -9,13 +11,17 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  useAddSuppression, useLeads, useNiches,
+  useAddSuppression, useBulkSuppress, useBulkUpdateContacts, useLeads, useNiches,
 } from '@/features/outreach/hooks/useOutreach';
 import {
   ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, PageHeader, SourceBadge,
 } from '@/features/outreach/components/indicators';
+import { EditLeadDialog } from '@/features/outreach/components/EditLeadDialog';
+import { DeleteLeadsDialog } from '@/features/outreach/components/DeleteLeadsDialog';
 import { errorMessage } from '@/features/outreach/errors';
-import { LEADS_PAGE_SIZE, type EmailStatus, type LeadsFilter } from '@/features/outreach/types';
+import {
+  LEADS_PAGE_SIZE, type EmailStatus, type LeadsFilter, type OutreachReadyRow,
+} from '@/features/outreach/types';
 
 const ANY = '__any__';
 const EMAIL_STATUSES: EmailStatus[] = ['verified', 'guessed', 'unverified', 'bounced'];
@@ -32,6 +38,12 @@ export default function OutreachLeads() {
   const [params, setParams] = useSearchParams();
   const { data: niches } = useNiches();
   const suppress = useAddSuppression();
+  const bulkSuppress = useBulkSuppress();
+  const bulkUpdate = useBulkUpdateContacts();
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editing, setEditing] = useState<OutreachReadyRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Filters live in the URL so a filtered view is shareable and survives reload.
   const filter: LeadsFilter = {
@@ -64,7 +76,53 @@ export default function OutreachLeads() {
   const page = filter.page ?? 1;
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / LEADS_PAGE_SIZE));
-  const rows = data?.rows ?? [];
+  const rows = useMemo(() => data?.rows ?? [], [data]);
+
+  // Selection is scoped to what is on screen. Anything filtered or paged away is
+  // dropped, so a bulk delete can never touch a row the user cannot see.
+  const visible = useMemo(() => new Set(rows.map(r => r.contact_id)), [rows]);
+  const selectedIds = useMemo(
+    () => [...selected].filter(id => visible.has(id)),
+    [selected, visible],
+  );
+  const selectedRows = rows.filter(r => selected.has(r.contact_id));
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+
+  const toggleRow = (id: string) =>
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(rows.map(r => r.contact_id)));
+
+  const clearSelection = () => setSelected(new Set());
+
+  const handleBulkSuppress = async () => {
+    try {
+      const added = await bulkSuppress.mutateAsync(selectedRows.map(r => r.email));
+      const skipped = selectedRows.length - added;
+      toast.success(
+        `Suppressed ${added} address${added === 1 ? '' : 'es'}.`,
+        skipped > 0 ? { description: `${skipped} already suppressed.` } : undefined,
+      );
+      clearSelection();
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not suppress those addresses.'));
+    }
+  };
+
+  const handleBulkDnc = async () => {
+    try {
+      await bulkUpdate.mutateAsync({ ids: selectedIds, updates: { do_not_contact: true } });
+      toast.success(`${selectedIds.length} lead${selectedIds.length === 1 ? '' : 's'} marked do-not-contact.`);
+      clearSelection();
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not update those leads.'));
+    }
+  };
 
   return (
     <div>
@@ -137,10 +195,36 @@ export default function OutreachLeads() {
         />
       ) : (
         <>
+          {selectedIds.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/25 bg-primary/[0.07] px-4 py-2.5">
+              <span className="text-sm font-medium">
+                {selectedIds.length} selected
+              </span>
+              <Button variant="ghost" size="sm" onClick={clearSelection}>Clear</Button>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" disabled={bulkSuppress.isPending}
+                  onClick={() => void handleBulkSuppress()}>
+                  Suppress
+                </Button>
+                <Button variant="outline" size="sm" disabled={bulkUpdate.isPending}
+                  onClick={() => void handleBulkDnc()}>
+                  Do not contact
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setDeleting(true)}>
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="o-panel">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-9">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleAll}
+                      aria-label="Select all leads on this page" />
+                  </TableHead>
                   <TableHead>Business</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Email</TableHead>
@@ -153,7 +237,13 @@ export default function OutreachLeads() {
               </TableHeader>
               <TableBody>
                 {rows.map(row => (
-                  <TableRow key={row.contact_id}>
+                  <TableRow key={row.contact_id}
+                    data-state={selected.has(row.contact_id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox checked={selected.has(row.contact_id)}
+                        onCheckedChange={() => toggleRow(row.contact_id)}
+                        aria-label={`Select ${row.business_name}`} />
+                    </TableCell>
                     <TableCell>
                       <Link
                         to={`/outreach/businesses/${row.business_id}`}
@@ -183,7 +273,10 @@ export default function OutreachLeads() {
                     <TableCell className="outreach-mono text-xs text-muted-foreground">
                       {formatDate(row.last_contacted_at)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="sm" onClick={() => setEditing(row)}>
+                        Edit
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -222,6 +315,20 @@ export default function OutreachLeads() {
           )}
         </>
       )}
+
+      <EditLeadDialog
+        lead={editing}
+        open={editing !== null}
+        onOpenChange={open => { if (!open) setEditing(null); }}
+      />
+
+      <DeleteLeadsDialog
+        ids={selectedIds}
+        emails={selectedRows.map(r => r.email)}
+        open={deleting}
+        onOpenChange={setDeleting}
+        onDeleted={clearSelection}
+      />
     </div>
   );
 }
