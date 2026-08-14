@@ -36,6 +36,7 @@ import OutreachNicheForm from "./pages/outreach/OutreachNicheForm";
 import OutreachBusiness from "./pages/outreach/OutreachBusiness";
 import OutreachRuns from "./pages/outreach/OutreachRuns";
 import OutreachSuppression from "./pages/outreach/OutreachSuppression";
+import OutreachSenders from "./pages/outreach/OutreachSenders";
 import OutreachCampaigns from "./pages/outreach/OutreachCampaigns";
 import OutreachCampaign from "./pages/outreach/OutreachCampaign";
 import OutreachCampaignNew from "./pages/outreach/OutreachCampaignNew";
@@ -164,6 +165,7 @@ function AnimatedRoutes() {
               <Route path="/outreach/campaigns/:id" element={<OutreachCampaign />} />
               <Route path="/outreach/templates" element={<OutreachTemplates />} />
               <Route path="/outreach/runs" element={<OutreachRuns />} />
+              <Route path="/outreach/senders" element={<OutreachSenders />} />
               <Route path="/outreach/suppression" element={<OutreachSuppression />} />
             </Route>
           </Route>

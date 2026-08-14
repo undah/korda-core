@@ -17,6 +17,8 @@
  * calls repeatedly until `remaining` is 0.
  */
 
+import { sendMail } from './_providers.js';
+
 const DEFAULT_BATCH = 25;
 
 function sb(env, path, init = {}) {
@@ -86,6 +88,42 @@ export function amsterdamMidnight(now = new Date(), timeZone = TZ) {
  * a day, adding 5 a week, never exceeding the niche's own cap. Unset means the
  * niche cap applies as-is.
  */
+/**
+ * How many a single mailbox may send today.
+ *
+ * Its own cap, ramped if it is still warming. 30-50/day is the accepted safe
+ * band for cold sending per mailbox, and a brand-new mailbox that opens at its
+ * full cap lands in spam: properly warmed accounts see far better inbox
+ * placement than cold-started ones, and the ramp is what earns that.
+ */
+export function identityCapToday(identity, now = Date.now()) {
+  const cap = identity.daily_cap ?? 40;
+  if (!identity.warmup_started_on) return cap;
+
+  const started = Date.parse(identity.warmup_started_on);
+  if (Number.isNaN(started)) return cap;
+
+  const weeks = Math.floor((now - started) / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(cap, 5 + 5 * Math.max(0, weeks));
+}
+
+/**
+ * Pick the mailbox with the most headroom left today.
+ *
+ * Most-headroom rather than round-robin so volume self-levels across a pool
+ * whose members have different caps and warm-up ages, instead of the smallest
+ * mailbox becoming the bottleneck for everyone.
+ */
+export function pickIdentity(identities, sentToday, now = Date.now()) {
+  const usable = identities
+    .filter(i => i.active)
+    .map(i => ({ identity: i, headroom: identityCapToday(i, now) - (sentToday[i.id] ?? 0) }))
+    .filter(x => x.headroom > 0)
+    .sort((a, b) => b.headroom - a.headroom);
+
+  return usable[0]?.identity ?? null;
+}
+
 export function warmupCap(env, nicheCap, now = Date.now()) {
   if (!env.OUTREACH_WARMUP_START) return nicheCap;
   const started = Date.parse(env.OUTREACH_WARMUP_START);
@@ -113,9 +151,12 @@ ${escaped}
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  for (const key of ['RESEND_API_KEY', 'OUTREACH_FROM', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
+  for (const key of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
     if (!env[key]) return Response.json({ error: `${key} not configured` }, { status: 500 });
   }
+  // RESEND_API_KEY / OUTREACH_FROM are only required as the fallback for an
+  // empty identity pool; a pool-only setup supplies its own per-identity
+  // credentials, so demanding them here would break that configuration.
 
   // Only the scheduler may drain the queue. Sending is paced deliberately, and
   // an endpoint anyone could POST to would let a caller bypass that pacing —
@@ -177,6 +218,24 @@ export async function onRequestPost(context) {
       env,
       `sequence_steps?campaign_id=eq.${campaignId}&select=step_number,delay_days&order=step_number.asc`,
     );
+
+    // ── the sending pool ──
+    // An empty pool falls back to the original single-sender env pair, so this
+    // stays a no-op until identities are actually configured.
+    const identities = await sbJson(
+      env, 'sending_identities?select=*&active=is.true&order=created_at.asc',
+    );
+    const since = amsterdamMidnight();
+    const sentToday = {};
+    if (identities.length) {
+      const todaysByIdentity = await sbJson(
+        env,
+        `outreach_messages?status=eq.sent&sent_at=gte.${since}&identity_id=not.is.null&select=identity_id`,
+      );
+      for (const row of todaysByIdentity) {
+        sentToday[row.identity_id] = (sentToday[row.identity_id] ?? 0) + 1;
+      }
+    }
 
     // Suppression list is small; pull it once for the batch.
     const suppressed = await sbJson(env, 'suppression_list?select=email,domain');
@@ -277,7 +336,6 @@ export async function onRequestPost(context) {
       const nicheId = msg.niche_id ?? contact.businesses?.niche_id ?? null;
       const cap = warmupCap(env, contact.businesses?.niches?.send_cap_per_day ?? null);
       if (cap !== null && nicheId) {
-        const since = amsterdamMidnight();
         const todays = await sbJson(
           env,
           `outreach_messages?status=eq.sent&niche_id=eq.${nicheId}` +
@@ -290,36 +348,65 @@ export async function onRequestPost(context) {
         }
       }
 
-      // ── send ──
-      const unsubUrl = `${origin}/api/outreach/unsubscribe?t=${msg.unsubscribe_token}`;
-      await markMessage(env, msg.id, { status: 'sending' });
+      // ── pick a mailbox ──
+      // Per-mailbox caps are what make volume safe: one domain carries roughly
+      // 100-150/day, so anything beyond that is a pool problem, not a pacing
+      // problem. With no pool configured we fall back to the original single
+      // sender so behaviour is unchanged until identities exist.
+      const identity = identities.length ? pickIdentity(identities, sentToday) : null;
+      if (identities.length && !identity) {
+        // Every mailbox is at its ceiling. Leave the message queued — the next
+        // tick, or tomorrow, will have headroom.
+        break;
+      }
 
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: env.OUTREACH_FROM,
-          to: [msg.to_email],
-          subject: msg.subject,
-          text: `${msg.body}\n\n—\nDon't want to hear from me again? Unsubscribe: ${unsubUrl}`,
-          html: toHtml(msg.body, unsubUrl),
-          headers: { 'List-Unsubscribe': `<${unsubUrl}>` },
-        }),
-      });
+      const provider = identity?.provider ?? 'resend';
+      const credential = identity
+        ? env[identity.credential_key]
+        : env.RESEND_API_KEY;
+      const fromEmail = identity?.from_email ?? env.OUTREACH_FROM;
 
-      if (!res.ok) {
-        const detail = await res.text().catch(() => '');
-        await markMessage(env, msg.id, { status: 'failed', error: `Resend ${res.status}: ${detail}`.slice(0, 500) });
+      if (!credential) {
+        await markMessage(env, msg.id, {
+          status: 'failed',
+          error: `No credential in env "${identity?.credential_key ?? 'RESEND_API_KEY'}"`,
+        });
         failed++;
         continue;
       }
 
-      const data = await res.json().catch(() => ({}));
+      // ── send ──
+      const unsubUrl = `${origin}/api/outreach/unsubscribe?t=${msg.unsubscribe_token}`;
+      await markMessage(env, msg.id, { status: 'sending' });
+
+      let result;
+      try {
+        result = await sendMail(provider, {
+          from: fromEmail,
+          fromName: identity?.from_name ?? null,
+          to: msg.to_email,
+          replyTo: identity?.reply_to ?? null,
+          subject: msg.subject,
+          text: `${msg.body}\n\n—\nDon't want to hear from me again? Unsubscribe: ${unsubUrl}`,
+          html: toHtml(msg.body, unsubUrl),
+          headers: { 'List-Unsubscribe': `<${unsubUrl}>` },
+        }, credential, env);
+      } catch (e) {
+        await markMessage(env, msg.id, {
+          status: 'failed',
+          error: (e?.message ?? 'Send failed').slice(0, 500),
+        });
+        failed++;
+        continue;
+      }
+
       const now = new Date().toISOString();
-      await markMessage(env, msg.id, { status: 'sent', sent_at: now, provider_message_id: data.id ?? null });
+      await markMessage(env, msg.id, {
+        status: 'sent',
+        sent_at: now,
+        provider_message_id: result.id ?? null,
+        identity_id: identity?.id ?? null,
+      });
       await sb(env, 'outreach_events', {
         method: 'POST',
         headers: { Prefer: 'return=minimal' },
@@ -327,10 +414,11 @@ export async function onRequestPost(context) {
           contact_id: msg.contact_id,
           campaign: campaignId,
           event_type: 'sent',
-          meta: { provider_message_id: data.id ?? null },
+          meta: { provider_message_id: result.id ?? null, identity: identity?.label ?? null },
         }),
       });
       sentAddresses.add(email);
+      if (identity) sentToday[identity.id] = (sentToday[identity.id] ?? 0) + 1;
       sent++;
 
       // ── activate the next step ──

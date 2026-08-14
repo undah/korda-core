@@ -179,6 +179,32 @@ export interface OutreachMessage {
   created_at: string;
 }
 
+/**
+ * One mailbox in the sending pool.
+ *
+ * `credential_key` names an environment variable on the host — it is never the
+ * credential itself, which is why this table is safe to read from the browser.
+ */
+export interface SendingIdentity {
+  id: string;
+  label: string;
+  from_email: string;
+  from_name: string | null;
+  reply_to: string | null;
+  provider: string;
+  credential_key: string;
+  daily_cap: number;
+  /** Null means no ramp — only for a mailbox with existing reputation. */
+  warmup_started_on: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SendingIdentityDraft = Omit<
+  SendingIdentity, 'id' | 'created_at' | 'updated_at'
+>;
+
 /** What /api/outreach/send reports back per batch. */
 export interface SendResult {
   sent: number;
