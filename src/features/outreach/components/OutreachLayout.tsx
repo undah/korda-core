@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Layers, Send, History, Ban, AtSign, LogOut, Menu, X } from 'lucide-react';
+import { Users, Layers, Send, History, Ban, AtSign, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: '/outreach/runs',        label: 'Runs',        icon: History, match: ['/outreach/runs'] },
   { path: '/outreach/senders',     label: 'Senders',     icon: AtSign,  match: ['/outreach/senders'] },
   { path: '/outreach/suppression', label: 'Suppression', icon: Ban,     match: ['/outreach/suppression'] },
+  { path: '/outreach/settings',    label: 'Settings',    icon: Settings, match: ['/outreach/settings'] },
 ];
 
 const OUTREACH_CSS = `

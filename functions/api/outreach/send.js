@@ -1,7 +1,14 @@
 /**
- * POST /api/outreach/send  { campaignId, limit? }
+ * POST /api/outreach/send  { campaignId, limit? } | { messageIds: [...] }
  *
- * Drains queued messages for a campaign and sends them through Resend.
+ * Two ways in, one guard loop. `campaignId` drains whatever is due for a
+ * scheduled/paced campaign (the scheduler's normal call). `messageIds` sends
+ * specific queued messages immediately, ignoring `scheduled_at` — this is how
+ * an individual send from a lead's page goes out the moment the user clicks
+ * Send, rather than waiting for the next scheduler tick. Every safety check
+ * below still applies to both: an individual send is still one contact, so it
+ * still has to pass suppression, do-not-contact, and the rest.
+ *
  * Runs server-side so the Resend key and the Supabase service-role key never
  * reach the browser.
  *
@@ -14,7 +21,8 @@
  * Anything failing a check is marked `skipped` with a reason, never sent.
  *
  * Sends a small batch per invocation (CF has a request time limit); the UI
- * calls repeatedly until `remaining` is 0.
+ * calls repeatedly until `remaining` is 0. In `messageIds` mode there is no
+ * polling loop — the caller passes the exact set it wants sent right now.
  */
 
 const DEFAULT_BATCH = 25;
@@ -259,48 +267,72 @@ export async function onRequestPost(context) {
   try { body = await request.json(); }
   catch { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
 
-  const { campaignId, limit } = body;
-  if (!campaignId) return Response.json({ error: 'campaignId is required' }, { status: 400 });
+  let { campaignId } = body;
+  const { limit, messageIds } = body;
+  const isDirect = Array.isArray(messageIds) && messageIds.length > 0;
+  if (!campaignId && !isDirect) {
+    return Response.json({ error: 'campaignId or messageIds is required' }, { status: 400 });
+  }
 
   const batchSize = Math.min(Number(limit) || DEFAULT_BATCH, 50);
   const origin = new URL(request.url).origin;
 
   try {
-    // Only work that is actually due. A null scheduled_at means "a later step
-    // whose turn has not come" — it is activated when the step before it sends.
-    const nowIso = new Date().toISOString();
-    const queued = await sbJson(
-      env,
-      `outreach_messages?campaign_id=eq.${campaignId}&status=eq.queued` +
-        `&scheduled_at=not.is.null&scheduled_at=lte.${nowIso}` +
-        `&select=*&order=scheduled_at.asc&limit=${batchSize}`,
-    );
+    let queued;
 
-    if (!queued.length) {
-      // Nothing due now is not the same as nothing left: a campaign mid-sequence
-      // is waiting, not finished. Only close it when no queued work remains at
-      // all, otherwise it would flip to 'sent' between steps and the scheduler
-      // would stop picking it up.
-      const outstanding = await sbJson(
+    if (isDirect) {
+      // Immediate send of specific messages — no due-date filter, no campaign
+      // draining. IDs are validated as strings and capped, same as batchSize
+      // elsewhere, so a malformed or oversized request can't build an
+      // unbounded `in.(...)` filter.
+      const ids = messageIds.filter(id => typeof id === 'string' && id.length > 0).slice(0, 50);
+      queued = ids.length
+        ? await sbJson(env, `outreach_messages?id=in.(${ids.join(',')})&status=eq.queued&select=*`)
+        : [];
+      // Every id must resolve to a message before campaignId can be trusted —
+      // an empty result could mean "already sent" as easily as "bad ids", so
+      // guessing a campaign from nothing would misattribute the guards below.
+      campaignId = queued[0]?.campaign_id ?? null;
+      if (!campaignId) return Response.json({ sent: 0, skipped: 0, failed: 0, remaining: 0, done: true });
+    } else {
+      // Only work that is actually due. A null scheduled_at means "a later step
+      // whose turn has not come" — it is activated when the step before it sends.
+      const nowIso = new Date().toISOString();
+      queued = await sbJson(
         env,
-        `outreach_messages?campaign_id=eq.${campaignId}&status=eq.queued&select=id&limit=1`,
+        `outreach_messages?campaign_id=eq.${campaignId}&status=eq.queued` +
+          `&scheduled_at=not.is.null&scheduled_at=lte.${nowIso}` +
+          `&select=*&order=scheduled_at.asc&limit=${batchSize}`,
       );
-      if (!outstanding.length) {
-        await sb(env, `campaigns?id=eq.${campaignId}`, {
-          method: 'PATCH',
-          headers: { Prefer: 'return=minimal' },
-          body: JSON.stringify({ status: 'sent' }),
+
+      if (!queued.length) {
+        // Nothing due now is not the same as nothing left: a campaign mid-sequence
+        // is waiting, not finished. Only close it when no queued work remains at
+        // all, otherwise it would flip to 'sent' between steps and the scheduler
+        // would stop picking it up.
+        const outstanding = await sbJson(
+          env,
+          `outreach_messages?campaign_id=eq.${campaignId}&status=eq.queued&select=id&limit=1`,
+        );
+        if (!outstanding.length) {
+          await sb(env, `campaigns?id=eq.${campaignId}`, {
+            method: 'PATCH',
+            headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({ status: 'sent' }),
+          });
+        }
+        return Response.json({
+          sent: 0, skipped: 0, failed: 0,
+          remaining: outstanding.length,
+          done: outstanding.length === 0,
         });
       }
-      return Response.json({
-        sent: 0, skipped: 0, failed: 0,
-        remaining: outstanding.length,
-        done: outstanding.length === 0,
-      });
     }
 
     // Steps for this campaign, pulled once — used to schedule the follow-up
-    // after each successful send.
+    // after each successful send. The Direct sends campaign has none, so this
+    // is an empty array there and no next step ever activates — correct for a
+    // one-off message.
     const steps = await sbJson(
       env,
       `sequence_steps?campaign_id=eq.${campaignId}&select=step_number,delay_days&order=step_number.asc`,
@@ -436,12 +468,34 @@ export async function onRequestPost(context) {
       }
 
       // ── pick a mailbox ──
-      // Per-mailbox caps are what make volume safe: one domain carries roughly
-      // 100-150/day, so anything beyond that is a pool problem, not a pacing
-      // problem. With no pool configured we fall back to the original single
-      // sender so behaviour is unchanged until identities exist.
-      const identity = identities.length ? pickIdentity(identities, sentToday) : null;
-      if (identities.length && !identity) {
+      // A message queued with its own identity_id (an individual send where the
+      // user chose a sender) uses exactly that mailbox — a deliberate choice
+      // should never be silently reassigned. Everything else auto-picks, same
+      // as before. With no pool configured, fall back to the single-sender env
+      // pair so behaviour is unchanged until identities exist.
+      let identity = null;
+      if (msg.identity_id) {
+        identity = identities.find(i => i.id === msg.identity_id) ?? null;
+        if (!identity) {
+          await markMessage(env, msg.id, {
+            status: 'failed', error: 'Chosen sender is no longer active',
+          });
+          failed++;
+          continue;
+        }
+        const headroom = identityCapToday(identity) - (sentToday[identity.id] ?? 0);
+        if (headroom <= 0) {
+          await markMessage(env, msg.id, {
+            status: 'skipped', skip_reason: `chosen sender "${identity.label}" is at its daily cap`,
+          });
+          skipped++;
+          continue;
+        }
+      } else if (identities.length) {
+        identity = pickIdentity(identities, sentToday);
+      }
+
+      if (identities.length && !identity && !msg.identity_id) {
         // Every mailbox is at its ceiling. Leave the message queued — the next
         // tick, or tomorrow, will have headroom.
         break;
@@ -525,6 +579,15 @@ export async function onRequestPost(context) {
           },
         );
       }
+    }
+
+    if (isDirect) {
+      // No draining concept in this mode — the caller asked for exactly these
+      // messages, and they're now sent/skipped/failed. Leaving campaign status
+      // alone also keeps the Direct sends campaign from flapping between
+      // 'sending' and 'sent' as one-off messages complete; nothing reads its
+      // status the way the scheduler reads a real campaign's.
+      return Response.json({ sent, skipped, failed, remaining: 0, done: true });
     }
 
     const stillQueued = await sbJson(

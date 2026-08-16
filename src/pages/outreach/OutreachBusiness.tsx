@@ -1,18 +1,34 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
   useAddSuppression, useBusiness, useBusinessContacts, useDeleteContact, useUpdateContact,
 } from '@/features/outreach/hooks/useOutreach';
+import { renderTemplate, useTemplates } from '@/features/outreach/hooks/useEmail';
+import { useIdentities } from '@/features/outreach/hooks/useIdentities';
+import {
+  useGeneratePersonalization, useSendDirect, type PersonalizeOutcome,
+} from '@/features/outreach/hooks/usePersonalize';
 import {
   ConfidenceBar, EmailStatusBadge, EmptyState, ErrorState, PageHeader, SourceBadge,
 } from '@/features/outreach/components/indicators';
 import { errorMessage } from '@/features/outreach/errors';
-import type { Contact } from '@/features/outreach/types';
+import { OBJECTIVE_LABELS } from '@/features/outreach/types';
+import type { Contact, Objective, OutreachReadyRow } from '@/features/outreach/types';
+
+const ANY = '__none__';
+const OBJECTIVES = Object.keys(OBJECTIVE_LABELS) as Objective[];
 
 function formatDateTime(value: string | null): string {
   if (!value) return '—';
@@ -27,6 +43,220 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
       <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">{label}</p>
       <div className="mt-0.5 text-sm text-foreground">{children}</div>
     </div>
+  );
+}
+
+/**
+ * Compose and send one email to one lead, outside of a campaign.
+ *
+ * Generation and sending are deliberately separate steps: Generate only ever
+ * fills the subject/body fields, never sends anything, so a bad or declined
+ * generation costs nothing but a re-click. Send always goes through the same
+ * guarded path a campaign uses (see functions/api/outreach/send.js) — an
+ * individual send is still one contact, still subject to suppression,
+ * do-not-contact, and every other check.
+ */
+function ComposePanel({ business, contacts }: {
+  business: { id: string; name: string; niche_id: string | null; site_extract: string | null };
+  contacts: Contact[];
+}) {
+  const { data: templates } = useTemplates();
+  const { data: identities } = useIdentities();
+  const generate = useGeneratePersonalization();
+  const send = useSendDirect();
+
+  const sendable = useMemo(() => contacts.filter(c => c.email), [contacts]);
+
+  const [contactId, setContactId] = useState('');
+  const [objective, setObjective] = useState<Objective>('reply');
+  const [templateId, setTemplateId] = useState(ANY);
+  const [identityId, setIdentityId] = useState(ANY);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [lastOutcome, setLastOutcome] = useState<PersonalizeOutcome | null>(null);
+
+  // Default to the first sendable contact once contacts load, without
+  // clobbering a selection the user already made.
+  useEffect(() => {
+    if (!contactId && sendable.length > 0) setContactId(sendable[0].id);
+  }, [contactId, sendable]);
+
+  const contact = sendable.find(c => c.id === contactId) ?? null;
+  const template = templates?.find(t => t.id === templateId);
+
+  const handleFillTemplate = () => {
+    if (!template || !contact) return;
+    // renderTemplate wants an OutreachReadyRow shape; only the fields it
+    // actually reads matter — the rest are placeholders this component has no
+    // use for. See src/features/outreach/hooks/useEmail.ts.
+    const lead: OutreachReadyRow = {
+      contact_id: contact.id, business_id: business.id, niche: null,
+      business_name: business.name, website: null, domain: null,
+      formatted_address: null, phone: null, rating: null, ratings_total: null,
+      full_name: contact.full_name, role: contact.role, email: contact.email ?? '',
+      email_status: contact.email_status, source: contact.source,
+      source_url: contact.source_url, confidence: contact.confidence,
+      last_contacted_at: null,
+    };
+    setSubject(renderTemplate(template.subject, lead));
+    setBody(renderTemplate(template.body, lead));
+    setLastOutcome(null);
+  };
+
+  const handleGenerate = async () => {
+    if (!contact) return toast.error('Pick a contact first.');
+    try {
+      const outcome = await generate.mutateAsync({
+        contactId: contact.id, objective,
+        templateId: templateId === ANY ? null : templateId,
+      });
+      setLastOutcome(outcome);
+      if (outcome.ok) {
+        setSubject(outcome.subject);
+        setBody(outcome.body);
+        toast.success('Generated.');
+      } else {
+        toast.error(`Claude didn't produce an email: ${outcome.reason}`);
+        // Give the user something to start from rather than an empty form.
+        if (template) handleFillTemplate();
+      }
+    } catch (e) {
+      toast.error(errorMessage(e, 'Generation failed.'));
+    }
+  };
+
+  const handleSend = async () => {
+    if (!contact?.email) return toast.error('That contact has no email address.');
+    if (!subject.trim() || !body.trim()) return toast.error('Write a subject and body first.');
+    try {
+      const result = await send.mutateAsync({
+        contactId: contact.id,
+        nicheId: business.niche_id,
+        toEmail: contact.email,
+        subject: subject.trim(),
+        body: body.trim(),
+        objective,
+        personalized: lastOutcome?.ok === true,
+        personalizationModel: lastOutcome?.ok === true ? lastOutcome.model : null,
+        identityId: identityId === ANY ? null : identityId,
+      });
+      if (result.sent > 0) {
+        toast.success(`Sent to ${contact.email}.`);
+        setSubject(''); setBody(''); setLastOutcome(null);
+      } else {
+        toast.error(
+          result.failed > 0 ? 'Send failed — check the campaign log.' : 'Not sent — a safety check skipped it.',
+        );
+      }
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not send that email.'));
+    }
+  };
+
+  if (sendable.length === 0) {
+    return (
+      <section className="o-panel mt-6 p-4">
+        <h2 className="mb-1 text-sm font-semibold text-foreground">Compose</h2>
+        <p className="text-xs text-muted-foreground">
+          No contact here has an email address to send to.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="o-panel mt-6 space-y-4 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-foreground">Compose</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {business.site_extract
+            ? `Using ${business.site_extract.length.toLocaleString()} characters of site content for personalization.`
+            : "No site content captured for this business yet — Claude will personalize from the business name only. Re-run this niche with website enrichment on for a better result."}
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Contact</Label>
+          <Select value={contactId} onValueChange={setContactId}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {sendable.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.full_name ? `${c.full_name} — ${c.email}` : c.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Objective</Label>
+          <Select value={objective} onValueChange={v => setObjective(v as Objective)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {OBJECTIVES.map(o => <SelectItem key={o} value={o}>{OBJECTIVE_LABELS[o]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Angle (optional template)</Label>
+          <Select value={templateId} onValueChange={setTemplateId}>
+            <SelectTrigger><SelectValue placeholder="None — write from scratch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>None — write from scratch</SelectItem>
+              {(templates ?? []).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Sender</Label>
+          <Select value={identityId} onValueChange={setIdentityId}>
+            <SelectTrigger><SelectValue placeholder="Auto-pick from the pool" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY}>Auto-pick from the pool</SelectItem>
+              {(identities ?? []).filter(i => i.active).map(i => (
+                <SelectItem key={i.id} value={i.id}>{i.label} — {i.from_email}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" disabled={generate.isPending || !contact} onClick={() => void handleGenerate()}>
+          {generate.isPending ? 'Generating…' : 'Generate with Claude'}
+        </Button>
+        {template && (
+          <Button size="sm" variant="outline" onClick={handleFillTemplate}>
+            Fill from template
+          </Button>
+        )}
+        {lastOutcome?.ok && (
+          <span className="o-pill o-pill-verified self-center">
+            personalized · {lastOutcome.model}
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="compose-subject">Subject</Label>
+          <Input id="compose-subject" value={subject} onChange={e => setSubject(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="compose-body">Body</Label>
+          <Textarea id="compose-body" rows={10} className="font-mono text-sm"
+            value={body} onChange={e => setBody(e.target.value)} />
+        </div>
+      </div>
+
+      <Button disabled={send.isPending || !subject.trim() || !body.trim()} onClick={() => void handleSend()}>
+        {send.isPending ? 'Sending…' : `Send to ${contact?.email ?? '…'}`}
+      </Button>
+    </section>
   );
 }
 
@@ -186,6 +416,8 @@ export default function OutreachBusiness() {
           </Table>
         </div>
       )}
+
+      <ComposePanel business={business} contacts={contacts ?? []} />
     </div>
   );
 }

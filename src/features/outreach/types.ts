@@ -43,6 +43,14 @@ export interface Niche {
 /** Fields the UI is allowed to create/update on a niche. */
 export type NicheDraft = Omit<Niche, 'id'>;
 
+/** Cheap structural signals detected while the site was already being fetched. */
+export interface SiteSignals {
+  hasBooking: boolean;
+  hasContactForm: boolean;
+  hasSocialLinks: boolean;
+  sinceYear: number | null;
+}
+
 export interface Business {
   id: string;
   niche_id: string | null;
@@ -61,6 +69,11 @@ export interface Business {
   types: string[];
   last_enriched_at: string | null;
   discovered_at: string;
+  /** Source material for AI personalization — null until a website-enrichment
+   * run has crawled this business since the personalization migration. */
+  site_extract: string | null;
+  site_signals: SiteSignals | null;
+  site_fetched_at: string | null;
 }
 
 export interface Contact {
@@ -125,6 +138,33 @@ export interface OutreachReadyRow {
 export type CampaignStatus = 'draft' | 'sending' | 'sent' | 'paused';
 export type MessageStatus = 'queued' | 'sending' | 'sent' | 'failed' | 'skipped' | 'canceled';
 
+/** What a generated email is trying to do — chosen before generation, not after. */
+export type Objective = 'reply' | 'book_call' | 'sale' | 'warm_up';
+export type PersonalizeMode = 'off' | 'full';
+
+export const OBJECTIVE_LABELS: Record<Objective, string> = {
+  reply: 'Get a reply',
+  book_call: 'Book a call',
+  sale: 'Move toward a sale',
+  warm_up: 'Warm up a cold lead',
+};
+
+/**
+ * What we sell, stated once rather than retyped into every generation. Edited
+ * on the Settings page; read by the pipeline host when it calls Claude.
+ */
+export interface OutreachProfile {
+  id: string;
+  company_name: string;
+  offer: string;
+  proof_points: string;
+  tone: string;
+  language: string;
+  sender_name: string;
+  constraints: string;
+  updated_at: string;
+}
+
 export interface EmailTemplate {
   id: string;
   name: string;
@@ -139,6 +179,9 @@ export interface Campaign {
   name: string;
   template_id: string | null;
   status: CampaignStatus;
+  objective: Objective;
+  objective_notes: string | null;
+  personalize: PersonalizeMode;
   created_at: string;
   updated_at: string;
 }
@@ -177,6 +220,12 @@ export interface OutreachMessage {
   scheduled_at: string | null;
   sent_at: string | null;
   created_at: string;
+  /** Null inherits the campaign's objective — the normal case except for an
+   * individually-sent message, which has no campaign default to fall back to. */
+  objective: Objective | null;
+  personalized: boolean;
+  personalization_error: string | null;
+  personalization_model: string | null;
 }
 
 /**
@@ -223,3 +272,14 @@ export interface LeadsFilter {
 }
 
 export const LEADS_PAGE_SIZE = 50;
+
+/**
+ * At or below this many recipients, a campaign generates every email upfront
+ * so each one can be read and edited before sending. Above it, generation
+ * happens at send time (the scheduler calls Claude just before each message
+ * goes out) and the builder shows one preview instead of the full set —
+ * generating hundreds of emails synchronously in the browser doesn't scale,
+ * and most of that spend would be wasted on recipients later skipped by
+ * suppression or a reply.
+ */
+export const PERSONALIZE_UPFRONT_MAX = 50;

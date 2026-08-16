@@ -5,7 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import type {
-  Campaign, EmailTemplate, OutreachMessage, OutreachReadyRow, SendResult,
+  Campaign, EmailTemplate, Objective, OutreachMessage, OutreachReadyRow, SendResult,
 } from '../types';
 
 // ── merge fields ──────────────────────────────────────────────────────────────
@@ -174,6 +174,35 @@ export function useCampaignMessages(campaignId: string | undefined) {
 }
 
 /**
+ * Edit one still-queued message — reviewing an upfront-generated email before
+ * the campaign starts, or fixing one Claude got wrong. Only meaningful while
+ * `status = 'queued'`: once sending begins the row is history, not a draft.
+ */
+export function useUpdateMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string; campaignId: string;
+      subject: string; body: string;
+      personalized?: boolean;
+      personalizationModel?: string | null;
+    }) => {
+      const patch: Record<string, unknown> = { subject: input.subject, body: input.body };
+      if (input.personalized !== undefined) {
+        patch.personalized = input.personalized;
+        patch.personalization_model = input.personalizationModel ?? null;
+        patch.personalization_error = null;
+      }
+      const { error } = await supabase.from('outreach_messages').update(patch).eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: (_r, input) => {
+      qc.invalidateQueries({ queryKey: ['outreach-campaign-messages', input.campaignId] });
+    },
+  });
+}
+
+/**
  * Create a campaign and queue every step for every selected lead.
  *
  * All steps are rendered and inserted now rather than generated as the sequence
@@ -185,6 +214,11 @@ export function useCampaignMessages(campaignId: string | undefined) {
  * Every message starts with `scheduled_at = null`, meaning "not due". Starting
  * the campaign stamps step 1; each send stamps the step after it. So a draft is
  * inert no matter what else goes wrong.
+ *
+ * Every message also always gets valid rendered-template content, even when
+ * `personalize: 'full'` is requested — that's the fallback a declined or
+ * not-yet-run generation falls back to, at upfront-generation time or at
+ * send time. A campaign is never one failed AI call away from sending nothing.
  */
 export function useCreateCampaign() {
   const qc = useQueryClient();
@@ -193,6 +227,9 @@ export function useCreateCampaign() {
       name: string;
       steps: { template: EmailTemplate; delay_days: number }[];
       recipients: OutreachReadyRow[];
+      objective: Objective;
+      objectiveNotes?: string | null;
+      personalize: 'off' | 'full';
     }): Promise<Campaign> => {
       if (input.steps.length === 0) throw new Error('A campaign needs at least one step.');
 
@@ -200,7 +237,11 @@ export function useCreateCampaign() {
         .from('campaigns')
         // template_id still points at step 1, so anything reading the campaign
         // without knowing about steps keeps working.
-        .insert({ name: input.name, template_id: input.steps[0].template.id, status: 'draft' })
+        .insert({
+          name: input.name, template_id: input.steps[0].template.id, status: 'draft',
+          objective: input.objective, objective_notes: input.objectiveNotes ?? null,
+          personalize: input.personalize,
+        })
         .select().single();
       if (error) throw error;
 

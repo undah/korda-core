@@ -8,27 +8,43 @@ import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useLeads, useNiches } from '@/features/outreach/hooks/useOutreach';
 import {
   dedupeRecipients, renderTemplate, useCreateCampaign, useTemplates,
 } from '@/features/outreach/hooks/useEmail';
 import {
+  useGeneratePersonalization, useUpfrontPersonalize, type PersonalizeOutcome,
+} from '@/features/outreach/hooks/usePersonalize';
+import {
   EmailStatusBadge, EmptyState, ErrorState, PageHeader,
 } from '@/features/outreach/components/indicators';
 import { errorMessage } from '@/features/outreach/errors';
-import type { EmailStatus, SequenceStepDraft } from '@/features/outreach/types';
+import {
+  OBJECTIVE_LABELS, PERSONALIZE_UPFRONT_MAX,
+} from '@/features/outreach/types';
+import type { EmailStatus, Objective, SequenceStepDraft } from '@/features/outreach/types';
 
 const ANY = '__any__';
+const OBJECTIVES = Object.keys(OBJECTIVE_LABELS) as Objective[];
 
 export default function OutreachCampaignNew() {
   const navigate = useNavigate();
   const { data: niches } = useNiches();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
   const createCampaign = useCreateCampaign();
+  const upfrontPersonalize = useUpfrontPersonalize();
+  const generatePreview = useGeneratePersonalization();
 
   const [name, setName] = useState('');
   // Step 1 is the initial mail; its delay is fixed at 0 and ignored on save.
   const [steps, setSteps] = useState<SequenceStepDraft[]>([{ template_id: '', delay_days: 0 }]);
+  const [objective, setObjective] = useState<Objective>('reply');
+  const [objectiveNotes, setObjectiveNotes] = useState('');
+  const [personalize, setPersonalize] = useState<'off' | 'full'>('off');
+  const [aiPreview, setAiPreview] = useState<PersonalizeOutcome | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [niche, setNiche] = useState<string>(ANY);
   const [status, setStatus] = useState<string>(ANY);
   const [minConfidence, setMinConfidence] = useState<string>(ANY);
@@ -76,6 +92,9 @@ export default function OutreachCampaignNew() {
       return next;
     });
 
+  const messageCount = recipients.length * steps.length;
+  const upfrontEligible = personalize === 'full' && recipients.length <= PERSONALIZE_UPFRONT_MAX;
+
   const handleCreate = async () => {
     if (!name.trim()) return toast.error('Give the campaign a name.');
     if (!stepsReady) return toast.error('Every step needs a template.');
@@ -85,18 +104,58 @@ export default function OutreachCampaignNew() {
         name: name.trim(),
         steps: resolvedSteps.map(s => ({ template: s.template!, delay_days: s.delay_days })),
         recipients,
+        objective,
+        objectiveNotes: objectiveNotes.trim() || null,
+        personalize,
       });
-      toast.success(
-        `Queued ${recipients.length * steps.length} message${recipients.length * steps.length === 1 ? '' : 's'}.`,
-        { description: 'Nothing sends until you start the campaign.' },
-      );
+
+      if (upfrontEligible) {
+        toast.success(`Queued ${messageCount} message${messageCount === 1 ? '' : 's'} — personalizing now…`);
+        setProgress({ done: 0, total: messageCount });
+        const result = await upfrontPersonalize.mutateAsync({
+          campaignId: campaign.id,
+          objective,
+          objectiveNotes: objectiveNotes.trim() || null,
+          onProgress: setProgress,
+        });
+        toast.success(
+          `Personalized ${result.personalized} of ${messageCount}.`,
+          result.failed > 0
+            ? { description: `${result.failed} kept the template — read them on the campaign page before starting.` }
+            : undefined,
+        );
+      } else {
+        toast.success(
+          `Queued ${messageCount} message${messageCount === 1 ? '' : 's'}.`,
+          personalize === 'full'
+            ? { description: 'Too many recipients to personalize upfront — Claude writes each one just before it sends.' }
+            : { description: 'Nothing sends until you start the campaign.' },
+        );
+      }
+
       navigate(`/outreach/campaigns/${campaign.id}`);
     } catch (e) {
       toast.error(errorMessage(e, 'Could not create the campaign.'));
     }
   };
 
-  const preview = template && recipients[0] ? {
+  const handlePreviewAi = async () => {
+    if (!recipients[0]) return;
+    try {
+      const outcome = await generatePreview.mutateAsync({
+        contactId: recipients[0].contact_id,
+        objective,
+        objectiveNotes: objectiveNotes.trim() || null,
+        templateId: template?.id ?? null,
+      });
+      setAiPreview(outcome);
+      if (!outcome.ok) toast.error(`Claude didn't produce an email: ${outcome.reason}`);
+    } catch (e) {
+      toast.error(errorMessage(e, 'Preview failed.'));
+    }
+  };
+
+  const templatePreview = template && recipients[0] ? {
     subject: renderTemplate(template.subject, recipients[0]),
     body: renderTemplate(template.body, recipients[0]),
     to: recipients[0].email,
@@ -126,11 +185,44 @@ export default function OutreachCampaignNew() {
                 <Input id="c-name" value={name} placeholder="Kappers Rotterdam — intro"
                   onChange={e => setName(e.target.value)} />
               </div>
+              <div className="space-y-1.5">
+                <Label>Objective</Label>
+                <Select value={objective} onValueChange={v => setObjective(v as Objective)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {OBJECTIVES.map(o => <SelectItem key={o} value={o}>{OBJECTIVE_LABELS[o]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {(!templates || templates.length === 0) && !templatesLoading && (
               <p className="mt-3 text-xs text-muted-foreground">
                 No templates yet — <Link to="/outreach/templates" className="text-primary">create one first</Link>.
               </p>
+            )}
+
+            <div className="mt-4 flex items-start gap-3 border-t border-white/8 pt-4">
+              <Switch checked={personalize === 'full'}
+                onCheckedChange={v => setPersonalize(v ? 'full' : 'off')} />
+              <div>
+                <p className="text-sm">Personalize with Claude</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {recipients.length > PERSONALIZE_UPFRONT_MAX
+                    ? `${recipients.length} recipients — above ${PERSONALIZE_UPFRONT_MAX}, so each email is written just ` +
+                      'before it sends and you\'ll review one sample here rather than every one.'
+                    : 'Writes each email from the lead\'s site content instead of filling in the template below. ' +
+                      'You\'ll read every one before the campaign starts.'}
+                </p>
+              </div>
+            </div>
+
+            {personalize === 'full' && (
+              <div className="mt-3 space-y-1.5">
+                <Label htmlFor="c-notes">Additional guidance (optional)</Label>
+                <Textarea id="c-notes" rows={2} value={objectiveNotes}
+                  onChange={e => setObjectiveNotes(e.target.value)}
+                  placeholder="e.g. mention we're Rotterdam-based, keep it under 80 words" />
+              </div>
             )}
           </div>
 
@@ -295,24 +387,55 @@ export default function OutreachCampaignNew() {
               every check runs again at send time. Each email includes an unsubscribe link.
             </p>
             <Button className="mt-4 w-full"
-              disabled={createCampaign.isPending || !stepsReady || recipients.length === 0}
+              disabled={createCampaign.isPending || upfrontPersonalize.isPending || !stepsReady || recipients.length === 0}
               onClick={() => void handleCreate()}>
               {createCampaign.isPending
                 ? 'Queueing…'
-                : `Queue ${recipients.length * steps.length} message${recipients.length * steps.length === 1 ? '' : 's'}`}
+                : upfrontPersonalize.isPending
+                  ? `Personalizing… ${progress?.done ?? 0}/${progress?.total ?? messageCount}`
+                  : `Queue ${messageCount} message${messageCount === 1 ? '' : 's'}`}
             </Button>
             <p className="mt-2 text-center text-xs text-muted-foreground">
               Queueing does not send. You start the campaign from its own page.
             </p>
           </div>
 
-          {preview && (
+          {personalize === 'full' ? (
+            <div className="o-panel p-5">
+              <div className="mb-1 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">AI preview</h2>
+                <Button size="sm" variant="outline" disabled={generatePreview.isPending || !recipients[0]}
+                  onClick={() => void handlePreviewAi()}>
+                  {generatePreview.isPending ? 'Writing…' : `Preview for ${recipients[0]?.business_name ?? '…'}`}
+                </Button>
+              </div>
+              {!aiPreview ? (
+                <p className="text-xs text-muted-foreground">
+                  See what Claude writes for your first recipient before queueing everyone.
+                </p>
+              ) : aiPreview.ok ? (
+                <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                  <p className="mb-2 text-sm font-medium">{aiPreview.subject}</p>
+                  <p className="whitespace-pre-wrap text-[0.83rem] leading-relaxed text-muted-foreground">
+                    {aiPreview.body}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-destructive">
+                  Claude didn't produce an email: {aiPreview.reason}. The rendered template is used as a
+                  fallback for any lead this happens to.
+                </p>
+              )}
+            </div>
+          ) : templatePreview && (
             <div className="o-panel p-5">
               <h2 className="mb-1 text-sm font-semibold">Preview</h2>
-              <p className="mb-3 text-xs text-muted-foreground">First recipient: {preview.to}</p>
+              <p className="mb-3 text-xs text-muted-foreground">First recipient: {templatePreview.to}</p>
               <div className="rounded-lg border border-white/10 bg-black/20 p-4">
-                <p className="mb-2 text-sm font-medium">{preview.subject}</p>
-                <p className="whitespace-pre-wrap text-[0.83rem] leading-relaxed text-muted-foreground">{preview.body}</p>
+                <p className="mb-2 text-sm font-medium">{templatePreview.subject}</p>
+                <p className="whitespace-pre-wrap text-[0.83rem] leading-relaxed text-muted-foreground">
+                  {templatePreview.body}
+                </p>
               </div>
             </div>
           )}
