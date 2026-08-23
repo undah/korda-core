@@ -233,6 +233,27 @@ export function useSendDirect() {
     mutationFn: async (input: SendDirectInput): Promise<SendDirectResult> => {
       const campaignId = await getOrCreateDirectCampaignId();
 
+      // outreach_messages is unique on (campaign_id, contact_id, step_number),
+      // which is correct for a real campaign — step 1 should never be queued
+      // twice for the same person. Direct sends breaks that assumption: every
+      // one-off shares a single catch-all campaign, so a fixed step_number of 1
+      // would allow exactly one direct email per contact for all time, and a
+      // failed send would permanently block its own retry. Numbering them
+      // sequentially per contact keeps the constraint meaningful (still no
+      // duplicate rows) while letting you mail the same person again later.
+      // Safe against the sequence logic: the Direct sends campaign has no
+      // sequence_steps, so sendBatch never finds a "next step" to activate.
+      const { data: prior, error: priorError } = await supabase
+        .from('outreach_messages')
+        .select('step_number')
+        .eq('campaign_id', campaignId)
+        .eq('contact_id', input.contactId)
+        .order('step_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (priorError) throw priorError;
+      const stepNumber = ((prior as { step_number: number } | null)?.step_number ?? 0) + 1;
+
       const { data: message, error: insertError } = await supabase
         .from('outreach_messages')
         .insert({
@@ -240,7 +261,7 @@ export function useSendDirect() {
           contact_id: input.contactId,
           niche_id: input.nicheId,
           to_email: input.toEmail,
-          step_number: 1,
+          step_number: stepNumber,
           subject: input.subject,
           body: input.body,
           status: 'queued',
