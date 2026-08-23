@@ -28,7 +28,8 @@ import type { SendingIdentity, SendingIdentityDraft } from '@/features/outreach/
  * here: that's what "http" is for, configured entirely by env.
  */
 const PROVIDERS: { value: string; label: string }[] = [
-  { value: 'smtp', label: 'smtp — a real mailbox (Google Workspace, Microsoft 365)' },
+  { value: 'gmail', label: 'gmail — Google Workspace over the Gmail API (recommended)' },
+  { value: 'smtp', label: 'smtp — a real mailbox over SMTP (blocked on some hosts)' },
   { value: 'resend', label: 'resend — Resend API' },
   { value: 'smartlead', label: 'smartlead — Smartlead API' },
   { value: 'http', label: 'http — generic JSON endpoint, configured by env' },
