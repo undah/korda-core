@@ -6,6 +6,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -16,6 +19,20 @@ import {
 import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/components/indicators';
 import { errorMessage } from '@/features/outreach/errors';
 import type { SendingIdentity, SendingIdentityDraft } from '@/features/outreach/types';
+
+/**
+ * The complete set of adapters the sender knows how to call — see sendMail in
+ * korda-outreach/src/send.ts. This was a free-text field, which meant a typo
+ * ("smpt") saved happily and only surfaced at send time, as a failed message
+ * that had already consumed a queue slot. A new vendor doesn't need a new entry
+ * here: that's what "http" is for, configured entirely by env.
+ */
+const PROVIDERS: { value: string; label: string }[] = [
+  { value: 'smtp', label: 'smtp — a real mailbox (Google Workspace, Microsoft 365)' },
+  { value: 'resend', label: 'resend — Resend API' },
+  { value: 'smartlead', label: 'smartlead — Smartlead API' },
+  { value: 'http', label: 'http — generic JSON endpoint, configured by env' },
+];
 
 const EMPTY: SendingIdentityDraft = {
   label: '', from_email: '', from_name: null, reply_to: null,
@@ -205,9 +222,19 @@ export default function OutreachSenders() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="s-provider">Provider</Label>
-                  <Input id="s-provider" className="outreach-mono" value={editing.provider}
-                    placeholder="resend"
-                    onChange={e => setEditing({ ...editing, provider: e.target.value })} />
+                  <Select value={editing.provider}
+                    onValueChange={v => setEditing({ ...editing, provider: v })}>
+                    <SelectTrigger id="s-provider" className="outreach-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROVIDERS.map(p => (
+                        <SelectItem key={p.value} value={p.value} className="text-xs">
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="s-cred">Credential key</Label>
