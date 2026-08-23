@@ -53,6 +53,12 @@ export default function OutreachSenders() {
     if (!editing) return;
     if (!editing.label.trim()) return toast.error('Give the mailbox a label.');
     if (!editing.from_email.includes('@')) return toast.error('That is not an email address.');
+    // Caught here rather than at send time. smtpConfigFor throws without a host,
+    // and by then the message is queued and marked failed on another screen —
+    // which is a slow way to learn about a field you never filled in.
+    if (editing.provider === 'smtp' && !editing.smtp_host?.trim()) {
+      return toast.error('An SMTP sender needs a host — smtp.gmail.com for Google Workspace.');
+    }
     try {
       await save.mutateAsync(editing);
       toast.success('Sender saved.');
