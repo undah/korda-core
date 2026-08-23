@@ -246,6 +246,12 @@ export interface SendingIdentity {
   /** Null means no ramp — only for a mailbox with existing reputation. */
   warmup_started_on: string | null;
   active: boolean;
+  /** Only used when provider is "smtp" — from_email doubles as the SMTP
+   * username, credential_key still names the env var holding the app password. */
+  smtp_host: string | null;
+  smtp_port: number | null;
+  /** Null defers to "port 465 implies TLS, otherwise STARTTLS". */
+  smtp_secure: boolean | null;
   created_at: string;
   updated_at: string;
 }

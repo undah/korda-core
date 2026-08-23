@@ -21,6 +21,7 @@ const EMPTY: SendingIdentityDraft = {
   label: '', from_email: '', from_name: null, reply_to: null,
   provider: 'resend', credential_key: 'RESEND_API_KEY',
   daily_cap: 40, warmup_started_on: null, active: true,
+  smtp_host: null, smtp_port: null, smtp_secure: null,
 };
 
 export default function OutreachSenders() {
@@ -77,8 +78,8 @@ export default function OutreachSenders() {
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Credentials are not stored here. <span className="outreach-mono">Credential key</span> names
-          an environment variable on Cloudflare Pages; the send function reads the actual key from
-          there, so nothing secret is ever exposed to this page.
+          an environment variable on whichever host actually sends — Cloudflare Pages for Resend,
+          Smartlead and generic HTTP providers, or the pipeline (Railway) for an <span className="outreach-mono">smtp</span> mailbox — so nothing secret is ever exposed to this page.
         </p>
         {rows.length > 0 && (
           <p className="mt-3 text-sm">
@@ -215,6 +216,28 @@ export default function OutreachSenders() {
                     onChange={e => setEditing({ ...editing, credential_key: e.target.value })} />
                 </div>
               </div>
+
+              {editing.provider === 'smtp' && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="s-smtp-host">SMTP host</Label>
+                    <Input id="s-smtp-host" className="outreach-mono" value={editing.smtp_host ?? ''}
+                      placeholder="smtp.gmail.com"
+                      onChange={e => setEditing({ ...editing, smtp_host: e.target.value || null })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="s-smtp-port">SMTP port</Label>
+                    <Input id="s-smtp-port" className="outreach-mono"
+                      value={editing.smtp_port ?? ''} placeholder="587"
+                      onChange={e => setEditing({
+                        ...editing, smtp_port: e.target.value ? Number(e.target.value) || null : null,
+                      })} />
+                    <p className="text-xs text-muted-foreground">
+                      From address is the SMTP username; credential key holds the app password.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
