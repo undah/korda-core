@@ -22,22 +22,13 @@ import type { Campaign, OutreachMessage } from '@/features/outreach/types';
 
 /* Text-grade steps from the shared palette — these render as words, not fills. */
 const INK = { good: '#006300', warn: '#8a5a00', bad: '#b3261e', dim: '#56554f' };
+const ACCENT = '#1b31c4';
 
 function formatTime(value: string | null): string {
   if (!value) return '—';
   return new Date(value).toLocaleString(undefined, {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
   });
-}
-
-/**
- * The outcome that stands for a message: what the sender did, overridden by
- * what the recipient did. A row saying `sent` whose contact then replied is a
- * reply, and that is the only reading anyone cares about.
- */
-function outcomeOf(m: OutreachMessage, insight: CampaignInsight | undefined): string {
-  const evt = m.status === 'sent' ? insight?.outcomes.get(m.contact_id) : undefined;
-  return evt?.type ?? m.status;
 }
 
 const OUTCOME_INK: Record<string, string> = {
@@ -68,6 +59,67 @@ function Stat({ label, value, sub, color }: {
       {sub && <div className="text-[0.68rem] text-muted-foreground">{sub}</div>}
     </div>
   );
+}
+
+/**
+ * One contact's whole conversation, not one email.
+ *
+ * A follow-up is the same conversation as the email it chases, and listing it
+ * as its own row said nothing new while doubling the length of the list — at
+ * 40-50 sends a day with follow-ups on, that is the difference between a
+ * readable page and an unreadable one. The thread is the unit here; the
+ * individual emails live inside it.
+ */
+interface Thread {
+  contactId: string;
+  email: string;
+  messages: OutreachMessage[];
+  /** Most recent activity — what the row leads with. */
+  latest: OutreachMessage;
+  /** The next thing that will actually happen, if anything. */
+  nextQueued: OutreachMessage | null;
+  outcome: string;
+  /** Sort key: when this conversation last did anything, or will next. */
+  at: string;
+}
+
+const stampOf = (m: OutreachMessage) => m.sent_at ?? m.scheduled_at ?? m.created_at;
+
+function buildThreads(rows: OutreachMessage[], insight: CampaignInsight | undefined): Thread[] {
+  const byContact = new Map<string, OutreachMessage[]>();
+  for (const m of rows) {
+    const list = byContact.get(m.contact_id);
+    if (list) list.push(m);
+    else byContact.set(m.contact_id, [m]);
+  }
+
+  return [...byContact.entries()]
+    .map(([contactId, msgs]) => {
+      const messages = [...msgs].sort((a, b) => (a.step_number ?? 0) - (b.step_number ?? 0));
+      const sentOrDone = messages.filter(m => m.status !== 'queued');
+      const latest = sentOrDone.length
+        ? sentOrDone[sentOrDone.length - 1]
+        : messages[messages.length - 1];
+      const nextQueued = messages.find(m => m.status === 'queued') ?? null;
+
+      // The contact's outcome wins over any single message's status: someone who
+      // replied is replied, whichever email they were answering.
+      const evt = insight?.outcomes.get(contactId);
+      const outcome = evt && sentOrDone.some(m => m.status === 'sent')
+        ? evt.type
+        : latest.status;
+
+      return {
+        contactId,
+        email: latest.to_email,
+        messages,
+        latest,
+        nextQueued,
+        outcome,
+        at: stampOf(latest),
+      };
+    })
+    .sort((a, b) => b.at.localeCompare(a.at));
 }
 
 /**
@@ -104,40 +156,43 @@ function stepBreakdown(rows: OutreachMessage[], insight: CampaignInsight | undef
 }
 
 /**
- * Read and, while still queued, edit or regenerate one message. This is the
- * "read every one before it sends" half of upfront generation — Generate never
- * sends anything by itself, so a bad email here costs a re-click, not a send.
+ * The conversation, and — where one is still queued — the ability to edit it
+ * before it goes.
  *
- * A sent message is deliberately thin here: its full history lives on the
- * Messages page, and duplicating that was the previous version's whole problem.
+ * Sent emails are summarised rather than reproduced: their body and full event
+ * history are on the Messages page, and duplicating that here was this
+ * dialog's original problem.
  */
-function MessageDialog({ message, campaign, insight, open, onOpenChange }: {
-  message: OutreachMessage | null;
+function ThreadDialog({ thread, campaign, insight, onClose }: {
+  thread: Thread;
   campaign: Campaign;
   insight: CampaignInsight | undefined;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
 }) {
   const update = useUpdateMessage();
   const generate = useGeneratePersonalization();
+  const editing = thread.nextQueued;
 
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
 
   useEffect(() => {
-    if (message) { setSubject(message.subject); setBody(message.body); }
-  }, [message]);
+    if (editing) { setSubject(editing.subject); setBody(editing.body); }
+  }, [editing]);
 
-  const editable = message?.status === 'queued';
-  const outcome = message ? outcomeOf(message, insight) : null;
-  const evt = message ? insight?.outcomes.get(message.contact_id) : undefined;
+  const evt = insight?.outcomes.get(thread.contactId);
 
   const handleRegenerate = async () => {
-    if (!message) return;
+    if (!editing) return;
     try {
       const result = await generate.mutateAsync({
-        contactId: message.contact_id,
-        objective: message.objective ?? campaign.objective,
+        contactId: thread.contactId,
+        objective: editing.objective ?? campaign.objective,
+        objectiveNotes: (editing.step_number ?? 1) > 1
+          ? 'This is a short follow-up to an earlier email that went unanswered. ' +
+            'Reference briefly that you wrote before, do not repeat the original pitch, ' +
+            'and keep it to two or three sentences.'
+          : null,
       });
       if (result.ok) {
         setSubject(result.subject);
@@ -152,103 +207,101 @@ function MessageDialog({ message, campaign, insight, open, onOpenChange }: {
   };
 
   const handleSave = async () => {
-    if (!message) return;
+    if (!editing) return;
     try {
       await update.mutateAsync({
-        id: message.id, campaignId: message.campaign_id, subject, body,
-        // Editing by hand after an AI draft is still your personalized email;
-        // editing a plain template does not retroactively make it one.
-        personalized: message.personalized || undefined,
+        id: editing.id, campaignId: editing.campaign_id, subject, body,
+        personalized: editing.personalized || undefined,
       });
       toast.success('Saved.');
-      onOpenChange(false);
+      onClose();
     } catch (e) {
       toast.error(errorMessage(e, 'Could not save that message.'));
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editable ? 'Edit message' : 'Message'}</DialogTitle>
-          <DialogDescription>{message?.to_email}</DialogDescription>
+          <DialogTitle>{thread.email}</DialogTitle>
+          <DialogDescription>
+            {thread.messages.length} email{thread.messages.length === 1 ? '' : 's'} in this conversation
+          </DialogDescription>
         </DialogHeader>
 
-        {message && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {outcome && <OutcomePill value={outcome} />}
-              {evt && (
-                <span className="text-[0.7rem] text-muted-foreground">
-                  {evt.type} {formatTime(evt.at)}
-                </span>
-              )}
-            </div>
-
-            {editable ? (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="m-subject">Subject</Label>
-                  <Input id="m-subject" value={subject} onChange={e => setSubject(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="m-body">Body</Label>
-                  <Textarea id="m-body" rows={10} className="font-mono text-sm"
-                    value={body} onChange={e => setBody(e.target.value)} />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="grid gap-x-6 gap-y-1.5 text-xs sm:grid-cols-2">
-                  {[
-                    ['Sent', formatTime(message.sent_at)],
-                    ['Step', String(message.step_number ?? 1)],
-                    ['Written by', message.personalized ? 'Claude' : 'template'],
-                    ['Subject', message.subject],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-3 border-b pb-1">
-                      <span className="outreach-mono text-[0.62rem] uppercase tracking-wider text-muted-foreground">
-                        {k}
-                      </span>
-                      <span className="truncate text-right">{v}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[0.7rem] text-muted-foreground">
-                  The body as sent, and everything recorded for this contact, are on the
-                  Messages page.
-                </p>
-                <Link to="/outreach/messages" className="text-xs" style={{ color: '#1b31c4' }}>
-                  Open Messages →
-                </Link>
-              </>
-            )}
-
-            {(message.error || message.skip_reason) && (
-              <p className="text-xs" style={{ color: INK.bad }}>
-                {message.error ?? message.skip_reason}
-              </p>
-            )}
-            {message.personalization_error && (
-              <p className="text-xs text-muted-foreground">
-                Generation didn't produce an email for this lead ({message.personalization_error}) —
-                the rendered template was used instead.
-              </p>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <OutcomePill value={thread.outcome} />
+            {evt && (
+              <span className="text-[0.7rem] text-muted-foreground">
+                {evt.type} {formatTime(evt.at)}
+              </span>
             )}
           </div>
-        )}
+
+          {/* The conversation in order. One line each — enough to see what has
+              been said and what is still coming, without reprinting it. */}
+          <div className="space-y-1.5">
+            {thread.messages.map(m => (
+              <div key={m.id}
+                className="flex items-center gap-2 border-b border-[var(--o-hairline-2)] pb-1.5 text-xs">
+                <span className="outreach-mono w-5 shrink-0 text-muted-foreground">
+                  {m.step_number ?? 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{m.subject}</span>
+                {m.personalized && (
+                  <span className="outreach-mono shrink-0 text-[0.6rem]" style={{ color: ACCENT }}>ai</span>
+                )}
+                <span className="outreach-mono shrink-0 text-[0.65rem]"
+                  style={{ color: OUTCOME_INK[m.status] ?? INK.dim }}>
+                  {m.status}
+                </span>
+                <span className="outreach-mono shrink-0 text-[0.65rem] text-muted-foreground">
+                  {m.sent_at ? formatTime(m.sent_at) : m.scheduled_at ? `due ${formatTime(m.scheduled_at)}` : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {(thread.latest.error || thread.latest.skip_reason) && (
+            <p className="text-xs" style={{ color: INK.bad }}>
+              {thread.latest.error ?? thread.latest.skip_reason}
+            </p>
+          )}
+
+          {editing ? (
+            <div className="space-y-3 rounded border p-3">
+              <div className="outreach-mono text-[0.62rem] uppercase tracking-wider text-muted-foreground">
+                Still queued — editable until it sends
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-subject">Subject</Label>
+                <Input id="m-subject" value={subject} onChange={e => setSubject(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-body">Body</Label>
+                <Textarea id="m-body" rows={8} className="font-mono text-sm"
+                  value={body} onChange={e => setBody(e.target.value)} />
+              </div>
+            </div>
+          ) : (
+            <Link to="/outreach/messages" className="text-xs" style={{ color: ACCENT }}>
+              Read the bodies as sent in Messages →
+            </Link>
+          )}
+        </div>
 
         <DialogFooter className="sm:justify-between">
-          {editable ? (
+          {editing ? (
             <Button variant="outline" size="sm" disabled={generate.isPending}
               onClick={() => void handleRegenerate()}>
               {generate.isPending ? 'Generating…' : 'Regenerate with Claude'}
             </Button>
           ) : <span />}
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
-            {editable && (
+            <Button variant="ghost" onClick={onClose}>Close</Button>
+            {editing && (
               <Button disabled={update.isPending} onClick={() => void handleSave()}>
                 {update.isPending ? 'Saving…' : 'Save'}
               </Button>
@@ -266,14 +319,13 @@ export default function OutreachCampaign() {
   const { data: messages } = useCampaignMessages(id);
   const { data: insight } = useCampaignInsight(id);
   const control = useCampaignControl();
-  const [openMessage, setOpenMessage] = useState<OutreachMessage | null>(null);
+  const [openThread, setOpenThread] = useState<Thread | null>(null);
 
   const rows = messages ?? [];
   const queued = rows.filter(m => m.status === 'queued').length;
   const sent = rows.filter(m => m.status === 'sent').length;
   const failed = rows.filter(m => m.status === 'failed').length;
   const personalized = rows.filter(m => m.personalized).length;
-  const steps = [...new Set(rows.map(m => m.step_number))].sort((a, b) => a - b);
   const running = campaign?.status === 'sending';
 
   // Counted per contact, not per message: someone who got three emails and
@@ -286,21 +338,12 @@ export default function OutreachCampaign() {
   const replyRate = contacted.size > 0 ? replied / contacted.size : 0;
 
   const breakdown = stepBreakdown(rows, insight);
+  const threads = buildThreads(rows, insight);
+  const recent = threads.slice(0, 15);
   const nextDue = rows
     .filter(m => m.status === 'queued' && m.scheduled_at)
     .map(m => m.scheduled_at as string)
     .sort()[0] ?? null;
-
-  // Newest first, and only a window of it. At 40-50/day this campaign reaches
-  // hundreds of rows within a fortnight, and a page that renders all of them is
-  // a worse Messages page — which already paginates, filters and searches.
-  // What belongs here is the shape of the campaign plus enough recent activity
-  // to see it working.
-  const recent = [...rows]
-    .sort((a, b) =>
-      (b.sent_at ?? b.scheduled_at ?? b.created_at)
-        .localeCompare(a.sent_at ?? a.scheduled_at ?? a.created_at))
-    .slice(0, 15);
 
   const handleControl = async (action: 'start' | 'pause') => {
     if (!id) return;
@@ -370,10 +413,10 @@ export default function OutreachCampaign() {
       )}
 
       {/*
-        Only for a real sequence. In the Direct sends bucket step_number is an
-        unbounded per-contact counter, so this table grew a row per number and
-        would reach hundreds at real volume — every one of them reporting a
-        single send. There is no step to compare against there, so the whole
+        Only for a real sequence. In the Direct sends bucket step_number is not a
+        step at all but an unbounded per-contact counter, so this table grew a
+        row per number and would reach hundreds at real volume — each reporting
+        a single send. There is no step to compare against there, so the whole
         comparison is meaningless rather than merely noisy.
       */}
       {insight?.hasSequence && breakdown.length > 1 && (
@@ -385,7 +428,7 @@ export default function OutreachCampaign() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">{insight?.hasSequence ? 'Step' : '#'}</TableHead>
+                <TableHead className="w-16">Step</TableHead>
                 <TableHead className="text-right">Sent</TableHead>
                 <TableHead className="text-right">Queued</TableHead>
                 <TableHead className="text-right">Replied</TableHead>
@@ -416,66 +459,54 @@ export default function OutreachCampaign() {
         <div className="o-panel">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
-              <div className="text-sm">Recent activity</div>
+              <div className="text-sm">Conversations</div>
               <p className="text-xs text-muted-foreground">
-                {rows.length <= recent.length
-                  ? `All ${rows.length} message${rows.length === 1 ? '' : 's'}.`
-                  : `Latest ${recent.length} of ${rows.length}.`}
+                One row per contact — follow-ups are inside, not beside.
+                {threads.length > recent.length && ` Latest ${recent.length} of ${threads.length}.`}
               </p>
             </div>
             <Link to={`/outreach/messages?campaign=${campaign.id}`}
-              className="text-xs whitespace-nowrap" style={{ color: '#1b31c4' }}>
-              View all in Messages →
+              className="text-xs whitespace-nowrap" style={{ color: ACCENT }}>
+              Every email in Messages →
             </Link>
           </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Recipient</TableHead>
-                {insight?.hasSequence && steps.length > 1 && (
-                  <TableHead className="w-14">Step</TableHead>
-                )}
-                <TableHead>Subject</TableHead>
-                {campaign.personalize === 'full' && <TableHead className="w-10" />}
+                <TableHead>Latest</TableHead>
                 <TableHead>Outcome</TableHead>
-                <TableHead>Due / sent</TableHead>
+                <TableHead>Next / last</TableHead>
                 <TableHead>Detail</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recent.map(m => (
-                <TableRow key={m.id} className="cursor-pointer" onClick={() => setOpenMessage(m)}>
-                  <TableCell className="text-sm">{m.to_email}</TableCell>
-                  {insight?.hasSequence && steps.length > 1 && (
-                    <TableCell className="o-num text-xs text-muted-foreground">{m.step_number}</TableCell>
-                  )}
+              {recent.map(t => (
+                <TableRow key={t.contactId} className="cursor-pointer" onClick={() => setOpenThread(t)}>
+                  <TableCell>
+                    <div className="text-sm">{t.email}</div>
+                    {t.messages.length > 1 && (
+                      <div className="outreach-mono text-[0.65rem] text-muted-foreground">
+                        {t.messages.length} emails
+                        {t.nextQueued ? ' · 1 queued' : ''}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground">
-                    {m.subject}
+                    {t.latest.subject}
                   </TableCell>
-                  {campaign.personalize === 'full' && (
-                    <TableCell>
-                      <span
-                        className={`o-pill ${m.personalized ? 'o-pill-verified' : 'o-pill-neutral'}`}
-                        title={m.personalization_error ?? undefined}
-                      >
-                        {m.personalized ? 'AI' : 'template'}
-                      </span>
-                    </TableCell>
-                  )}
-                  <TableCell><OutcomePill value={outcomeOf(m, insight)} /></TableCell>
+                  <TableCell><OutcomePill value={t.outcome} /></TableCell>
                   <TableCell className="o-num text-xs text-muted-foreground">
-                    {/* Once sent that time is the fact; before then, when it comes
-                        due is what the user actually wants to know. */}
-                    {m.sent_at
-                      ? formatTime(m.sent_at)
-                      : m.scheduled_at
-                        ? `due ${formatTime(m.scheduled_at)}`
-                        : m.status === 'queued' ? 'waiting' : '—'}
+                    {/* What happens next beats what happened last: a queued
+                        follow-up is the actionable fact about this conversation. */}
+                    {t.nextQueued?.scheduled_at
+                      ? `due ${formatTime(t.nextQueued.scheduled_at)}`
+                      : t.latest.sent_at
+                        ? formatTime(t.latest.sent_at)
+                        : t.nextQueued ? 'waiting' : '—'}
                   </TableCell>
-                  <TableCell className="max-w-[260px] text-xs text-muted-foreground">
-                    {/* Skip reasons and provider errors are the whole point of this
-                        view when something didn't land — show them in full. */}
-                    {m.skip_reason ?? m.error ?? '—'}
+                  <TableCell className="max-w-[240px] text-xs text-muted-foreground">
+                    {t.latest.skip_reason ?? t.latest.error ?? '—'}
                   </TableCell>
                 </TableRow>
               ))}
@@ -484,13 +515,14 @@ export default function OutreachCampaign() {
         </div>
       )}
 
-      <MessageDialog
-        message={openMessage}
-        campaign={campaign}
-        insight={insight}
-        open={openMessage !== null}
-        onOpenChange={open => { if (!open) setOpenMessage(null); }}
-      />
+      {openThread && (
+        <ThreadDialog
+          thread={openThread}
+          campaign={campaign}
+          insight={insight}
+          onClose={() => setOpenThread(null)}
+        />
+      )}
     </div>
   );
 }
