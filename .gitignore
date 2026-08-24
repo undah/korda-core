@@ -50,3 +50,7 @@ Thumbs.db
 
 # Railway bot session (contains TradingView credentials)
 railway-bot/tv_session.json
+
+# Playwright screenshot sweep (scripts/shoot.mjs)
+screenshots/
+.playwright-session.json

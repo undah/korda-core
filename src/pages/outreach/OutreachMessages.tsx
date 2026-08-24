@@ -235,7 +235,7 @@ export default function OutreachMessages() {
                   <TableHead>Subject</TableHead>
                   <TableHead>Campaign</TableHead>
                   <TableHead>Outcome</TableHead>
-                  <TableHead>Sent</TableHead>
+                  <TableHead>Sent / due</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -256,7 +256,14 @@ export default function OutreachMessages() {
                     <TableCell className="text-xs text-muted-foreground">{m.campaignName}</TableCell>
                     <TableCell><OutcomePill outcome={m.outcome} /></TableCell>
                     <TableCell className="outreach-mono text-[0.7rem] text-muted-foreground">
-                      {when(m.sent_at ?? m.scheduled_at)}
+                      {/* A queued message carries a future scheduled_at. Printing
+                          it bare under a "Sent" heading read as though a message
+                          had been sent on a date that has not happened yet. */}
+                      {m.sent_at
+                        ? when(m.sent_at)
+                        : m.scheduled_at
+                          ? `due ${when(m.scheduled_at)}`
+                          : '—'}
                     </TableCell>
                   </TableRow>
                 ))}
