@@ -16,6 +16,12 @@ const PROVIDER_LABEL: Record<string, string> = {
   hunter: 'Hunter.io',
   anthropic: 'Claude (personalization)',
   google_places: 'Google Places',
+  kvk: 'KVK (business register)',
+  gmail: 'Gmail (sending)',
+  resend: 'Resend (sending)',
+  smartlead: 'Smartlead (sending)',
+  smtp: 'SMTP (sending)',
+  http: 'HTTP provider (sending)',
 };
 
 /**
@@ -28,7 +34,16 @@ const PROVIDER_NOTE: Record<string, string> = {
   hunter: 'Metered — one credit per domain searched, found or not.',
   anthropic: 'Billed per token. Cost is estimated from list prices.',
   google_places: 'Billed per request, including paged continuations.',
+  kvk: 'Contract-priced. Two calls per business: a name search, then a profile.',
+  gmail: 'Free with the Workspace seat, but capped at 2,000/day per sender.',
+  resend: 'Billed per email.',
+  smartlead: 'Billed per email on your Smartlead plan.',
+  smtp: 'Cost depends on the mailbox provider.',
+  http: 'Cost depends on the configured vendor.',
 };
+
+/** Providers whose count is a quota reading rather than a bill. */
+const QUOTA_NOT_COST = new Set(['gmail']);
 
 const money = (n: number) => (n < 0.01 && n > 0 ? '<$0.01' : `$${n.toFixed(2)}`);
 const num = (n: number) => n.toLocaleString('en-GB');
@@ -143,9 +158,11 @@ function ProviderCard({ total }: { total: ProviderTotal }) {
         {total.costUnknown ? num(total.calls) : money(total.cost)}
       </div>
       <div className="mt-1 text-[0.7rem] text-muted-foreground">
-        {total.costUnknown
-          ? `${num(total.calls)} calls · no rate configured`
-          : `${num(total.calls)} calls`}
+        {QUOTA_NOT_COST.has(total.provider)
+          ? `${num(total.calls)} sent · no per-message charge`
+          : total.costUnknown
+            ? `${num(total.calls)} calls · no rate configured`
+            : `${num(total.calls)} calls`}
       </div>
       {total.inputTokens > 0 && (
         <div className="mt-1 text-[0.7rem] text-muted-foreground">
