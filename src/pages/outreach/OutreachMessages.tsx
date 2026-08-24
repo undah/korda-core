@@ -259,13 +259,14 @@ export default function OutreachMessages() {
         </>
       )}
 
-      <p className="mt-6 max-w-2xl text-[0.7rem] leading-relaxed text-muted-foreground">
-        Opens are not tracked, on purpose. A tracking pixel needs consent under ePrivacy
-        Art. 5(3) — legitimate interest, which the rest of this system runs on, is not
-        available for it — and Apple Mail preloads images anyway, so the number would be
-        mostly noise. Replies are the metric that pays.
-      </p>
-
+      {/*
+        No opens column, and that is deliberate rather than missing. A tracking
+        pixel needs consent under ePrivacy Art. 5(3) — legitimate interest, which
+        the rest of this system relies on, is not available for it — Apple Mail
+        preloads images so the number would be mostly noise, and a remote 1x1 is
+        a spam signal on a young domain. Decided with the user; don't add one
+        back without revisiting all three.
+      */}
       {open && <MessageDetail message={open} onClose={() => setOpen(null)} />}
     </div>
   );
