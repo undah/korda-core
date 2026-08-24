@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -150,18 +151,23 @@ function MessageDetail({ message, onClose }: { message: MessageRow; onClose: () 
 }
 
 export default function OutreachMessages() {
+  // Deep-linked from a campaign page, which shows only recent activity and
+  // sends you here for the full history rather than duplicating this view.
+  const [params, setParams] = useSearchParams();
+  const campaignId = params.get('campaign') ?? undefined;
   const [tab, setTab] = useState<Outcome | 'all'>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState<MessageRow | null>(null);
 
   const { data, isLoading, error } = useMessages({
-    outcome: tab, search: search.trim() || undefined, page,
+    outcome: tab, search: search.trim() || undefined, page, campaignId,
   });
 
   if (error) return <ErrorState error={error} />;
 
   const rows = data?.rows ?? [];
+  const campaignName = campaignId ? rows[0]?.campaignName : undefined;
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / MESSAGES_PAGE_SIZE));
 
@@ -174,6 +180,19 @@ export default function OutreachMessages() {
         title="Messages"
         sub="Every email the system has queued or sent, and what became of it."
       />
+
+      {campaignId && (
+        <div className="o-panel mb-4 flex items-center justify-between p-3">
+          <span className="text-xs text-muted-foreground">
+            Filtered to one campaign{campaignName ? ` — ${campaignName}` : ''}
+          </span>
+          <button className="text-xs"
+            style={{ color: '#1b31c4', background: 'none', border: 'none', cursor: 'pointer' }}
+            onClick={() => { setParams({}); setPage(1); }}>
+            Show all campaigns
+          </button>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div style={{ display: 'flex', border: '1px solid var(--o-hairline)', borderRadius: 3, overflow: 'hidden' }}>

@@ -291,6 +291,17 @@ export default function OutreachCampaign() {
     .map(m => m.scheduled_at as string)
     .sort()[0] ?? null;
 
+  // Newest first, and only a window of it. At 40-50/day this campaign reaches
+  // hundreds of rows within a fortnight, and a page that renders all of them is
+  // a worse Messages page — which already paginates, filters and searches.
+  // What belongs here is the shape of the campaign plus enough recent activity
+  // to see it working.
+  const recent = [...rows]
+    .sort((a, b) =>
+      (b.sent_at ?? b.scheduled_at ?? b.created_at)
+        .localeCompare(a.sent_at ?? a.scheduled_at ?? a.created_at))
+    .slice(0, 15);
+
   const handleControl = async (action: 'start' | 'pause') => {
     if (!id) return;
     try {
@@ -358,13 +369,18 @@ export default function OutreachCampaign() {
         </div>
       )}
 
-      {breakdown.length > 1 && (
+      {/*
+        Only for a real sequence. In the Direct sends bucket step_number is an
+        unbounded per-contact counter, so this table grew a row per number and
+        would reach hundreds at real volume — every one of them reporting a
+        single send. There is no step to compare against there, so the whole
+        comparison is meaningless rather than merely noisy.
+      */}
+      {insight?.hasSequence && breakdown.length > 1 && (
         <div className="o-panel mb-4 p-4">
-          <div className="mb-1 text-sm">{insight?.hasSequence ? 'By step' : 'By message number'}</div>
+          <div className="mb-1 text-sm">By step</div>
           <p className="mb-3 text-xs text-muted-foreground">
-            {insight?.hasSequence
-              ? 'A reply is credited to the last step that reached the contact before they answered.'
-              : 'Not sequence steps — this campaign holds one-off sends, so the number is simply the nth email to that contact.'}
+            A reply is credited to the last step that reached the contact before they answered.
           </p>
           <Table>
             <TableHeader>
@@ -398,12 +414,26 @@ export default function OutreachCampaign() {
         <EmptyState title="No messages in this campaign." />
       ) : (
         <div className="o-panel">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <div>
+              <div className="text-sm">Recent activity</div>
+              <p className="text-xs text-muted-foreground">
+                {rows.length <= recent.length
+                  ? `All ${rows.length} message${rows.length === 1 ? '' : 's'}.`
+                  : `Latest ${recent.length} of ${rows.length}.`}
+              </p>
+            </div>
+            <Link to={`/outreach/messages?campaign=${campaign.id}`}
+              className="text-xs whitespace-nowrap" style={{ color: '#1b31c4' }}>
+              View all in Messages →
+            </Link>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Recipient</TableHead>
-                {steps.length > 1 && (
-                  <TableHead className="w-14">{insight?.hasSequence ? 'Step' : '#'}</TableHead>
+                {insight?.hasSequence && steps.length > 1 && (
+                  <TableHead className="w-14">Step</TableHead>
                 )}
                 <TableHead>Subject</TableHead>
                 {campaign.personalize === 'full' && <TableHead className="w-10" />}
@@ -413,10 +443,10 @@ export default function OutreachCampaign() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map(m => (
+              {recent.map(m => (
                 <TableRow key={m.id} className="cursor-pointer" onClick={() => setOpenMessage(m)}>
                   <TableCell className="text-sm">{m.to_email}</TableCell>
-                  {steps.length > 1 && (
+                  {insight?.hasSequence && steps.length > 1 && (
                     <TableCell className="o-num text-xs text-muted-foreground">{m.step_number}</TableCell>
                   )}
                   <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground">
