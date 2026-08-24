@@ -193,9 +193,20 @@ const DIRECT_CAMPAIGN_NAME = 'Direct sends';
  */
 async function getOrCreateDirectCampaignId(): Promise<string> {
   const { data: existing, error: findError } = await supabase
-    .from('campaigns').select('id').eq('name', DIRECT_CAMPAIGN_NAME).limit(1).maybeSingle();
+    .from('campaigns').select('id,status').eq('name', DIRECT_CAMPAIGN_NAME).limit(1).maybeSingle();
   if (findError) throw findError;
-  if (existing) return (existing as { id: string }).id;
+  if (existing) {
+    const row = existing as { id: string; status: string };
+    // Reopen it if it has drained. sendBatch marks a campaign `sent` once no
+    // queued work remains, and the scheduler only drains campaigns that are
+    // `sending` — so a direct send with no follow-up closes this campaign, and
+    // a follow-up queued onto it afterwards would never be picked up. Harmless
+    // to set every time: it is the one campaign that is never really finished.
+    if (row.status !== 'sending') {
+      await supabase.from('campaigns').update({ status: 'sending' }).eq('id', row.id);
+    }
+    return row.id;
+  }
 
   const { data: created, error: createError } = await supabase
     .from('campaigns')
@@ -203,6 +214,14 @@ async function getOrCreateDirectCampaignId(): Promise<string> {
     .select('id').single();
   if (createError) throw createError;
   return (created as { id: string }).id;
+}
+
+/** One unanswered-follow-up, queued alongside the first email. */
+export interface FollowUpDraft {
+  /** Days after the first email goes out. */
+  delayDays: number;
+  subject: string;
+  body: string;
 }
 
 export interface SendDirectInput {
@@ -218,6 +237,8 @@ export interface SendDirectInput {
    * exactly — see the "pick a mailbox" guard in functions/api/outreach/send.js,
    * which never silently reassigns a deliberate choice. */
   identityId?: string | null;
+  /** Queued now, cancelled automatically if they reply first. */
+  followUps?: FollowUpDraft[];
 }
 
 export interface SendDirectResult {
@@ -254,25 +275,58 @@ export function useSendDirect() {
       if (priorError) throw priorError;
       const stepNumber = ((prior as { step_number: number } | null)?.step_number ?? 0) + 1;
 
+      const base = {
+        campaign_id: campaignId,
+        contact_id: input.contactId,
+        niche_id: input.nicheId,
+        to_email: input.toEmail,
+        objective: input.objective,
+        identity_id: input.identityId ?? null,
+      };
+
       const { data: message, error: insertError } = await supabase
         .from('outreach_messages')
         .insert({
-          campaign_id: campaignId,
-          contact_id: input.contactId,
-          niche_id: input.nicheId,
-          to_email: input.toEmail,
+          ...base,
           step_number: stepNumber,
           subject: input.subject,
           body: input.body,
           status: 'queued',
           scheduled_at: null,
-          objective: input.objective,
           personalized: input.personalized,
           personalization_model: input.personalizationModel ?? null,
-          identity_id: input.identityId ?? null,
         })
         .select('id').single();
       if (insertError) throw insertError;
+
+      // Follow-ups are queued now with a due date, rather than created later
+      // when the first email goes unanswered — nothing would be watching to
+      // create them. The scheduler drains the Direct sends campaign like any
+      // other, so a message whose scheduled_at has passed simply goes out.
+      //
+      // They are cancelled, not sent, if the prospect answers first: a reply
+      // cancels every queued message for that contact, wherever it sits. That
+      // is the whole reason this is safe to queue upfront.
+      if (input.followUps?.length) {
+        const now = Date.now();
+        const { error: followError } = await supabase.from('outreach_messages').insert(
+          input.followUps.map((f, i) => ({
+            ...base,
+            step_number: stepNumber + 1 + i,
+            subject: f.subject,
+            body: f.body,
+            status: 'queued',
+            scheduled_at: new Date(now + f.delayDays * 86_400_000).toISOString(),
+            personalized: false,
+            personalization_model: null,
+          })),
+        );
+        // A failed follow-up must not lose the first email, which is about to
+        // send and is the part that matters.
+        if (followError) {
+          console.warn('Could not queue follow-ups:', followError.message);
+        }
+      }
 
       const res = await fetch('/api/outreach/send-now', {
         method: 'POST',

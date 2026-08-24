@@ -73,6 +73,12 @@ function ComposePanel({ business, contacts }: {
   const [identityId, setIdentityId] = useState(ANY);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  // A single follow-up rather than a full sequence: two touches covers the
+  // common case, and anything longer is what campaigns are for.
+  const [followUp, setFollowUp] = useState(false);
+  const [followDays, setFollowDays] = useState(3);
+  const [followSubject, setFollowSubject] = useState('');
+  const [followBody, setFollowBody] = useState('');
   const [lastOutcome, setLastOutcome] = useState<PersonalizeOutcome | null>(null);
 
   // Default to the first sendable contact once contacts load, without
@@ -125,6 +131,36 @@ function ComposePanel({ business, contacts }: {
     }
   };
 
+  /**
+   * Write the follow-up. Told explicitly that it is a second touch on an
+   * unanswered email, because without that it produces another opener — the
+   * lead has already read one of those, and repeating it is what makes a
+   * follow-up read as automated.
+   */
+  const handleGenerateFollowUp = async () => {
+    if (!contact) return toast.error('Pick a contact first.');
+    try {
+      const outcome = await generate.mutateAsync({
+        contactId: contact.id,
+        objective,
+        objectiveNotes:
+          'This is a short follow-up to an earlier email that went unanswered. ' +
+          'Reference briefly that you wrote before, do not repeat the original pitch, ' +
+          'and keep it to two or three sentences.',
+        templateId: null,
+      });
+      if (outcome.ok) {
+        setFollowSubject(outcome.subject);
+        setFollowBody(outcome.body);
+        toast.success('Follow-up generated.');
+      } else {
+        toast.error(`Claude didn't produce a follow-up: ${outcome.reason}`);
+      }
+    } catch (e) {
+      toast.error(errorMessage(e, 'Generation failed.'));
+    }
+  };
+
   const handleSend = async () => {
     if (!contact?.email) return toast.error('That contact has no email address.');
     if (!subject.trim() || !body.trim()) return toast.error('Write a subject and body first.');
@@ -139,10 +175,22 @@ function ComposePanel({ business, contacts }: {
         personalized: lastOutcome?.ok === true,
         personalizationModel: lastOutcome?.ok === true ? lastOutcome.model : null,
         identityId: identityId === ANY ? null : identityId,
+        followUps: followUp && followBody.trim()
+          ? [{
+              delayDays: followDays,
+              subject: followSubject.trim() || `Re: ${subject.trim()}`,
+              body: followBody.trim(),
+            }]
+          : undefined,
       });
       if (result.sent > 0) {
-        toast.success(`Sent to ${contact.email}.`);
+        toast.success(
+          followUp && followBody.trim()
+            ? `Sent to ${contact.email}. Follow-up queued for ${followDays} day${followDays === 1 ? '' : 's'} from now.`
+            : `Sent to ${contact.email}.`,
+        );
         setSubject(''); setBody(''); setLastOutcome(null);
+        setFollowUp(false); setFollowSubject(''); setFollowBody('');
       } else {
         toast.error(
           result.failed > 0 ? 'Send failed — check the campaign log.' : 'Not sent — a safety check skipped it.',
@@ -251,6 +299,50 @@ function ComposePanel({ business, contacts }: {
           <Textarea id="compose-body" rows={10} className="font-mono text-sm"
             value={body} onChange={e => setBody(e.target.value)} />
         </div>
+      </div>
+
+      <div className="mt-4 border-t pt-4">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={followUp}
+            onChange={e => {
+              setFollowUp(e.target.checked);
+              // Prefill the subject so the thread reads as one conversation.
+              if (e.target.checked && !followSubject && subject.trim()) {
+                setFollowSubject(`Re: ${subject.trim()}`);
+              }
+            }} />
+          <span className="text-sm">Follow up if they don't reply</span>
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Queued now and sent on schedule. Cancelled automatically the moment they answer.
+        </p>
+
+        {followUp && (
+          <div className="mt-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="follow-days" className="text-xs">Send after</Label>
+              <Input id="follow-days" className="h-8 w-16 text-xs" value={followDays}
+                onChange={e => setFollowDays(Math.max(1, Number(e.target.value) || 1))} />
+              <span className="text-xs text-muted-foreground">days</span>
+              <Button variant="outline" size="sm" className="ml-auto"
+                disabled={generate.isPending || !contact}
+                onClick={() => void handleGenerateFollowUp()}>
+                {generate.isPending ? 'Writing…' : 'Generate with Claude'}
+              </Button>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="follow-subject">Follow-up subject</Label>
+              <Input id="follow-subject" value={followSubject}
+                placeholder={subject.trim() ? `Re: ${subject.trim()}` : 'Re: …'}
+                onChange={e => setFollowSubject(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="follow-body">Follow-up body</Label>
+              <Textarea id="follow-body" rows={5} className="font-mono text-sm"
+                value={followBody} onChange={e => setFollowBody(e.target.value)} />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button disabled={send.isPending || !subject.trim() || !body.trim()} onClick={() => void handleSend()}>
