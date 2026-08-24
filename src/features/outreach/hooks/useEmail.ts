@@ -174,6 +174,64 @@ export function useCampaignMessages(campaignId: string | undefined) {
 }
 
 /**
+ * What actually happened to this campaign's recipients, and whether it is a
+ * real sequence.
+ *
+ * Replies were previously counted as `skip_reason === 'replied'` — the marker
+ * left on a *cancelled follow-up*. That only fires when a queued follow-up
+ * existed to cancel, so a reply to a one-off email counted as zero, and the
+ * campaign header confidently reported no replies while a reply sat in the
+ * inbox. Outcomes come from outreach_events now, which is where they are
+ * actually recorded.
+ */
+export interface CampaignInsight {
+  /** contact_id → the outcome that stands for them, newest and highest-ranked. */
+  outcomes: Map<string, { type: 'replied' | 'bounced' | 'unsubscribed'; at: string }>;
+  /** True when the campaign has real sequence steps, as opposed to the Direct
+   *  sends bucket where step_number is just "nth email to this contact". */
+  hasSequence: boolean;
+}
+
+export function useCampaignInsight(campaignId: string | undefined) {
+  return useQuery({
+    queryKey: ['outreach-campaign-insight', campaignId],
+    enabled: Boolean(campaignId),
+    staleTime: 15_000,
+    queryFn: async (): Promise<CampaignInsight> => {
+      const [eventsRes, stepsRes] = await Promise.all([
+        supabase
+          .from('outreach_events')
+          .select('contact_id,event_type,occurred_at')
+          .eq('campaign', campaignId)
+          .in('event_type', ['replied', 'bounced', 'unsubscribed'])
+          .order('occurred_at', { ascending: false }),
+        supabase.from('sequence_steps').select('id').eq('campaign_id', campaignId).limit(1),
+      ]);
+      if (eventsRes.error) throw eventsRes.error;
+      if (stepsRes.error) throw stepsRes.error;
+
+      const outcomes = new Map<string, { type: 'replied' | 'bounced' | 'unsubscribed'; at: string }>();
+      // A reply outranks a bounce outranks an opt-out: if they answered, that is
+      // the fact worth reporting even if the address later broke.
+      const rank = (t: string) => (t === 'replied' ? 3 : t === 'bounced' ? 2 : 1);
+      for (const e of (eventsRes.data ?? []) as
+        { contact_id: string | null; event_type: string; occurred_at: string }[]) {
+        if (!e.contact_id) continue;
+        const current = outcomes.get(e.contact_id);
+        if (!current || rank(e.event_type) > rank(current.type)) {
+          outcomes.set(e.contact_id, {
+            type: e.event_type as 'replied' | 'bounced' | 'unsubscribed',
+            at: e.occurred_at,
+          });
+        }
+      }
+
+      return { outcomes, hasSequence: (stepsRes.data ?? []).length > 0 };
+    },
+  });
+}
+
+/**
  * Edit one still-queued message — reviewing an upfront-generated email before
  * the campaign starts, or fixing one Claude got wrong. Only meaningful while
  * `status = 'queued'`: once sending begins the row is history, not a draft.
