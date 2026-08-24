@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Layers, Send, History, Ban, AtSign, Settings, LogOut, Menu, X, BarChart3, Gauge } from 'lucide-react';
+import { Users, Layers, Send, History, Ban, AtSign, Settings, LogOut, Menu, X, BarChart3, Gauge, Mail } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 
 const NAV_ITEMS = [
   { path: '/outreach/leads',       label: 'Leads',       icon: Users,   match: ['/outreach/leads', '/outreach/businesses'] },
   { path: '/outreach/niches',      label: 'Niches',      icon: Layers,  match: ['/outreach/niches'] },
   { path: '/outreach/campaigns',   label: 'Campaigns',   icon: Send,    match: ['/outreach/campaigns', '/outreach/templates'] },
+  { path: '/outreach/messages',    label: 'Messages',    icon: Mail,    match: ['/outreach/messages'] },
   { path: '/outreach/analytics',   label: 'Analytics',   icon: BarChart3, match: ['/outreach/analytics'] },
   { path: '/outreach/usage',       label: 'Usage',       icon: Gauge,   match: ['/outreach/usage'] },
   { path: '/outreach/runs',        label: 'Runs',        icon: History, match: ['/outreach/runs'] },
