@@ -6,9 +6,11 @@ import { EmptyState, ErrorState, PageHeader } from '@/features/outreach/componen
 import { useHunterBalance, useUsageSummary } from '@/features/outreach/hooks/useUsage';
 import type { ProviderTotal, UsageRow } from '@/features/outreach/hooks/useUsage';
 
-/* Same validated chart palette as Analytics — one system, one set of hues. */
-const VIZ = { spend: '#cf7d22', ok: '#199e70', track: 'rgba(255,255,255,0.08)', none: '#8a8781' };
-const STATUS = { good: '#0ca30c', warning: '#fab219', critical: '#d03b3b' };
+/* Same validated light-surface palette as Analytics — one system, one set of hues. */
+const VIZ = { spend: '#2743f0', ok: '#008300', track: '#eceae4', none: '#8a8781' };
+/* This page renders status as words and numbers, never as a fill, so only the
+   text-grade steps are needed — the vivid mark steps are unreadable at this size. */
+const STATUS_TEXT = { good: '#006300', warning: '#8a5a00', critical: '#b3261e', none: '#56554f' };
 
 const RANGES = [7, 30, 90];
 
@@ -49,11 +51,12 @@ const money = (n: number) => (n < 0.01 && n > 0 ? '<$0.01' : `$${n.toFixed(2)}`)
 const num = (n: number) => n.toLocaleString('en-GB');
 
 function balanceVerdict(remaining: number, available: number) {
-  if (available === 0) return { color: VIZ.none, word: 'no allowance on this plan' };
+  // Text steps: this renders as a number and a word, not a fill.
+  if (available === 0) return { color: STATUS_TEXT.none, word: 'no allowance on this plan' };
   const share = remaining / available;
-  if (share <= 0.1) return { color: STATUS.critical, word: 'nearly out' };
-  if (share <= 0.3) return { color: STATUS.warning, word: 'running low' };
-  return { color: STATUS.good, word: 'healthy' };
+  if (share <= 0.1) return { color: STATUS_TEXT.critical, word: 'nearly out' };
+  if (share <= 0.3) return { color: STATUS_TEXT.warning, word: 'running low' };
+  return { color: STATUS_TEXT.good, word: 'healthy' };
 }
 
 function HunterCard() {
@@ -122,12 +125,12 @@ function HunterCard() {
       </div>
 
       <div style={{
-        marginTop: '0.9rem', height: 8, borderRadius: 4,
+        marginTop: '0.9rem', height: 6, borderRadius: 2,
         background: VIZ.track, overflow: 'hidden',
       }}>
         <div style={{
           width: `${Math.min(100, usedShare * 100)}%`, height: '100%',
-          background: verdict.color, borderRadius: 4,
+          background: verdict.color, borderRadius: 2,
         }} />
       </div>
 
@@ -197,13 +200,15 @@ export default function OutreachUsage() {
         title="API usage"
         sub="What the paid APIs are costing, and how much Hunter allowance is left."
         actions={
-          <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.045)', borderRadius: 10, padding: 2 }}>
+          <div style={{ display: 'flex', border: '1px solid #e4e3dd', borderRadius: 3, overflow: 'hidden' }}>
             {RANGES.map(r => (
               <button key={r} onClick={() => setDays(r)} className="text-xs"
                 style={{
-                  padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: r === days ? 'rgba(247,161,74,0.16)' : 'transparent',
-                  color: r === days ? '#f7a14a' : 'rgba(240,233,226,0.62)',
+                  padding: '0.4rem 0.75rem', border: 'none', cursor: 'pointer',
+                  fontFamily: "ui-monospace, 'SFMono-Regular', Menlo, monospace",
+                  letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: '0.63rem',
+                  background: r === days ? '#2743f0' : '#ffffff',
+                  color: r === days ? '#ffffff' : '#56554f',
                 }}>
                 {r} days
               </button>

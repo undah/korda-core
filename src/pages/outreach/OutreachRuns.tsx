@@ -40,7 +40,7 @@ export default function OutreachRuns() {
         actions={
           (runs ?? []).some(r => r.finished_at === null) ? (
             <span className="o-pill o-pill-guessed">
-              <span className="o-pill-dot" style={{ background: '#f7a14a' }} />
+              <span className="o-pill-dot" style={{ background: '#2743f0' }} />
               run in progress — live
             </span>
           ) : undefined

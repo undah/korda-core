@@ -6,10 +6,10 @@ import { errorMessage } from '../errors';
 /** Deliverability state — a soft pill, coloured by risk. */
 export function EmailStatusBadge({ status }: { status: EmailStatus }) {
   const dot: Record<EmailStatus, string> = {
-    verified: '#34d399',
-    guessed: '#f7a14a',
-    bounced: '#f87171',
-    unverified: 'rgba(240,233,226,0.4)',
+    verified: '#008300',
+    guessed: '#b57500',
+    bounced: '#d03b3b',
+    unverified: '#a8a6a0',
   };
   return (
     <span className={`o-pill o-pill-${status}`}>
@@ -33,9 +33,10 @@ export function SourceBadge({ source }: { source: ContactSource }) {
 export function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
   const fill =
-    value >= 0.7 ? 'linear-gradient(90deg, #34d399, #6ee7b7)'
-    : value >= 0.4 ? 'linear-gradient(90deg, #f7a14a, #fbbf6e)'
-    : 'linear-gradient(90deg, rgba(240,233,226,0.28), rgba(240,233,226,0.42))';
+    // Flat fills, not gradients: the site draws state with solid colour.
+    value >= 0.7 ? '#008300'
+    : value >= 0.4 ? '#b57500'
+    : '#c4c2bb';
 
   return (
     <div className="o-meter">
@@ -82,7 +83,7 @@ export function ErrorState({ error }: { error: unknown }) {
   const message = errorMessage(error, 'Unknown error.');
   return (
     <div className="o-panel o-state">
-      <div className="o-state-icon" style={{ background: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.25)', color: '#fca5a5' }}>
+      <div className="o-state-icon" style={{ background: 'rgba(208,59,59,0.07)', borderColor: 'rgba(208,59,59,0.28)', color: '#b3261e' }}>
         <AlertTriangle size={19} />
       </div>
       <p className="o-state-title">Couldn't load this</p>
