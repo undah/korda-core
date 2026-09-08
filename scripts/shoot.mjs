@@ -159,8 +159,13 @@ async function shoot(context, path) {
 
 const browser = await chromium.launch();
 try {
-  rmSync(OUT, { recursive: true, force: true });
+  // Only clear what this run will rewrite. Wiping the whole directory meant a
+  // desktop sweep followed by `--mobile` destroyed the desktop set.
   mkdirSync(OUT, { recursive: true });
+  for (const p of targets) {
+    const n = (p.replace(/^\//, '').replace(/\//g, '_') || 'root') + (mobile ? '_mobile' : '');
+    rmSync(`${OUT}/${n}.png`, { force: true });
+  }
 
   const context = existsSync(SESSION)
     ? await browser.newContext({ storageState: SESSION, viewport })
