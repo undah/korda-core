@@ -1,14 +1,16 @@
 // scripts/shoot.mjs
 //
-// Screenshots the outreach console so Claude can actually look at it.
+// Screenshots the app so Claude can actually look at it.
 //
-// Every page in this section was built without anyone seeing it render —
+// Every page in these sections was built without anyone seeing it render —
 // reviews happened by the user screenshotting things by hand, which caught the
 // obvious breakage (unstyled buttons) and missed the rest (a table that was
 // unreadable at eight rows, mono set too small to read). This closes that loop.
 //
-//   npm run shoot                      every page, live
-//   npm run shoot -- /outreach/usage   just one
+//   npm run shoot                      every page in every section
+//   npm run shoot -- tracker           one section
+//   npm run shoot -- /outreach/usage   one page
+//   npm run shoot -- tracker --mobile  at 390x844 instead of desktop
 //   BASE=http://localhost:8080 npm run shoot
 //
 // Credentials come from .env.local, which is gitignored. They are never printed,
@@ -31,19 +33,42 @@ const PASSWORD = process.env.E2E_PASSWORD;
 const OUT = 'screenshots';
 const SESSION = '.playwright-session.json';
 
-/** Default sweep. Ordered the way you'd actually review the section. */
-const PAGES = [
-  '/outreach/leads',
-  '/outreach/niches',
-  '/outreach/campaigns',
-  '/outreach/messages',
-  '/outreach/analytics',
-  '/outreach/usage',
-  '/outreach/senders',
-  '/outreach/suppression',
-  '/outreach/settings',
-  '/outreach/runs',
-];
+/** Default sweep, per section. Ordered the way you'd actually review each. */
+const SECTIONS = {
+  outreach: [
+    '/outreach/leads',
+    '/outreach/niches',
+    '/outreach/campaigns',
+    '/outreach/messages',
+    '/outreach/analytics',
+    '/outreach/usage',
+    '/outreach/senders',
+    '/outreach/suppression',
+    '/outreach/settings',
+    '/outreach/runs',
+  ],
+  tracker: [
+    '/tracker/dashboard',
+    '/tracker/graph',
+    '/tracker/progress',
+    '/tracker/journal',
+    '/tracker/photos',
+    '/tracker/analysis',
+    '/tracker/strava',
+    '/tracker/settings',
+  ],
+};
+const SECTION_NAMES = Object.keys(SECTIONS);
+const ALL_PAGES = SECTION_NAMES.flatMap(k => SECTIONS[k]);
+
+/** The two sections have separate layouts, so the readiness selectors differ. */
+const READY = '.o-main, .kt-main';
+const CONTENT = '.o-panel, .o-state, .kt-card, table';
+
+/** Mobile matters for the tracker specifically — its bottom nav and grid
+ *  collapse below 768px, and that layout has never been reviewed. */
+const DESKTOP = { width: 1440, height: 900 };
+const MOBILE = { width: 390, height: 844 };
 
 /**
  * Normalise a path argument.
@@ -54,13 +79,26 @@ const PAGES = [
  * the caller remember to escape it.
  */
 const normalise = (arg) => {
-  const stripped = arg.replace(/^[A-Za-z]:[/\\].*?[/\\](?=outreach\/)/, '/');
-  return stripped.startsWith('/') ? stripped : `/${stripped}`;
+  // Recover the tail at the first known section name. Done by string search
+  // rather than a regex: the pattern needs a literal backslash inside a
+  // character class, and threading that through a template literal collapses
+  // it to `[/\]`, which is an unterminated class.
+  for (const name of SECTION_NAMES) {
+    const i = arg.indexOf(`/${name}/`);
+    if (i > 0) return arg.slice(i);
+  }
+  return arg.startsWith('/') ? arg : `/${arg}`;
 };
 
-const targets = process.argv.slice(2).length
-  ? process.argv.slice(2).map(normalise)
-  : PAGES;
+const rawArgs = process.argv.slice(2);
+const mobile = rawArgs.includes('--mobile');
+const viewport = mobile ? MOBILE : DESKTOP;
+const pathArgs = rawArgs.filter(a => !a.startsWith('--'));
+
+// A bare section name expands to that whole section; anything else is a path.
+const targets = pathArgs.length
+  ? pathArgs.flatMap(a => (SECTION_NAMES.includes(a) ? SECTIONS[a] : [normalise(a)]))
+  : ALL_PAGES;
 
 if (!EMAIL || !PASSWORD) {
   console.error(
@@ -74,7 +112,7 @@ if (!EMAIL || !PASSWORD) {
 
 /** Log in once and keep the session, so later runs skip straight to shooting. */
 async function login(browser) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ viewport });
   const page = await context.newPage();
 
   await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
@@ -102,15 +140,15 @@ async function login(browser) {
 
 async function shoot(context, path) {
   const page = await context.newPage();
-  const name = path.replace(/^\//, '').replace(/\//g, '_') || 'root';
+  const name = (path.replace(/^\//, '').replace(/\//g, '_') || 'root') + (mobile ? '_mobile' : '');
 
   await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' });
 
   // Content arrives from React Query after mount, so waiting on the network is
   // unreliable (some pages poll). Wait for the section chrome, then for either
   // real content or an empty state — both are legitimate things to photograph.
-  await page.waitForSelector('.o-main', { timeout: 20_000 });
-  await page.waitForSelector('.o-panel, .o-state, table', { timeout: 20_000 }).catch(() => {});
+  await page.waitForSelector(READY, { timeout: 20_000 });
+  await page.waitForSelector(CONTENT, { timeout: 20_000 }).catch(() => {});
   // Charts animate in; a short settle avoids catching them mid-transition.
   await page.waitForTimeout(1200);
 
@@ -125,10 +163,10 @@ try {
   mkdirSync(OUT, { recursive: true });
 
   const context = existsSync(SESSION)
-    ? await browser.newContext({ storageState: SESSION, viewport: { width: 1440, height: 900 } })
+    ? await browser.newContext({ storageState: SESSION, viewport })
     : await login(browser);
 
-  console.log(`Shooting ${targets.length} page(s) at ${BASE}`);
+  console.log(`Shooting ${targets.length} page(s) at ${BASE} (${viewport.width}x${viewport.height})`);
   for (const path of targets) {
     try {
       await shoot(context, path);
