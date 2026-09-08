@@ -27,7 +27,14 @@ export async function onRequestPost(context) {
     return Response.json({ error: 'Supabase not configured' }, { status: 500 });
   }
 
-  if (env.RESEND_WEBHOOK_SECRET) {
+  // Fail closed. This was `if (env.RESEND_WEBHOOK_SECRET)`, so an unset variable —
+  // a typo, a forgotten setting on a new environment — left the endpoint
+  // open to anyone, and a forged payload here writes bounce and reply
+  // events that suppress real leads.
+  if (!env.RESEND_WEBHOOK_SECRET) {
+    return Response.json({ error: 'RESEND_WEBHOOK_SECRET is not configured' }, { status: 500 });
+  }
+  {
     const url = new URL(request.url);
     const provided = request.headers.get('x-webhook-secret') ?? url.searchParams.get('secret');
     if (provided !== env.RESEND_WEBHOOK_SECRET) {

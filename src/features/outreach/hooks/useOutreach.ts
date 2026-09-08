@@ -3,6 +3,7 @@
 // what the signed-in user can see. There is deliberately no service-role key here.
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
+import { outreachPost } from '../api';
 import {
   LEADS_PAGE_SIZE,
   type Business,
@@ -373,14 +374,10 @@ export function useTriggerRun() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { slug: string; maxResultsOverride?: number }) => {
-      const res = await fetch('/api/outreach/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `Run request failed (${res.status})`);
-      return data as { accepted: boolean; slug: string; maxResults?: number };
+      return outreachPost<{ accepted: boolean; slug: string; maxResults?: number }>(
+        '/api/outreach/run',
+        input,
+      );
     },
     onSuccess: () => {
       // Give the pipeline a moment to open its run_log row, then start polling.

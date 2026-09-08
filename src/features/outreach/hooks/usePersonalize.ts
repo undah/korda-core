@@ -6,6 +6,7 @@
 // (/api/outreach/personalize, /api/outreach/send-now).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
+import { outreachPost } from '../api';
 import type { Objective, OutreachProfile } from '../types';
 
 // ── offer profile ────────────────────────────────────────────────────────────
@@ -64,14 +65,7 @@ export function useGeneratePersonalization() {
       objectiveNotes?: string | null;
       templateId?: string | null;
     }): Promise<PersonalizeOutcome> => {
-      const res = await fetch('/api/outreach/personalize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `Personalization failed (${res.status})`);
-      return data as PersonalizeOutcome;
+      return outreachPost<PersonalizeOutcome>('/api/outreach/personalize', input);
     },
   });
 }
@@ -133,19 +127,14 @@ export function useUpfrontPersonalize() {
       for (let i = 0; i < rows.length; i++) {
         const msg = rows[i];
         try {
-          const res = await fetch('/api/outreach/personalize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contactId: msg.contact_id,
-              objective: input.objective,
-              objectiveNotes: input.objectiveNotes ?? null,
-              templateId: templateByStep.get(msg.step_number) ?? null,
-            }),
+          const outcome = await outreachPost<PersonalizeOutcome>('/api/outreach/personalize', {
+            contactId: msg.contact_id,
+            objective: input.objective,
+            objectiveNotes: input.objectiveNotes ?? null,
+            templateId: templateByStep.get(msg.step_number) ?? null,
           });
-          const outcome = (await res.json().catch(() => ({}))) as PersonalizeOutcome;
 
-          if (res.ok && 'ok' in outcome && outcome.ok) {
+          if ('ok' in outcome && outcome.ok) {
             const { error: updateError } = await supabase
               .from('outreach_messages')
               .update({
@@ -157,7 +146,7 @@ export function useUpfrontPersonalize() {
             if (updateError) throw updateError;
             personalized++;
           } else {
-            const reason = 'ok' in outcome && !outcome.ok ? outcome.reason : `HTTP ${res.status}`;
+            const reason = 'ok' in outcome && !outcome.ok ? outcome.reason : 'Generation failed';
             await supabase
               .from('outreach_messages').update({ personalization_error: reason }).eq('id', msg.id);
             failed++;
@@ -328,14 +317,9 @@ export function useSendDirect() {
         }
       }
 
-      const res = await fetch('/api/outreach/send-now', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageIds: [(message as { id: string }).id] }),
+      return outreachPost<SendDirectResult>('/api/outreach/send-now', {
+        messageIds: [(message as { id: string }).id],
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `Send failed (${res.status})`);
-      return data as SendDirectResult;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outreach-business-contacts'] });

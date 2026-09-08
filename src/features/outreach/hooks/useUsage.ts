@@ -14,6 +14,7 @@
 // subtraction would quietly drift.
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
+import { outreachFetch } from '../api';
 
 export interface HunterBalance {
   planName: string | null;
@@ -131,9 +132,9 @@ export function useHunterBalance() {
     staleTime: 120_000,
     retry: false,
     queryFn: async (): Promise<{ hunter: HunterBalance | null; hunterConfigured: boolean }> => {
-      const res = await fetch('/api/outreach/usage');
-      if (!res.ok) throw new Error(`Balance check failed (${res.status})`);
-      return res.json() as Promise<{ hunter: HunterBalance | null; hunterConfigured: boolean }>;
+      return outreachFetch<{ hunter: HunterBalance | null; hunterConfigured: boolean }>(
+        '/api/outreach/usage',
+      );
     },
   });
 }
