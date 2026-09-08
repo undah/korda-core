@@ -113,6 +113,34 @@ function emptyDays(days: number): Map<string, DailyPoint> {
   return out;
 }
 
+/**
+ * Read an entire result set, a page at a time.
+ *
+ * PostgREST truncates at the project's max-rows and reports success, so a
+ * caller that needs a complete set has to ask for it explicitly. `build` makes
+ * a fresh query each call because a Supabase query builder is single-use.
+ *
+ * A stable `order` on the built query is required, or paging can repeat and
+ * skip rows.
+ */
+const ANALYTICS_PAGE = 1000;
+/** Guard against an unbounded loop if a query ever stops terminating. */
+const ANALYTICS_MAX_ROWS = 200_000;
+
+async function fetchAllRows<T>(
+  build: () => { range: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }> },
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; from < ANALYTICS_MAX_ROWS; from += ANALYTICS_PAGE) {
+    const { data, error } = await build().range(from, from + ANALYTICS_PAGE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as T[];
+    out.push(...page);
+    if (page.length < ANALYTICS_PAGE) break;
+  }
+  return out;
+}
+
 export function useAnalytics(range: AnalyticsRange) {
   return useQuery({
     queryKey: ['outreach-analytics', range.days],
@@ -126,33 +154,44 @@ export function useAnalytics(range: AnalyticsRange) {
         ? new Date(Date.now() - 2 * range.days * 86_400_000).toISOString()
         : null;
 
-      let messageQuery = supabase
-        .from('outreach_messages')
-        .select('id,campaign_id,identity_id,sent_at')
-        .eq('status', 'sent')
-        .not('sent_at', 'is', null);
-      // Pull the previous window too, in one request, and split locally.
-      if (prevSince) messageQuery = messageQuery.gte('sent_at', prevSince);
+      // Every row is paged through. Supabase caps a single response (1000 by
+      // default, Settings -> API) and returns the first page with no error, so
+      // an unpaged query here would silently under-report every number on this
+      // page once sending passes that mark — including the bounce rate, which
+      // is the one the page says decides whether the domain survives.
+      const buildMessages = () => {
+        let q = supabase
+          .from('outreach_messages')
+          .select('id,campaign_id,identity_id,sent_at')
+          .eq('status', 'sent')
+          .not('sent_at', 'is', null)
+          .order('sent_at', { ascending: true });
+        // Pull the previous window too, in one pass, and split locally.
+        if (prevSince) q = q.gte('sent_at', prevSince);
+        return q;
+      };
 
-      let eventQuery = supabase
-        .from('outreach_events')
-        .select('contact_id,campaign,event_type,occurred_at')
-        .in('event_type', ['replied', 'bounced', 'unsubscribed']);
-      if (prevSince) eventQuery = eventQuery.gte('occurred_at', prevSince);
+      const buildEvents = () => {
+        let q = supabase
+          .from('outreach_events')
+          .select('contact_id,campaign,event_type,occurred_at')
+          .in('event_type', ['replied', 'bounced', 'unsubscribed'])
+          .order('occurred_at', { ascending: true });
+        if (prevSince) q = q.gte('occurred_at', prevSince);
+        return q;
+      };
 
-      const [messages, events, campaigns, identities] = await Promise.all([
-        messageQuery,
-        eventQuery,
+      const [allMessages, allEvents, campaigns, identities] = await Promise.all([
+        fetchAllRows<MessageRow>(buildMessages),
+        fetchAllRows<EventRow>(buildEvents),
         supabase.from('campaigns').select('id,name'),
         supabase.from('sending_identities').select('*').order('created_at', { ascending: true }),
       ]);
 
-      for (const r of [messages, events, campaigns, identities]) {
+      for (const r of [campaigns, identities]) {
         if (r.error) throw r.error;
       }
 
-      const allMessages = (messages.data ?? []) as MessageRow[];
-      const allEvents = (events.data ?? []) as EventRow[];
       const campaignRows = (campaigns.data ?? []) as { id: string; name: string }[];
       const identityRows = (identities.data ?? []) as SendingIdentity[];
 

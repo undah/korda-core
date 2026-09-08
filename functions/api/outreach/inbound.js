@@ -61,6 +61,13 @@ function addressOf(from) {
  * recorded.
  */
 
+/**
+ * Where the bounce report stops and the returned message begins. Everything
+ * below this is our own text coming back to us, not the server's verdict.
+ */
+const ORIGINAL_MESSAGE =
+  /(?:^|\n)\s*(?:-{2,}\s*(?:original|forwarded|returned)\s+message|content-type:\s*message\/rfc822|below this line is a copy|begin message headers)/i;
+
 const BOUNCE_SUBJECT =
   /undeliver|delivery (status notification|failure|has failed)|failure notice|returned mail|mail delivery (failed|subsystem)|delivery incomplete/i;
 
@@ -90,19 +97,29 @@ export function parseBounce(mail) {
 
   if (!isBounce) return { isBounce: false, permanent: false, failedRecipient: null, statusCode: null };
 
+  // An NDR normally attaches the message that failed, and our own copy can
+  // easily hold a bare number in the 4xx/5xx range ('500 euro', '450 leads')
+  // which would then read as a permanent failure and suppress a live contact
+  // forever. Both searches are limited to the report, above the quoted copy.
+  const cut = body.search(ORIGINAL_MESSAGE);
+  const report = cut > 0 ? body.slice(0, cut) : body;
+
   // RFC 3463 status, e.g. "5.1.1" — the digit before the first dot is the class.
-  const status = /\b([45])\.\d{1,3}\.\d{1,3}\b/.exec(body);
-  // Fall back to the bare SMTP reply code ("550", "452") when no DSN is present.
-  const smtp = status ? null : /\b(5\d{2}|4\d{2})\b(?=[\s:-])/.exec(body);
+  const status = /\b([45])\.\d{1,3}\.\d{1,3}\b/.exec(report);
+  // Fall back to a bare SMTP reply code, but only where a server states one:
+  // at the start of a line, or introduced by the mailer.
+  const smtp = status
+    ? null
+    : /(?:^\s*|said:\s*|responded(?:\s+with)?:\s*|response(?:\s+was)?:\s*)([45]\d{2})\b/im.exec(report);
 
   const permanent = status ? status[1] === '5' : smtp ? smtp[1].startsWith('5') : null;
 
   // The address that failed is not the sender — the sender is the mailer. Prefer
   // an explicit DSN field, then the first address that isn't our own mailer.
-  const explicit = /(?:Final-Recipient|Original-Recipient):\s*rfc822;\s*([^\s<>]+@[^\s<>]+)/i.exec(body);
+  const explicit = /(?:Final-Recipient|Original-Recipient):\s*rfc822;\s*([^\s<>]+@[^\s<>]+)/i.exec(report);
   let failedRecipient = explicit ? explicit[1].toLowerCase() : null;
   if (!failedRecipient) {
-    const found = body.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? [];
+    const found = report.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? [];
     failedRecipient = found.map(a => a.toLowerCase()).find(a => !isBounceSender(a)) ?? null;
   }
 
@@ -142,9 +159,13 @@ async function findMessage(env, payload, addressOverride = null) {
   // which we never sent anything to and would never match.
   const email = addressOverride ?? addressOf(payload?.from);
   if (email) {
+    // ILIKE treats _ and % as wildcards, and underscores are ordinary in email
+    // addresses: unescaped, jan_jansen@x.nl also matches janXjansen@x.nl and would
+    // cancel the wrong contact's follow-ups. Postgres escapes with a backslash.
+    const pattern = email.replace(/[\\%_]/g, m => `\\${m}`);
     const rows = await sbJson(
       env,
-      `outreach_messages?to_email=ilike.${encodeURIComponent(email)}&status=eq.sent` +
+      `outreach_messages?to_email=ilike.${encodeURIComponent(pattern)}&status=eq.sent` +
         `&select=id,contact_id,campaign_id,step_number&order=sent_at.desc&limit=1`,
     );
     if (rows?.length) return { message: rows[0], matchedBy: 'address' };
