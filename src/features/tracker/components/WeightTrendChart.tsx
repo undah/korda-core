@@ -1,5 +1,5 @@
 // src/features/tracker/components/WeightTrendChart.tsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ComposedChart, Line, Area, XAxis, YAxis,
   Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid, LabelList,
@@ -92,6 +92,11 @@ interface WeightTrendChartProps {
   hideToggles?: boolean;
 }
 
+/** Roughly the width of "133.2" at 9px mono, plus breathing room. */
+const MIN_LABEL_PX = 38;
+/** Chart margins that hold no labels. */
+const LABEL_GUTTER = 62;
+
 export default function WeightTrendChart({
   points,
   projected = [],
@@ -105,6 +110,19 @@ export default function WeightTrendChart({
 }: WeightTrendChartProps) {
   const hasAvg       = points.some(p => p.avg7 != null);
   const hasProjected = projected.length > 0;
+
+  // ResponsiveContainer owns the width, so measure the wrapper to decide
+  // whether value labels can fit.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [plotWidth, setPlotWidth] = useState(0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    setPlotWidth(el.clientWidth);
+    const ro = new ResizeObserver(entries => setPlotWidth(entries[0].contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const [showRaw,       setShowRaw]       = useState(true);
   const [showAvg,       setShowAvg]       = useState(true);
@@ -131,7 +149,11 @@ export default function WeightTrendChart({
 
   const TooltipContent = useMemo(() => makeTooltip(photosByDate), [photosByDate]);
 
-  const showLabels = showLabelsProp !== undefined ? showLabelsProp : points.length <= 20;
+  // Auto label visibility is a question of space, not point count: 20 labels
+  // fit on a desktop chart and smear into a solid block at 390px wide.
+  const autoLabels = plotWidth > 0 && points.length > 0
+    && (plotWidth - LABEL_GUTTER) / points.length >= MIN_LABEL_PX;
+  const showLabels = showLabelsProp !== undefined ? showLabelsProp : autoLabels;
 
   if (points.length < 2) {
     return (
@@ -142,11 +164,11 @@ export default function WeightTrendChart({
   }
 
   return (
-    <>
+    <div ref={wrapRef}>
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart
           data={combined}
-          margin={{ top: 20, right: 44, bottom: 0, left: 0 }}
+          margin={{ top: 20, right: 44, bottom: 0, left: 18 }}
           onClick={(d: { activePayload?: { payload: ChartRow }[] }) => {
             const date = d?.activePayload?.[0]?.payload?.date;
             if (date && onDotClick) onDotClick(date);
@@ -281,6 +303,6 @@ export default function WeightTrendChart({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

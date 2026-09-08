@@ -9,6 +9,7 @@ import { format, parseISO, subDays, differenceInCalendarDays } from "date-fns";
 import { useTrackerCheckins, useTrackerGoal, useProgressStats, formatISODate, ALL_CHECKINS } from "@/features/tracker/hooks/useTrackerCheckins";
 import { useTrackerPhotos, useTrackerJournal } from "@/features/tracker/hooks/useTrackerJournal";
 import { useStravaToken, useStravaActivities } from "@/features/tracker/hooks/useStrava";
+import { rollingAverage, smoothingIsMeaningful } from "@/features/tracker/lib/rollingAverage";
 import JournalCorrelation from "@/features/tracker/components/JournalCorrelation";
 import type { TrackerPhoto } from "@/features/tracker/types";
 
@@ -259,12 +260,15 @@ export default function TrackerAnalysis() {
   const mYMin = measureVals.length ? Math.floor(Math.min(...measureVals) - 2) : 0;
   const mYMax = measureVals.length ? Math.ceil(Math.max(...measureVals)  + 2) : 120;
 
-  // Build chart data with 7d rolling avg
-  const chartData = sorted.map((c, i) => {
-    const slice = sorted.slice(Math.max(0, i - 6), i + 1);
-    const avg7  = +(slice.reduce((s, x) => s + x.weight, 0) / slice.length).toFixed(2);
-    return { date: c.log_date, weight: c.weight, avg7 };
-  });
+  // Build chart data with a true 7-DAY trailing average. The old version
+  // averaged seven ROWS, which at weekly cadence meant seven weeks.
+  const avg7 = rollingAverage(sorted, 7);
+  const showAvg7 = smoothingIsMeaningful(avg7);
+  const chartData = sorted.map(c => ({
+    date: c.log_date,
+    weight: c.weight,
+    avg7: showAvg7 ? avg7.byDate[c.log_date] : undefined,
+  }));
 
   const weights = chartData.map(d => d.weight);
   const goalVal = goal?.goal_weight;
@@ -360,7 +364,7 @@ export default function TrackerAnalysis() {
       <div className="kt-card" style={{ marginBottom: "1.5rem" }}>
         <p className="kt-card-label" style={{ marginBottom: "0.3rem" }}>Full weight history</p>
         <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "var(--kt-fs-2xs)", color: C.dim, marginBottom: "1.5rem" }}>
-          Raw data + 7-day rolling average{goalVal ? `  ·  Goal: ${goalVal} kg` : ""}
+          Raw data{showAvg7 ? " + 7-day rolling average" : ""}{goalVal ? `  ·  Goal: ${goalVal} kg` : ""}
         </p>
 
         <div className="kt-chart-wrap" style={{ height: 260 }}>
@@ -406,7 +410,7 @@ export default function TrackerAnalysis() {
                 />
               )}
 
-              <Area type="monotone" dataKey="avg7" fill="url(#analysisGrad)" stroke="none" dot={false} activeDot={false} />
+              {showAvg7 && <Area type="monotone" dataKey="avg7" fill="url(#analysisGrad)" stroke="none" dot={false} activeDot={false} />}
               <Line
                 type="monotone"
                 dataKey="weight"
@@ -428,7 +432,7 @@ export default function TrackerAnalysis() {
                 }}
                 activeDot={{ r: 5, fill: "#00C8FF", strokeWidth: 2, stroke: "rgba(0,200,255,0.3)" }}
               />
-              <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />
+              {showAvg7 && <Line type="monotone" dataKey="avg7" stroke="#5ab4d4" strokeWidth={2} dot={false} activeDot={false} />}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
