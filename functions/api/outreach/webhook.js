@@ -27,17 +27,21 @@ export async function onRequestPost(context) {
     return Response.json({ error: 'Supabase not configured' }, { status: 500 });
   }
 
-  // Fail closed. This was `if (env.RESEND_WEBHOOK_SECRET)`, so an unset variable —
-  // a typo, a forgotten setting on a new environment — left the endpoint
-  // open to anyone, and a forged payload here writes bounce and reply
-  // events that suppress real leads.
-  if (!env.RESEND_WEBHOOK_SECRET) {
-    return Response.json({ error: 'RESEND_WEBHOOK_SECRET is not configured' }, { status: 500 });
+  // Fail closed. This was `if (env.<SECRET>)`, so an unset variable — a typo, a
+  // forgotten setting on a new environment — left the endpoint open to anyone,
+  // and a forged payload here writes delivery events that suppress real leads.
+  // The legacy name is still read so an existing deployment keeps working.
+  const webhookSecret = env.OUTREACH_WEBHOOK_SECRET ?? env.RESEND_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return Response.json(
+      { error: 'Webhook is not configured: set OUTREACH_WEBHOOK_SECRET.' },
+      { status: 500 },
+    );
   }
   {
     const url = new URL(request.url);
     const provided = request.headers.get('x-webhook-secret') ?? url.searchParams.get('secret');
-    if (provided !== env.RESEND_WEBHOOK_SECRET) {
+    if (provided !== webhookSecret) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

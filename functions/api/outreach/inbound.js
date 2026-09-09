@@ -1,5 +1,8 @@
 /**
- * POST /api/outreach/inbound — Resend inbound (reply) receiver.
+ * POST /api/outreach/inbound — inbound (reply) receiver.
+ *
+ * Fed by whatever collects mail for the sending mailbox; sending itself is
+ * Google Workspace over the Gmail API.
  *
  * Replies are the point of the whole system, and they are also the stop signal:
  * a follow-up that lands after someone has already answered is worse than no
@@ -174,38 +177,6 @@ async function findMessage(env, payload, addressOverride = null) {
   return { message: null, matchedBy: null };
 }
 
-/** Forward to a human. Best-effort: a failure here must not lose the reply. */
-async function forward(env, payload, message, matchedBy) {
-  if (!env.OUTREACH_REPLY_FORWARD_TO || !env.RESEND_API_KEY || !env.OUTREACH_FROM) return false;
-
-  const replyTo = addressOf(payload?.from);
-  const subject = payload?.subject ?? '(no subject)';
-  const text = payload?.text ?? payload?.html ?? '(no body)';
-
-  const context = message
-    ? `Reply from ${replyTo} — campaign ${message.campaign_id}, step ${message.step_number ?? 1}. ` +
-      `Remaining follow-ups for this contact have been cancelled.`
-    : `Reply from ${replyTo} — could not be matched to a sent message (${matchedBy ?? 'no match'}), ` +
-      `so no follow-ups were cancelled. Check before this contact is mailed again.`;
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: env.OUTREACH_FROM,
-      to: [env.OUTREACH_REPLY_FORWARD_TO],
-      // So hitting reply in the normal inbox answers the prospect, not us.
-      reply_to: replyTo || undefined,
-      subject: `[Outreach reply] ${subject}`,
-      text: `${context}\n\n---\n\n${text}`,
-    }),
-  });
-  return res.ok;
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -213,17 +184,22 @@ export async function onRequestPost(context) {
     return Response.json({ error: 'Supabase not configured' }, { status: 500 });
   }
 
-  // Fail closed. This was `if (env.RESEND_INBOUND_SECRET)`, so an unset variable —
-  // a typo, a forgotten setting on a new environment — left the endpoint
-  // open to anyone, and a forged payload here writes bounce and reply
-  // events that suppress real leads.
-  if (!env.RESEND_INBOUND_SECRET) {
-    return Response.json({ error: 'RESEND_INBOUND_SECRET is not configured' }, { status: 500 });
+  // Fail closed. This was `if (env.<SECRET>)`, so an unset variable — a typo, a
+  // forgotten setting on a new environment — left the endpoint open to anyone,
+  // and a forged payload here writes bounce and reply events that suppress real
+  // leads. RESEND_INBOUND_SECRET is still read so an existing deployment keeps
+  // working, but the name no longer implies a provider this project doesn't use.
+  const inboundSecret = env.OUTREACH_INBOUND_SECRET ?? env.RESEND_INBOUND_SECRET;
+  if (!inboundSecret) {
+    return Response.json(
+      { error: 'Inbound is not configured: set OUTREACH_INBOUND_SECRET.' },
+      { status: 500 },
+    );
   }
   {
     const url = new URL(request.url);
     const provided = request.headers.get('x-webhook-secret') ?? url.searchParams.get('secret');
-    if (provided !== env.RESEND_INBOUND_SECRET) {
+    if (provided !== inboundSecret) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }
@@ -320,15 +296,15 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Always forward, matched or not — an unmatched reply is still a human
-    // waiting on an answer, and dropping it is the one unrecoverable outcome.
-    const forwarded = await forward(env, mail, message, matchedBy);
-
+    // The reply is recorded and the follow-ups are cancelled; the Messages page
+    // is where a human reads it. There used to be an email relay here, but it
+    // went out through Resend, which this project does not use — so it returned
+    // false on every reply and told nobody. A relay that silently does nothing
+    // is worse than no relay, because it looks like one.
     return Response.json({
       ok: true,
       matched: Boolean(message),
       matched_by: matchedBy,
-      forwarded,
     });
   } catch (e) {
     return Response.json({ error: e?.message ?? 'Inbound failed' }, { status: 500 });
