@@ -85,6 +85,8 @@ interface RawMessage {
   campaign_id: string | null;
   contact_id: string;
   identity_id: string | null;
+  /** The Gmail thread, so an outcome lands on the message it answers. */
+  provider_thread_id: string | null;
   contacts: {
     full_name: string | null;
     businesses: { name: string } | null;
@@ -105,7 +107,7 @@ export function useMessages(filter: MessagesFilter) {
       const [eventsRes, campaignsRes, identitiesRes] = await Promise.all([
         supabase
           .from('outreach_events')
-          .select('contact_id,event_type,occurred_at')
+          .select('contact_id,event_type,occurred_at,meta')
           .in('event_type', ['replied', 'bounced', 'unsubscribed'])
           .order('occurred_at', { ascending: false }),
         supabase.from('campaigns').select('id,name'),
@@ -115,16 +117,37 @@ export function useMessages(filter: MessagesFilter) {
         if (r.error) throw r.error;
       }
 
-      // Newest event per contact per type. Ordered desc above, so the first
-      // one seen for a contact is the one that stands.
+      // A reply outranks a bounce outranks an opt-out: if someone answered,
+      // that is the fact worth surfacing even if the address later broke.
+      const rank = (t: string) => (t === 'replied' ? 3 : t === 'bounced' ? 2 : 1);
+
+      type OutcomeEvent = {
+        contact_id: string | null; event_type: string; occurred_at: string;
+        meta: { thread_id?: string } | null;
+      };
+      const events = (eventsRes.data ?? []) as OutcomeEvent[];
+
+      // An outcome belongs to the message it actually answers, keyed by the
+      // Gmail thread the poller recorded. Attributing it to the contact instead
+      // painted every message ever sent to that person: one reply on 10 Sept
+      // marked five August messages REPLIED, so the list read as five replies
+      // while the filter tab beside it correctly said one.
+      const outcomeByThread = new Map<string, { type: Outcome; at: string }>();
+      // Events recorded before thread ids were stored have no thread to match
+      // on. They fall back to the contact, but only for messages sent at or
+      // before the event — a later message cannot have caused an earlier reply.
       const outcomeByContact = new Map<string, { type: Outcome; at: string }>();
-      for (const e of (eventsRes.data ?? []) as
-        { contact_id: string | null; event_type: string; occurred_at: string }[]) {
+
+      for (const e of events) {
+        const threadId = e.meta?.thread_id;
+        if (threadId) {
+          const existing = outcomeByThread.get(threadId);
+          if (!existing || rank(e.event_type) > rank(existing.type)) {
+            outcomeByThread.set(threadId, { type: e.event_type as Outcome, at: e.occurred_at });
+          }
+        }
         if (!e.contact_id) continue;
         const existing = outcomeByContact.get(e.contact_id);
-        // A reply outranks a bounce outranks an opt-out: if someone answered,
-        // that is the fact worth surfacing even if the address later broke.
-        const rank = (t: string) => (t === 'replied' ? 3 : t === 'bounced' ? 2 : 1);
         if (!existing || rank(e.event_type) > rank(existing.type)) {
           outcomeByContact.set(e.contact_id, { type: e.event_type as Outcome, at: e.occurred_at });
         }
@@ -142,6 +165,7 @@ export function useMessages(filter: MessagesFilter) {
         .select(
           'id,to_email,subject,body,status,step_number,skip_reason,error,sent_at,scheduled_at,' +
           'created_at,personalized,personalization_error,campaign_id,contact_id,identity_id,' +
+          'provider_thread_id,' +
           'contacts(full_name,businesses(name))',
           { count: 'exact' },
         )
@@ -172,7 +196,16 @@ export function useMessages(filter: MessagesFilter) {
       if (error) throw error;
 
       const compose = (m: RawMessage): MessageRow => {
-        const evt = outcomeByContact.get(m.contact_id);
+        // Thread match first — that is the message the reply is actually on.
+        const byThread = m.provider_thread_id
+          ? outcomeByThread.get(m.provider_thread_id)
+          : undefined;
+        const byContact = outcomeByContact.get(m.contact_id);
+        const evt =
+          byThread ??
+          // Pre-thread-id events: attribute to this contact's messages, but only
+          // those already sent when the event happened.
+          (byContact && m.sent_at && byContact.at >= m.sent_at ? byContact : undefined);
         // An event only describes this message if the message actually went
         // out. A queued row for a contact who replied on an earlier campaign is
         // still queued, not replied.
