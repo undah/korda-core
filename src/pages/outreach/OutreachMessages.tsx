@@ -133,14 +133,47 @@ function MessageDetail({ message, onClose }: { message: MessageRow; onClose: () 
                 Everything recorded for this contact
               </div>
               <div className="space-y-1">
-                {events.map(e => (
-                  <div key={e.id} className="flex items-center justify-between text-xs">
-                    <span>{e.event_type}</span>
-                    <span className="outreach-mono text-[0.7rem] text-muted-foreground">
-                      {when(e.occurred_at)}
-                    </span>
-                  </div>
-                ))}
+                {events.map(e => {
+                  // The reply itself is never stored — it lives in the mailbox.
+                  // What the poller keeps is Gmail's own preview, which is
+                  // usually enough to tell interested from not; the thread link
+                  // is there for the rest of it.
+                  const meta = (e.meta ?? {}) as {
+                    snippet?: string; from?: string; thread_id?: string;
+                  };
+                  return (
+                    <div key={e.id} className="text-xs">
+                      <div className="flex items-center justify-between">
+                        <span>{e.event_type}</span>
+                        <span className="outreach-mono text-[0.7rem] text-muted-foreground">
+                          {when(e.occurred_at)}
+                        </span>
+                      </div>
+                      {meta.snippet && (
+                        <div className="my-1.5 border-l-2 border-border py-1 pl-2.5">
+                          {meta.from && (
+                            <div className="outreach-mono text-[0.65rem] text-muted-foreground">
+                              {meta.from}
+                            </div>
+                          )}
+                          <p className="mt-0.5 leading-relaxed text-muted-foreground">
+                            {meta.snippet}
+                          </p>
+                          {meta.thread_id && (
+                            <a
+                              href={`https://mail.google.com/mail/u/0/#all/${meta.thread_id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="outreach-mono mt-1 inline-block text-[0.65rem] underline"
+                            >
+                              Read the whole thread in Gmail →
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
