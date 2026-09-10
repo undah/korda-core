@@ -79,11 +79,34 @@ export function useDeleteIdentity() {
  * Today's ceiling for one mailbox — mirrors identityCapToday in the send
  * function so the console shows the same number the sender will enforce.
  */
+/**
+ * Mirrors dailyCapForAge in korda-outreach/src/rateLimit.ts, which is the
+ * source of truth — claim_send_slot enforces against that, not this.
+ *
+ * This used to ramp 5 per week while the pipeline stepped by tier, so the
+ * console showed 15 for a mailbox the system would actually let send 25. A
+ * displayed cap that disagrees with the enforced one is worse than no display:
+ * it is the number you plan a campaign around.
+ *
+ * Kept in sync by hand. The tiers are configurable on the pipeline
+ * (WARMUP_* env vars); if they are ever changed there, change them here too.
+ */
+const TIERS = { rampStart: 5, rampPerDay: 1, week2: 15, week3: 25, mature: 35 };
+
+export function dailyCapForAge(days: number): number {
+  const age = Math.max(0, Math.floor(days));
+  if (age < 7) return TIERS.rampStart + TIERS.rampPerDay * age;
+  if (age < 14) return TIERS.week2;
+  if (age < 21) return TIERS.week3;
+  return TIERS.mature;
+}
+
 export function capToday(identity: SendingIdentity, now = Date.now()): number {
-  const cap = identity.daily_cap ?? 40;
-  if (!identity.warmup_started_on) return cap;
+  if (!identity.warmup_started_on) return identity.daily_cap ?? TIERS.mature;
   const started = Date.parse(identity.warmup_started_on);
-  if (Number.isNaN(started)) return cap;
-  const weeks = Math.floor((now - started) / (7 * 24 * 60 * 60 * 1000));
-  return Math.min(cap, 5 + 5 * Math.max(0, weeks));
+  if (Number.isNaN(started)) return identity.daily_cap ?? TIERS.mature;
+
+  const curve = dailyCapForAge(Math.floor((now - started) / 86_400_000));
+  // An override applies, but never raises the cap above the curve mid-warmup.
+  return identity.daily_cap != null ? Math.min(identity.daily_cap, curve) : curve;
 }
