@@ -25,10 +25,9 @@
  *
  *  unsubscribe  public by design: the link is in every email we send, and has
  *               to work for someone who has never signed in and never will.
- *  inbound      a machine caller: whatever polls the sending mailbox and posts
- *               new mail here. It authenticates with its own shared secret,
- *               which the function verifies itself; a user JWT is meaningless
- *               for it.
+ *               (Reply and bounce recording is not here at all: the pipeline
+ *               polls Gmail directly in korda-outreach/src/replies.ts, since
+ *               MX points at Google and nothing can POST inbound mail to us.)
  *  send         already gated by SEND_TRIGGER_SECRET, and its callers are
  *               machines that hold it: the Railway scheduler, and send-now.js
  *               as a same-origin subrequest. A subrequest carries no user
@@ -41,7 +40,6 @@
  */
 const NO_SESSION = new Set([
   '/api/outreach/unsubscribe',
-  '/api/outreach/inbound',
   '/api/outreach/send',
 ]);
 
