@@ -39,7 +39,7 @@ const EMPTY: SendingIdentityDraft = {
   // Gmail is the only mailbox this project actually sends from; defaulting a
   // new sender to a provider with no account behind it just creates one that
   // silently cannot send.
-  provider: 'gmail', credential_key: 'GMAIL_CREDENTIALS',
+  provider: 'gmail', credential_key: 'GMAIL_SA_KEY',
   daily_cap: 40, warmup_started_on: null, active: true,
   smtp_host: null, smtp_port: null, smtp_secure: null,
 };
@@ -248,7 +248,7 @@ export default function OutreachSenders() {
                 <div className="space-y-1.5">
                   <Label htmlFor="s-cred">Credential key</Label>
                   <Input id="s-cred" className="outreach-mono" value={editing.credential_key}
-                    placeholder="GMAIL_CREDENTIALS"
+                    placeholder="GMAIL_SA_KEY"
                     onChange={e => setEditing({ ...editing, credential_key: e.target.value })} />
                 </div>
               </div>
