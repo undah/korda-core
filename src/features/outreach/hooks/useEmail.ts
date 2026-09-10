@@ -1,7 +1,7 @@
 // src/features/outreach/hooks/useEmail.ts
 // Email manager data access. Queuing happens client-side through the authed
 // anon client (RLS-guarded); the actual send runs in /api/outreach/send, which
-// holds the Resend key and the service-role key server-side.
+// holds the sending credentials and the service-role key server-side.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import type {

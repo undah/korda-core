@@ -25,9 +25,10 @@
  *
  *  unsubscribe  public by design: the link is in every email we send, and has
  *               to work for someone who has never signed in and never will.
- *  webhook,     machine callers (Resend). They authenticate with their own
- *  inbound      shared secret, which each verifies itself; a user JWT is
- *               meaningless for them.
+ *  inbound      a machine caller: whatever polls the sending mailbox and posts
+ *               new mail here. It authenticates with its own shared secret,
+ *               which the function verifies itself; a user JWT is meaningless
+ *               for it.
  *  send         already gated by SEND_TRIGGER_SECRET, and its callers are
  *               machines that hold it: the Railway scheduler, and send-now.js
  *               as a same-origin subrequest. A subrequest carries no user
@@ -40,7 +41,6 @@
  */
 const NO_SESSION = new Set([
   '/api/outreach/unsubscribe',
-  '/api/outreach/webhook',
   '/api/outreach/inbound',
   '/api/outreach/send',
 ]);

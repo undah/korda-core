@@ -30,14 +30,16 @@ import type { SendingIdentity, SendingIdentityDraft } from '@/features/outreach/
 const PROVIDERS: { value: string; label: string }[] = [
   { value: 'gmail', label: 'gmail — Google Workspace over the Gmail API (recommended)' },
   { value: 'smtp', label: 'smtp — a real mailbox over SMTP (blocked on some hosts)' },
-  { value: 'resend', label: 'resend — Resend API' },
   { value: 'smartlead', label: 'smartlead — Smartlead API' },
   { value: 'http', label: 'http — generic JSON endpoint, configured by env' },
 ];
 
 const EMPTY: SendingIdentityDraft = {
   label: '', from_email: '', from_name: null, reply_to: null,
-  provider: 'resend', credential_key: 'RESEND_API_KEY',
+  // Gmail is the only mailbox this project actually sends from; defaulting a
+  // new sender to a provider with no account behind it just creates one that
+  // silently cannot send.
+  provider: 'gmail', credential_key: 'GMAIL_CREDENTIALS',
   daily_cap: 40, warmup_started_on: null, active: true,
   smtp_host: null, smtp_port: null, smtp_secure: null,
 };
@@ -102,7 +104,7 @@ export default function OutreachSenders() {
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Credentials are not stored here. <span className="outreach-mono">Credential key</span> names
-          an environment variable on whichever host actually sends — Cloudflare Pages for Resend,
+          an environment variable on whichever host actually sends — Cloudflare Pages for
           Smartlead and generic HTTP providers, or the pipeline (Railway) for an <span className="outreach-mono">smtp</span> mailbox — so nothing secret is ever exposed to this page.
         </p>
         {rows.length > 0 && (
@@ -246,7 +248,7 @@ export default function OutreachSenders() {
                 <div className="space-y-1.5">
                   <Label htmlFor="s-cred">Credential key</Label>
                   <Input id="s-cred" className="outreach-mono" value={editing.credential_key}
-                    placeholder="RESEND_API_KEY"
+                    placeholder="GMAIL_CREDENTIALS"
                     onChange={e => setEditing({ ...editing, credential_key: e.target.value })} />
                 </div>
               </div>

@@ -1,8 +1,32 @@
 /**
  * POST /api/outreach/inbound — inbound (reply) receiver.
  *
- * Fed by whatever collects mail for the sending mailbox; sending itself is
- * Google Workspace over the Gmail API.
+ * Sending is Google Workspace over the Gmail API, and Gmail does not push mail
+ * to an endpoint on its own. So something has to poll the mailbox and post what
+ * it finds here — the pipeline host, which already holds the Gmail credentials.
+ * Classification and recording stay here because that is where the code and its
+ * tests live; the poller only needs to move bytes.
+ *
+ * Contract — POST with `x-webhook-secret: <OUTREACH_INBOUND_SECRET>` and a JSON
+ * body per new message:
+ *
+ *   {
+ *     "from":         "Jan Jansen <jan@klant.nl>",   // required
+ *     "subject":      "Re: samenwerking",
+ *     "text":         "...plain body...",            // or "html"
+ *     "in_reply_to":  "<message-id we sent>",        // Gmail: In-Reply-To header
+ *     "references":   ["<...>", "<...>"],            // Gmail: References header
+ *     "headers":      { "content-type": "..." }      // helps bounce detection
+ *   }
+ *
+ * in_reply_to should carry the same id stored on the message as
+ * provider_message_id, which is what lets a reply match its thread. Without it
+ * the sender's address is used instead, which is correct but weaker: it matches
+ * the most recent sent message to that address.
+ *
+ * Post each message once — a repeat writes a second event. Replies are
+ * de-duplicated per contact when rates are computed, so a duplicate will not
+ * skew a percentage, but it will show twice on the Messages page.
  *
  * Replies are the point of the whole system, and they are also the stop signal:
  * a follow-up that lands after someone has already answered is worse than no
@@ -16,7 +40,7 @@
  * 'unsubscribed' / 'bounced', so answering never removes a lead from
  * outreach_ready.
  *
- * Auth mirrors webhook.js — a shared secret in a header or query param.
+ * Auth: a shared secret in a header (x-webhook-secret) or query param.
  */
 
 function sb(env, path, init = {}) {
@@ -135,9 +159,10 @@ export function parseBounce(mail) {
 }
 
 /**
- * Resend gives `in_reply_to` (the Message-ID we sent) plus `references` for
- * deeper threads. We stored Resend's own id as provider_message_id, so try the
- * thread headers first and fall back to matching the sender's address.
+ * Match on the thread first: `in_reply_to` is the Message-ID we sent, and
+ * `references` carries deeper threads. We store the provider's own id as
+ * provider_message_id. Falls back to the sender's address when the poster
+ * cannot supply thread headers.
  */
 async function findMessage(env, payload, addressOverride = null) {
   const candidates = [
@@ -187,8 +212,8 @@ export async function onRequestPost(context) {
   // Fail closed. This was `if (env.<SECRET>)`, so an unset variable — a typo, a
   // forgotten setting on a new environment — left the endpoint open to anyone,
   // and a forged payload here writes bounce and reply events that suppress real
-  // leads. RESEND_INBOUND_SECRET is still read so an existing deployment keeps
-  // working, but the name no longer implies a provider this project doesn't use.
+  // leads. The old name is still read so a deployment that already sets it keeps
+  // working; set OUTREACH_INBOUND_SECRET and the legacy one can be deleted.
   const inboundSecret = env.OUTREACH_INBOUND_SECRET ?? env.RESEND_INBOUND_SECRET;
   if (!inboundSecret) {
     return Response.json(
@@ -208,7 +233,7 @@ export async function onRequestPost(context) {
   try { payload = await request.json(); }
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
-  // Resend nests the mail under `data` for webhook-style deliveries.
+  // Accept either a bare mail object or one nested under `data`.
   const mail = payload?.data ?? payload;
 
   try {
@@ -283,7 +308,7 @@ export async function onRequestPost(context) {
           contact_id: message.contact_id,
           campaign: message.campaign_id,
           event_type: 'replied',
-          meta: { provider: 'resend', matched_by: matchedBy, from: addressOf(mail?.from) },
+          meta: { provider: 'gmail', matched_by: matchedBy, from: addressOf(mail?.from) },
         }),
       });
 
@@ -298,7 +323,7 @@ export async function onRequestPost(context) {
 
     // The reply is recorded and the follow-ups are cancelled; the Messages page
     // is where a human reads it. There used to be an email relay here, but it
-    // went out through Resend, which this project does not use — so it returned
+    // went out through a provider this project does not use, so it returned
     // false on every reply and told nobody. A relay that silently does nothing
     // is worse than no relay, because it looks like one.
     return Response.json({
