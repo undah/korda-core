@@ -9,48 +9,76 @@ import type {
   BudgetMonth,
   BudgetPot,
   BudgetScope,
+  BudgetTransaction,
 } from "../types";
-import { maakUitnodigingscode, maandGrenzen } from "../lib/budget";
+import { maakUitnodigingscode, maandGrenzen, verschuifMaand } from "../lib/budget";
 
 // numeric columns can arrive as strings; never let "400" + 0 become "4000".
 const num = (v: unknown) => Number(v ?? 0);
 
-// ─── huishouden ──────────────────────────────────────────────────────────────
+// ─── huishoudens ─────────────────────────────────────────────────────────────
 
-export type MijnHuishouden = {
+export type Huishouden = {
   household: BudgetHousehold;
   members: BudgetMember[];
   me: BudgetMember;
-} | null;
+  /** Created it: may delete, may not leave. */
+  isMaker: boolean;
+};
 
-/** The signed-in user's household with its members, or null when they have none yet. */
-export function useMijnHuishouden() {
+/** Every household the signed-in user belongs to, oldest first. */
+export function useMijnHuishoudens() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["budget_household", user?.id],
+    queryKey: ["budget_households", user?.id],
     enabled: !!user,
-    queryFn: async (): Promise<MijnHuishouden> => {
+    queryFn: async (): Promise<Huishouden[]> => {
       const { data: eigen, error: e1 } = await supabase
         .from("budget_members")
         .select("household_id")
-        .eq("user_id", user!.id)
-        .maybeSingle();
+        .eq("user_id", user!.id);
       if (e1) throw e1;
-      if (!eigen) return null;
+      const ids = (eigen ?? []).map((r) => r.household_id);
+      if (ids.length === 0) return [];
 
-      const [{ data: household, error: e2 }, { data: members, error: e3 }] = await Promise.all([
-        supabase.from("budget_households").select("*").eq("id", eigen.household_id).single(),
-        supabase
-          .from("budget_members")
-          .select("*")
-          .eq("household_id", eigen.household_id)
-          .order("joined_at"),
+      const [{ data: households, error: e2 }, { data: members, error: e3 }] = await Promise.all([
+        supabase.from("budget_households").select("*").in("id", ids).order("created_at"),
+        supabase.from("budget_members").select("*").in("household_id", ids).order("joined_at"),
       ]);
       if (e2) throw e2;
       if (e3) throw e3;
-      const me = members!.find((m) => m.user_id === user!.id)!;
-      return { household: household!, members: members ?? [], me };
+      return (households ?? []).map((household) => {
+        const leden = (members ?? []).filter((m) => m.household_id === household.id);
+        return {
+          household,
+          members: leden,
+          me: leden.find((m) => m.user_id === user!.id)!,
+          isMaker: household.created_by === user!.id,
+        };
+      });
     },
+  });
+}
+
+export function useVerwijderHuishouden() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (householdId: string) => {
+      const { error } = await supabase.rpc("budget_delete_household", { p_household: householdId });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_households"] }),
+  });
+}
+
+export function useVerlaatHuishouden() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (householdId: string) => {
+      const { error } = await supabase.rpc("budget_leave_household", { p_household: householdId });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_households"] }),
   });
 }
 
@@ -65,7 +93,7 @@ export function useMaakHuishouden() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_household"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_households"] }),
   });
 }
 
@@ -80,7 +108,7 @@ export function useSluitAan() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_household"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_households"] }),
   });
 }
 
@@ -95,7 +123,7 @@ export function useWijzigWeergavenaam() {
         .eq("user_id", p.userId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_household"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_households"] }),
   });
 }
 
@@ -246,5 +274,74 @@ export function useUitgavenPerPotje(householdId: string | undefined, maand: Budg
       for (const k of Object.keys(perPot)) perPot[k] = Math.max(0, perPot[k]);
       return perPot;
     },
+  });
+}
+
+/**
+ * Spend per pot for the last `aantal` months ending at `tot` (oldest first).
+ * One query for the whole range; bucketed client-side.
+ */
+export function useUitgavenHistorie(householdId: string | undefined, tot: BudgetMonth, aantal = 6) {
+  const eerste = verschuifMaand(tot, -(aantal - 1));
+  const { van } = maandGrenzen(eerste);
+  const { tot: einde } = maandGrenzen(tot);
+  return useQuery({
+    queryKey: ["budget_history", householdId, van, einde],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("budget_transactions")
+        .select("pot_id, amount, booked_on")
+        .eq("household_id", householdId!)
+        .gte("booked_on", van)
+        .lt("booked_on", einde)
+        .not("pot_id", "is", null);
+      if (error) throw error;
+      const maanden = Array.from({ length: aantal }, (_, i) => verschuifMaand(eerste, i));
+      const perMaand = maanden.map((maand) => ({ maand, perPot: {} as Record<string, number> }));
+      for (const t of data ?? []) {
+        const [j, m] = t.booked_on.split("-").map(Number);
+        const rij = perMaand.find((r) => r.maand.year === j && r.maand.month === m);
+        if (!rij) continue;
+        rij.perPot[t.pot_id!] = (rij.perPot[t.pot_id!] ?? 0) - num(t.amount);
+      }
+      for (const r of perMaand)
+        for (const k of Object.keys(r.perPot)) r.perPot[k] = Math.max(0, r.perPot[k]);
+      return perMaand;
+    },
+  });
+}
+
+/** Transactions booked into one pot during a month, newest first. */
+export function usePotTransacties(potId: string | undefined, maand: BudgetMonth) {
+  const { van, tot } = maandGrenzen(maand);
+  return useQuery({
+    queryKey: ["budget_pot_tx", potId, van],
+    enabled: !!potId,
+    queryFn: async (): Promise<BudgetTransaction[]> => {
+      const { data, error } = await supabase
+        .from("budget_transactions")
+        .select("*")
+        .eq("pot_id", potId!)
+        .gte("booked_on", van)
+        .lt("booked_on", tot)
+        .order("booked_on", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((t) => ({ ...t, amount: num(t.amount) }));
+    },
+  });
+}
+
+export function useHernoemHuishouden() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { householdId: string; naam: string }) => {
+      const { error } = await supabase
+        .from("budget_households")
+        .update({ name: p.naam.trim() })
+        .eq("id", p.householdId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_households"] }),
   });
 }

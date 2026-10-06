@@ -58,6 +58,57 @@ export function maandVoortgang(m: BudgetMonth, nu = new Date()): number {
   return nu.getDate() / dagen;
 }
 
+export function dagenInMaand(m: BudgetMonth): number {
+  return new Date(m.year, m.month, 0).getDate();
+}
+
+/**
+ * Days left in the month including today (current month only), else 0.
+ * Today counts: money you can still spend today is part of today's budget.
+ */
+export function resterendeDagen(m: BudgetMonth, nu = new Date()): number {
+  if (!isZelfdeMaand(m, huidigeMaand(nu))) return 0;
+  return dagenInMaand(m) - nu.getDate() + 1;
+}
+
+/** What can go out per remaining day without breaching the total. */
+export function veiligPerDag(over: number, m: BudgetMonth, nu = new Date()): number | null {
+  const dagen = resterendeDagen(m, nu);
+  if (dagen <= 0) return null;
+  return Math.max(0, over) / dagen;
+}
+
+/**
+ * At the current pace, on which day of the month does this pot run out?
+ * Null when it won't, when the month isn't current, or when it's too early
+ * in the month for the pace to mean anything (first 3 days).
+ */
+export function opDatum(
+  uitgegeven: number,
+  limiet: number,
+  m: BudgetMonth,
+  nu = new Date(),
+): number | null {
+  if (!isZelfdeMaand(m, huidigeMaand(nu)) || limiet <= 0 || uitgegeven <= 0) return null;
+  const dag = nu.getDate();
+  if (dag < 4 || uitgegeven >= limiet) return null;
+  const perDag = uitgegeven / dag;
+  const opDag = Math.ceil(limiet / perDag);
+  return opDag <= dagenInMaand(m) ? opDag : null;
+}
+
+export function korteDatum(m: BudgetMonth, dag: number): string {
+  return new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short" }).format(
+    new Date(m.year, m.month - 1, dag),
+  );
+}
+
+export function korteMaand(m: BudgetMonth): string {
+  return new Intl.DateTimeFormat("nl-NL", { month: "short" })
+    .format(new Date(m.year, m.month - 1, 1))
+    .replace(".", "");
+}
+
 export type PotStatus = "ok" | "bijna" | "over";
 
 /** Warning threshold agreed for phase 4 alerts; the meter uses the same line. */

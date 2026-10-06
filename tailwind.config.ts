@@ -18,6 +18,29 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
+        // KordaBudget — light, warm paper. Contrast checked against `surface`:
+        // ink2 7.1:1, accent 7.4:1; ink3 is 4:1 and only for secondary text.
+        kb: {
+          bg: "#f4f3ee",
+          surface: "#fdfdfb",
+          sunk: "#ecebe5",
+          line: "#e3e2dc",
+          "line-strong": "#d3d2cb",
+          ink: "#17181c",
+          ink2: "#55575e",
+          ink3: "#7c7e85",
+          accent: "#3d3bd4",
+          "accent-ink": "#2c2aa8",
+          "accent-soft": "#e9e8fb",
+          // Status steps are fixed and always paired with an icon + label.
+          warn: "#fab219",
+          "warn-soft": "#fdf0cf",
+          "warn-ink": "#8a5a00",
+          crit: "#d03b3b",
+          "crit-soft": "#f8dcdc",
+          "crit-ink": "#a62a2a",
+          "good-ink": "#1d6b35",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

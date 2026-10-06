@@ -46,27 +46,27 @@ export default function BudgetPotjes() {
         {groepen.map((g) => (
           <div key={g.titel}>
             <div className="mb-2 flex items-baseline justify-between px-1">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[#6b6b66]">{g.titel}</h2>
-              <p className="text-xs tabular-nums text-[#6b6b66]">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-kb-ink2">{g.titel}</h2>
+              <p className="text-xs tabular-nums text-kb-ink2">
                 {formatEuroRond(g.lijst.reduce((s, p) => s + p.monthly_limit, 0))}
               </p>
             </div>
-            <Kaart className="divide-y divide-[#ececE7] overflow-hidden">
+            <Kaart className="divide-y divide-kb-line overflow-hidden">
               {g.lijst.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => setSheet({ open: true, pot: p })}
-                  className="flex min-h-[3.5rem] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#f6f6f2]"
+                  className="flex min-h-[3.5rem] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-kb-sunk/60"
                 >
                   <span aria-hidden="true" className="text-xl">
                     {p.emoji}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[0.95rem] font-medium">{p.name}</span>
-                  <span className="text-sm tabular-nums text-[#5c5c58]">
+                  <span className="text-sm tabular-nums text-kb-ink2">
                     {formatEuroRond(p.monthly_limit)}
                   </span>
-                  <ChevronRight className="h-4 w-4 text-[#a3a39d]" />
+                  <ChevronRight className="h-4 w-4 text-kb-ink3" />
                 </button>
               ))}
             </Kaart>
@@ -74,7 +74,7 @@ export default function BudgetPotjes() {
         ))}
 
         {potjes.length > 0 && (
-          <p className="px-1 text-xs text-[#6b6b66]">
+          <p className="px-1 text-xs text-kb-ink2">
             Persoonlijke potjes ziet alleen jij. Wat aan het eind van de maand over is, gaat naar
             sparen.
           </p>
@@ -123,7 +123,7 @@ function Startpakket({ householdId }: { householdId: string }) {
   return (
     <Kaart className="p-5">
       <p className="font-medium">Snel beginnen</p>
-      <p className="mt-1 text-sm text-[#5c5c58]">
+      <p className="mt-1 text-sm text-kb-ink2">
         Kies de potjes die bij jullie passen. De bedragen zijn een startpunt; je past ze daarna aan.
       </p>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -136,18 +136,18 @@ function Startpakket({ householdId }: { householdId: string }) {
                 aria-pressed={aan}
                 onClick={() => wissel(p.name)}
                 className={`flex min-h-[3rem] w-full items-center gap-3 rounded-xl border px-3 text-left transition-colors ${
-                  aan ? "border-[#2a5bd7] bg-[#e3eafb]" : "border-[#d9d9d3] bg-white hover:bg-[#f6f6f2]"
+                  aan ? "border-kb-accent bg-kb-accent-soft" : "border-kb-line-strong bg-white hover:bg-kb-sunk/60"
                 }`}
               >
                 <span aria-hidden="true" className="text-lg">
                   {p.emoji}
                 </span>
                 <span className="flex-1 text-sm font-medium">{p.name}</span>
-                <span className="text-xs tabular-nums text-[#5c5c58]">{formatEuroRond(p.monthly_limit)}</span>
+                <span className="text-xs tabular-nums text-kb-ink2">{formatEuroRond(p.monthly_limit)}</span>
                 <span
                   aria-hidden="true"
                   className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                    aan ? "border-[#2a5bd7] bg-[#2a5bd7] text-white" : "border-[#c9c9c3]"
+                    aan ? "border-kb-accent bg-kb-accent text-white" : "border-kb-line-strong"
                   }`}
                 >
                   {aan && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}

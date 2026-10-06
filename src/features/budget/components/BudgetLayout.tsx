@@ -1,9 +1,13 @@
 // src/features/budget/components/BudgetLayout.tsx — mobile-first shell for KordaBudget
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Home, PiggyBank, ArrowLeftRight, Target, Menu, Loader2 } from "lucide-react";
-import { useMijnHuishouden, type MijnHuishouden } from "../hooks/useBudget";
+import { ArrowLeftRight, Eye, EyeOff, Home, Loader2, Menu, PiggyBank, Target } from "lucide-react";
+import { useAuth } from "@/auth/AuthProvider";
+import { useMijnHuishoudens, type Huishouden } from "../hooks/useBudget";
+import { BedragProvider, useBedragen } from "./Bedrag";
 import { BudgetOnboarding } from "./BudgetOnboarding";
+import { HuishoudenKiezer } from "./HuishoudenKiezer";
+import { IcoonKnop } from "./ui";
 
 const NAV = [
   { to: "/budget/overzicht", label: "Overzicht", icon: Home },
@@ -13,15 +17,65 @@ const NAV = [
   { to: "/budget/meer", label: "Meer", icon: Menu },
 ] as const;
 
-export type BudgetOutletContext = { huishouden: NonNullable<MijnHuishouden> };
+export type BudgetOutletContext = {
+  /** The household currently shown. */
+  huishouden: Huishouden;
+  huishoudens: Huishouden[];
+  kies: (householdId: string) => void;
+};
+
+const PAPIER = "#f4f3ee";
+
+/** Which household is open, remembered per user on this device. */
+function useActiefHuishouden(huishoudens: Huishouden[] | undefined) {
+  const { user } = useAuth();
+  const sleutel = `kb-actief:${user?.id}`;
+  const [gekozen, setGekozen] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(sleutel);
+    } catch {
+      return null;
+    }
+  });
+  const kies = useCallback(
+    (id: string) => {
+      setGekozen(id);
+      try {
+        localStorage.setItem(sleutel, id);
+      } catch {
+        // Not persisted in private mode; the choice still holds for this session.
+      }
+    },
+    [sleutel],
+  );
+  // A deleted or left household falls back to the first one still there.
+  const actief =
+    huishoudens?.find((h) => h.household.id === gekozen) ?? huishoudens?.[0] ?? null;
+  return { actief, kies };
+}
+
+function OogKnop() {
+  const { verborgen, wissel } = useBedragen();
+  return (
+    <IcoonKnop
+      onClick={wissel}
+      aria-pressed={verborgen}
+      aria-label={verborgen ? "Bedragen tonen" : "Bedragen verbergen"}
+      title={verborgen ? "Bedragen tonen" : "Bedragen verbergen"}
+    >
+      {verborgen ? <EyeOff className="h-[1.15rem] w-[1.15rem]" /> : <Eye className="h-[1.15rem] w-[1.15rem]" />}
+    </IcoonKnop>
+  );
+}
 
 export default function BudgetLayout() {
-  const { data: huishouden, isLoading, error } = useMijnHuishouden();
+  const { data: huishoudens, isLoading, error } = useMijnHuishoudens();
+  const { actief, kies } = useActiefHuishouden(huishoudens);
 
   // The rest of Korda is dark; this app is light, so paint the page behind it too.
   useEffect(() => {
     const vorige = document.body.style.background;
-    document.body.style.background = "#f3f3ef";
+    document.body.style.background = PAPIER;
     return () => {
       document.body.style.background = vorige;
     };
@@ -29,87 +83,114 @@ export default function BudgetLayout() {
 
   if (isLoading) {
     return (
-      <div className="kb-root flex min-h-screen items-center justify-center bg-[#f3f3ef]">
-        <Loader2 className="h-5 w-5 animate-spin text-[#8a8a85]" aria-label="Laden" />
+      <div className="kb-root flex min-h-screen items-center justify-center bg-kb-bg">
+        <Loader2 className="h-5 w-5 animate-spin text-kb-ink3" aria-label="Laden" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="kb-root flex min-h-screen items-center justify-center bg-[#f3f3ef] px-6 text-center">
+      <div className="kb-root flex min-h-screen items-center justify-center bg-kb-bg px-6 text-center">
         <div>
-          <p className="text-sm font-medium text-[#1a1a19]">Kon je huishouden niet laden.</p>
-          <p className="mt-1 text-xs text-[#5c5c58]">{(error as Error).message}</p>
+          <p className="text-sm font-medium text-kb-ink">Kon je huishoudens niet laden.</p>
+          <p className="mt-1 text-xs text-kb-ink2">{(error as Error).message}</p>
         </div>
       </div>
     );
   }
 
-  if (!huishouden) {
+  if (!actief || !huishoudens) {
     return (
-      <div className="kb-root min-h-screen bg-[#f3f3ef] text-[#1a1a19]">
-        <BudgetOnboarding />
+      <div className="kb-root min-h-screen bg-kb-bg text-kb-ink">
+        <BudgetOnboarding onKlaar={kies} />
       </div>
     );
   }
 
-  const context: BudgetOutletContext = { huishouden };
+  const context: BudgetOutletContext = { huishouden: actief, huishoudens, kies };
 
   return (
-    <div className="kb-root min-h-screen bg-[#f3f3ef] text-[#1a1a19] md:flex">
-      {/* Desktop: left rail. Mobile: bottom bar. Same five destinations. */}
-      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-[#e4e4df] bg-[#fcfcfb] px-3 py-6 md:flex">
-        <div className="px-3">
-          <p className="text-sm font-semibold tracking-tight">KordaBudget</p>
-          <p className="mt-0.5 truncate text-xs text-[#5c5c58]">{huishouden.household.name}</p>
-        </div>
-        <nav className="mt-8 flex flex-col gap-1" aria-label="Hoofdmenu">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  isActive
-                    ? "bg-[#e3eafb] font-medium text-[#1d46b0]"
-                    : "text-[#5c5c58] hover:bg-[#f0f0ec] hover:text-[#1a1a19]"
-                }`
-              }
-            >
-              <item.icon className="h-4 w-4" strokeWidth={1.75} />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-
-      <main className="min-w-0 flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-10">
-        <Outlet context={context} />
-      </main>
-
-      <nav
-        aria-label="Hoofdmenu"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e4e4df] bg-[#fcfcfb]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-      >
-        <ul className="grid grid-cols-5">
-          {NAV.map((item) => (
-            <li key={item.to}>
+    <BedragProvider>
+      <div className="kb-root min-h-screen bg-kb-bg text-kb-ink antialiased md:flex">
+        {/* Desktop: left rail with the household switcher on top. */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-kb-line bg-kb-surface px-3 py-5 md:flex">
+          <p className="px-3 text-sm font-semibold tracking-tight">
+            Korda<span className="text-kb-accent">Budget</span>
+          </p>
+          <div className="mt-5">
+            <HuishoudenKiezer huishoudens={huishoudens} actief={actief} onKies={kies} />
+          </div>
+          <nav className="mt-4 flex flex-col gap-0.5" aria-label="Hoofdmenu">
+            {NAV.map((item) => (
               <NavLink
+                key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex min-h-[3.5rem] flex-col items-center justify-center gap-1 text-[0.68rem] ${
-                    isActive ? "font-semibold text-[#1d46b0]" : "text-[#6b6b66]"
+                  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-kb-accent-soft font-medium text-kb-accent-ink"
+                      : "text-kb-ink2 hover:bg-kb-sunk hover:text-kb-ink"
                   }`
                 }
               >
-                <item.icon className="h-5 w-5" strokeWidth={1.75} />
+                <item.icon className="h-[1.1rem] w-[1.1rem]" strokeWidth={1.75} />
                 {item.label}
               </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </div>
+            ))}
+          </nav>
+          <div className="mt-auto flex items-center justify-between px-1">
+            <span className="px-2 text-xs text-kb-ink3">Bedragen</span>
+            <OogKnop />
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          {/* Mobile: household + privacy toggle, always in reach. */}
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-kb-line/70 bg-kb-bg/90 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] backdrop-blur md:hidden">
+            <HuishoudenKiezer huishoudens={huishoudens} actief={actief} onKies={kies} compact />
+            <OogKnop />
+          </header>
+
+          <main className="pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-12">
+            {/* Remount per household so no page shows the previous one's data. */}
+            <Outlet key={actief.household.id} context={context} />
+          </main>
+        </div>
+
+        <nav
+          aria-label="Hoofdmenu"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-kb-line bg-kb-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        >
+          <ul className="grid grid-cols-5">
+            {NAV.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `group flex min-h-[3.75rem] flex-col items-center justify-center gap-1 text-[0.68rem] ${
+                      isActive ? "font-semibold text-kb-accent-ink" : "text-kb-ink2"
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                          isActive ? "bg-kb-accent-soft" : ""
+                        }`}
+                      >
+                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.1 : 1.75} />
+                      </span>
+                      {item.label}
+                    </>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </BedragProvider>
   );
 }

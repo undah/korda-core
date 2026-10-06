@@ -57,15 +57,15 @@ export default function BudgetLogin() {
   };
 
   return (
-    <div className="kb-root min-h-screen bg-[#f3f3ef] text-[#1a1a19]">
+    <div className="kb-root min-h-screen bg-kb-bg text-kb-ink">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
-        <Link to="/budget" className="text-sm font-semibold tracking-tight text-[#1d46b0]">
+        <Link to="/budget" className="text-sm font-semibold tracking-tight text-kb-accent-ink">
           KordaBudget
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
           {modus === "inloggen" ? "Inloggen" : "Account maken"}
         </h1>
-        <p className="mt-2 text-sm text-[#5c5c58]">
+        <p className="mt-2 text-sm text-kb-ink2">
           {modus === "inloggen"
             ? "Met je Korda-account. Heb je die al voor een andere Korda-app, dan werkt hij hier ook."
             : "Je partner maakt straks een eigen account en sluit aan met een code."}
@@ -100,7 +100,7 @@ export default function BudgetLogin() {
         <button
           type="button"
           onClick={() => setModus((m) => (m === "inloggen" ? "registreren" : "inloggen"))}
-          className="mt-5 text-sm text-[#5c5c58] underline-offset-4 hover:text-[#1a1a19] hover:underline"
+          className="mt-5 text-sm text-kb-ink2 underline-offset-4 hover:text-kb-ink hover:underline"
         >
           {modus === "inloggen" ? "Nog geen account? Maak er een" : "Al een account? Log in"}
         </button>

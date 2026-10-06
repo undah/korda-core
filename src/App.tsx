@@ -65,6 +65,8 @@ import BudgetLayout from "./features/budget/components/BudgetLayout";
 import BudgetOverzicht from "./pages/budget/BudgetOverzicht";
 import BudgetPotjes from "./pages/budget/BudgetPotjes";
 import BudgetMeer from "./pages/budget/BudgetMeer";
+import BudgetPotDetail from "./pages/budget/BudgetPotDetail";
+import BudgetHuishoudens from "./pages/budget/BudgetHuishoudens";
 import { BudgetTransacties, BudgetDoelen } from "./pages/budget/BudgetBinnenkort";
 import TrackerDashboard from "./pages/tracker/TrackerDashboard";
 import TrackerGraph from "./pages/tracker/TrackerGraph";
@@ -142,9 +144,11 @@ function AnimatedRoutes() {
             <Route element={<BudgetLayout />}>
               <Route path="/budget/overzicht"   element={<BudgetOverzicht />} />
               <Route path="/budget/potjes"      element={<BudgetPotjes />} />
+              <Route path="/budget/potjes/:potId" element={<BudgetPotDetail />} />
               <Route path="/budget/transacties" element={<BudgetTransacties />} />
               <Route path="/budget/doelen"      element={<BudgetDoelen />} />
               <Route path="/budget/meer"        element={<BudgetMeer />} />
+              <Route path="/budget/huishoudens" element={<BudgetHuishoudens />} />
             </Route>
           </Route>
 

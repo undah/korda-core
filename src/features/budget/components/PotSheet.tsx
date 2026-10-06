@@ -15,6 +15,7 @@ export function PotSheet({
   householdId,
   pot,
   volgendeSortering,
+  onVerwijderd,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,6 +23,8 @@ export function PotSheet({
   /** Omit to create a new pot. */
   pot?: BudgetPot;
   volgendeSortering: number;
+  /** Called after the pot is deleted, e.g. to leave its detail page. */
+  onVerwijderd?: () => void;
 }) {
   const [naam, setNaam] = useState("");
   const [emoji, setEmoji] = useState(EMOJI[0]);
@@ -62,6 +65,7 @@ export function PotSheet({
       await archiveer.mutateAsync(pot.id);
       toast.success("Potje verwijderd");
       onOpenChange(false);
+      onVerwijderd?.();
     } catch (err) {
       toast.error(foutTekst(err));
     }
@@ -70,9 +74,9 @@ export function PotSheet({
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-[#1a1a19]/40" />
-        <Drawer.Content className="kb-root fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-[#fcfcfb] text-[#1a1a19] outline-none">
-          <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-[#d9d9d3]" />
+        <Drawer.Overlay className="fixed inset-0 z-50 bg-kb-ink/40" />
+        <Drawer.Content className="kb-root fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-kb-surface text-kb-ink outline-none">
+          <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-kb-line-strong" />
           <form
             onSubmit={verstuur}
             className="overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4"
@@ -80,7 +84,7 @@ export function PotSheet({
             <Drawer.Title className="text-lg font-semibold tracking-tight">
               {pot ? "Potje bewerken" : "Nieuw potje"}
             </Drawer.Title>
-            <Drawer.Description className="mt-1 text-sm text-[#5c5c58]">
+            <Drawer.Description className="mt-1 text-sm text-kb-ink2">
               Wat over is aan het eind van de maand, gaat naar sparen.
             </Drawer.Description>
 
@@ -105,7 +109,7 @@ export function PotSheet({
                       aria-pressed={emoji === e}
                       onClick={() => setEmoji(e)}
                       className={`flex aspect-square items-center justify-center rounded-xl text-xl transition-colors ${
-                        emoji === e ? "bg-[#e3eafb] ring-2 ring-[#2a5bd7]" : "bg-[#f3f3ef] hover:bg-[#ebebe6]"
+                        emoji === e ? "bg-kb-accent-soft ring-2 ring-kb-accent" : "bg-kb-bg hover:bg-kb-sunk"
                       }`}
                     >
                       {e}
@@ -140,12 +144,12 @@ export function PotSheet({
                       onClick={() => setScope(o.id)}
                       className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         scope === o.id
-                          ? "border-[#2a5bd7] bg-[#e3eafb]"
-                          : "border-[#d9d9d3] bg-white hover:bg-[#f6f6f2]"
+                          ? "border-kb-accent bg-kb-accent-soft"
+                          : "border-kb-line-strong bg-white hover:bg-kb-sunk/60"
                       }`}
                     >
                       <span className="block text-sm font-medium">{o.titel}</span>
-                      <span className="block text-xs text-[#5c5c58]">{o.uitleg}</span>
+                      <span className="block text-xs text-kb-ink2">{o.uitleg}</span>
                     </button>
                   ))}
                 </div>
