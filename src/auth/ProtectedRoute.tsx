@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 
-export function ProtectedRoute() {
+/** `loginPath` lets an app send people to its own sign-in page instead of the trading one. */
+export function ProtectedRoute({ loginPath = "/login" }: { loginPath?: string } = {}) {
   const { user, loading } = useAuth();
   const location = useLocation();
   // <Navigate>'s effect depends on `state` by reference, so a fresh object
@@ -18,7 +19,7 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={redirectState} />;
+    return <Navigate to={loginPath} replace state={redirectState} />;
   }
 
   return <Outlet />;
