@@ -62,8 +62,8 @@ const SECTION_NAMES = Object.keys(SECTIONS);
 const ALL_PAGES = SECTION_NAMES.flatMap(k => SECTIONS[k]);
 
 /** The two sections have separate layouts, so the readiness selectors differ. */
-const READY = '.o-main, .kt-main';
-const CONTENT = '.o-panel, .o-state, .kt-card, table';
+const READY = '.o-main, .kt-main, .kb-root';
+const CONTENT = '.o-panel, .o-state, .kt-card, table, .kb-root h1';
 
 /** Mobile matters for the tracker specifically — its bottom nav and grid
  *  collapse below 768px, and that layout has never been reviewed. */

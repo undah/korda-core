@@ -1,6 +1,6 @@
 // src/pages/budget/BudgetTransacties.tsx — the month's money in and out, with the "nog indelen" inbox
 import { useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeftRight, Check, Inbox, Plus, Split } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
@@ -116,6 +116,9 @@ export default function BudgetTransacties() {
               Na het koppelen van ING komen je uitgaven hier vanzelf binnen. Contant betaald? Voeg het
               toe met de plusknop.
             </p>
+            <Link to="/budget/rekeningen" className="mt-4 inline-block text-sm font-medium text-kb-accent-ink underline">
+              Rekeningen beheren
+            </Link>
           </Kaart>
         ) : (
           <div className="space-y-5">

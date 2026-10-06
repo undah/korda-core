@@ -71,6 +71,9 @@ import BudgetTransacties from "./pages/budget/BudgetTransacties";
 import BudgetDoelen from "./pages/budget/BudgetDoelen";
 import BudgetVasteLasten from "./pages/budget/BudgetVasteLasten";
 import BudgetVerrekenen from "./pages/budget/BudgetVerrekenen";
+import BudgetRekeningen from "./pages/budget/BudgetRekeningen";
+import BudgetBankTerug from "./pages/budget/BudgetBankTerug";
+import { BudgetPrivacy, BudgetVoorwaarden } from "./pages/budget/BudgetJuridisch";
 import TrackerDashboard from "./pages/tracker/TrackerDashboard";
 import TrackerGraph from "./pages/tracker/TrackerGraph";
 import TrackerProgress from "./pages/tracker/TrackerProgress";
@@ -143,6 +146,8 @@ function AnimatedRoutes() {
           {/* KordaBudget — public landing + own sign-in, then the protected app */}
           <Route path="/budget" element={<KordaBudget />} />
           <Route path="/budget/login" element={<BudgetLogin />} />
+          <Route path="/budget/privacy" element={<BudgetPrivacy />} />
+          <Route path="/budget/voorwaarden" element={<BudgetVoorwaarden />} />
           <Route element={<ProtectedRoute loginPath="/budget/login" />}>
             <Route element={<BudgetLayout />}>
               <Route path="/budget/overzicht"   element={<BudgetOverzicht />} />
@@ -154,6 +159,8 @@ function AnimatedRoutes() {
               <Route path="/budget/huishoudens" element={<BudgetHuishoudens />} />
               <Route path="/budget/vaste-lasten" element={<BudgetVasteLasten />} />
               <Route path="/budget/verrekenen"  element={<BudgetVerrekenen />} />
+              <Route path="/budget/rekeningen"  element={<BudgetRekeningen />} />
+              <Route path="/budget/bank/terug"  element={<BudgetBankTerug />} />
             </Route>
           </Route>
 

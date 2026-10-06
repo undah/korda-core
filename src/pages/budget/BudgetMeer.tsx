@@ -44,6 +44,7 @@ export default function BudgetMeer() {
       <div className="max-w-2xl space-y-6">
         <nav className="divide-y divide-kb-line overflow-hidden rounded-2xl border border-kb-line bg-kb-surface" aria-label="Meer">
           {[
+            { to: "/budget/rekeningen", icon: Landmark, titel: "Rekeningen", sub: "ING koppelen, gedeeld of privé" },
             { to: "/budget/vaste-lasten", icon: CalendarClock, titel: "Vaste lasten", sub: "Wat terugkomt, abonnementen-radar" },
             { to: "/budget/verrekenen", icon: Handshake, titel: "Verrekenen", sub: "Wie betaalde wat voor het huishouden" },
             {
@@ -167,18 +168,6 @@ export default function BudgetMeer() {
               Opslaan
             </Knop>
           </form>
-        </Kaart>
-
-        <Kaart className="p-5">
-          <div className="flex items-center gap-2">
-            <Landmark className="h-4 w-4 text-kb-accent-ink" strokeWidth={1.75} />
-            <h2 className="font-semibold">Rekeningen</h2>
-          </div>
-          <p className="mt-2 text-sm text-kb-ink2">
-            Hier koppel je straks je ING-rekeningen en kies je per rekening of hij gedeeld of privé
-            is.
-          </p>
-          <p className="mt-3 text-xs font-medium text-kb-ink2">Komt in de volgende stap</p>
         </Kaart>
 
         <Knop

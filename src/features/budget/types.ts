@@ -70,6 +70,12 @@ export interface BudgetAccount {
   visibility: "shared" | "private";
   provider: string;
   is_joint: boolean;
+  provider_account_id?: string | null;
+  link_id?: string | null;
+  consent_valid_until?: string | null;
+  last_synced_at?: string | null;
+  sync_error?: string | null;
+  created_at?: string;
 }
 
 export interface BudgetSplit {

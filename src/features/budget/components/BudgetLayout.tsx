@@ -4,6 +4,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { ArrowLeftRight, Eye, EyeOff, Home, Loader2, Menu, PiggyBank, Target } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
 import { useMijnHuishoudens, type Huishouden } from "../hooks/useBudget";
+import { useBankBijwerken, useRekeningen } from "../hooks/useBudgetData";
 import { BedragProvider, useBedragen } from "./Bedrag";
 import { BudgetOnboarding } from "./BudgetOnboarding";
 import { HuishoudenKiezer } from "./HuishoudenKiezer";
@@ -52,6 +53,30 @@ function useActiefHuishouden(huishoudens: Huishouden[] | undefined) {
   const actief =
     huishoudens?.find((h) => h.household.id === gekozen) ?? huishoudens?.[0] ?? null;
   return { actief, kies };
+}
+
+/**
+ * When the app opens, fetch new bank transactions in the background, at most
+ * every half hour per household. The server only goes to the bank for accounts
+ * that haven't been synced in the last few hours.
+ */
+function AutoBijwerken({ householdId }: { householdId: string }) {
+  const { data: rekeningen } = useRekeningen(householdId);
+  const { mutate } = useBankBijwerken();
+  const gekoppeld = !!rekeningen?.some((r) => r.provider === "enable_banking" && r.link_id);
+  useEffect(() => {
+    if (!gekoppeld) return;
+    const sleutel = `kb-sync:${householdId}`;
+    try {
+      const vorige = Number(sessionStorage.getItem(sleutel));
+      if (vorige && Date.now() - vorige < 30 * 60_000) return;
+      sessionStorage.setItem(sleutel, String(Date.now()));
+    } catch {
+      // No storage: still sync; the server's own staleness check keeps it cheap.
+    }
+    mutate({ householdId, alleenOud: true });
+  }, [gekoppeld, householdId, mutate]);
+  return null;
 }
 
 function OogKnop() {
@@ -122,6 +147,7 @@ export default function BudgetLayout() {
 
   return (
     <BedragProvider>
+      <AutoBijwerken householdId={actief.household.id} />
       <div className="kb-root min-h-screen bg-kb-bg text-kb-ink antialiased md:flex">
         {/* Desktop: left rail with the household switcher on top. */}
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-kb-line bg-kb-surface px-3 py-5 md:flex">

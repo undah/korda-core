@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
 import { maandGrenzen, verschuifMaand } from "../lib/budget";
+import { bankFetch, type SyncUitkomst } from "../lib/bankApi";
 import type {
   BudgetAccount,
   BudgetGoal,
@@ -487,6 +488,48 @@ export function useRekeningen(householdId: string | undefined) {
 export function useZetGezamenlijk() {
   return useSchrijf(async (p: { id: string; isJoint: boolean }) => {
     await ok(supabase.from("budget_accounts").update({ is_joint: p.isJoint }).eq("id", p.id));
+  });
+}
+
+export function useZetZichtbaarheid() {
+  return useSchrijf(async (p: { id: string; visibility: "shared" | "private" }) => {
+    await ok(supabase.from("budget_accounts").update({ visibility: p.visibility }).eq("id", p.id));
+  });
+}
+
+export function useHernoemRekening() {
+  return useSchrijf(async (p: { id: string; naam: string }) => {
+    await ok(supabase.from("budget_accounts").update({ name: p.naam }).eq("id", p.id));
+  });
+}
+
+// ─── bankkoppeling (ING via Enable Banking) ──────────────────────────────────
+
+/** Ask the server for ING's login page and go there. */
+export function useKoppelBank() {
+  return useMutation({
+    mutationFn: async (householdId: string) => {
+      const { url } = await bankFetch<{ url: string }>("start", { householdId });
+      window.location.assign(url);
+    },
+  });
+}
+
+export function useRondKoppelingAf() {
+  return useSchrijf((p: { code: string; state: string }) =>
+    bankFetch<{ rekeningen: number; nieuw: number }>("terug", p),
+  );
+}
+
+export function useBankBijwerken() {
+  return useSchrijf((p: { householdId: string; alleenOud?: boolean }) => bankFetch<SyncUitkomst>("sync", p));
+}
+
+/** Stop syncing (and with `verwijderen`, also delete the account and its history). */
+export function useOntkoppel() {
+  return useSchrijf(async (p: { accountId: string; verwijderen?: boolean }) => {
+    await bankFetch("ontkoppel", { accountId: p.accountId });
+    if (p.verwijderen) await ok(supabase.rpc("budget_delete_account", { p_account: p.accountId }));
   });
 }
 
