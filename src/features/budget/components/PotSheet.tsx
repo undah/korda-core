@@ -2,8 +2,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
-import { useArchiveerPotje, useBewaarPotje, type PotInvoer } from "../hooks/useBudget";
-import { formatEuroRond, parseBedrag } from "../lib/budget";
+import { Lightbulb } from "lucide-react";
+import { useArchiveerPotje, useBewaarPotje, useUitgavenHistorie, type PotInvoer } from "../hooks/useBudget";
+import { formatEuroRond, huidigeMaand, parseBedrag } from "../lib/budget";
+import { limietVoorstel } from "../lib/inzicht";
+import { Wissel } from "./Blad";
 import type { BudgetPot, BudgetScope } from "../types";
 import { Knop, Veld, foutTekst } from "./ui";
 
@@ -30,6 +33,14 @@ export function PotSheet({
   const [emoji, setEmoji] = useState(EMOJI[0]);
   const [limiet, setLimiet] = useState("");
   const [scope, setScope] = useState<BudgetScope>("shared");
+  const [kind, setKind] = useState<"flexibel" | "vast">("flexibel");
+  const { data: historie = [] } = useUitgavenHistorie(open && pot ? householdId : undefined, huidigeMaand(), 4);
+  const voorstel = pot
+    ? limietVoorstel(
+        historie.map((h) => ({ maand: h.maand, bedrag: h.perPot[pot.id] ?? 0 })),
+        parseBedrag(limiet),
+      )
+    : null;
   const [zekerVerwijderen, setZekerVerwijderen] = useState(false);
   const bewaar = useBewaarPotje(householdId);
   const archiveer = useArchiveerPotje(householdId);
@@ -40,12 +51,13 @@ export function PotSheet({
     setEmoji(pot?.emoji ?? EMOJI[0]);
     setLimiet(pot ? String(pot.monthly_limit).replace(".", ",") : "");
     setScope(pot?.scope ?? "shared");
+    setKind(pot?.kind ?? "flexibel");
     setZekerVerwijderen(false);
   }, [open, pot]);
 
   const verstuur = async (e: FormEvent) => {
     e.preventDefault();
-    const invoer: PotInvoer = { name: naam, emoji, monthly_limit: parseBedrag(limiet), scope };
+    const invoer: PotInvoer = { name: naam, emoji, monthly_limit: parseBedrag(limiet), scope, kind };
     try {
       await bewaar.mutateAsync({ id: pot?.id, invoer, sortOrder: volgendeSortering });
       toast.success(pot ? "Potje bijgewerkt" : "Potje toegevoegd");
@@ -127,6 +139,31 @@ export function PotSheet({
                 hint={limiet ? `${formatEuroRond(parseBedrag(limiet))} per maand` : undefined}
                 required
               />
+              {voorstel && (
+                <button
+                  type="button"
+                  onClick={() => setLimiet(String(voorstel.bedrag))}
+                  className="-mt-1 flex w-full items-start gap-2.5 rounded-xl bg-kb-accent-soft px-3 py-2.5 text-left text-sm text-kb-accent-ink hover:bg-kb-accent-soft/70"
+                >
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    De afgelopen {voorstel.maanden} maanden gaf je gemiddeld zo'n{" "}
+                    <strong>{formatEuroRond(voorstel.bedrag)}</strong> uit. Tik om dat als limiet te nemen.
+                  </span>
+                </button>
+              )}
+
+              <fieldset>
+                <legend className="mb-1.5 text-sm font-medium">Soort</legend>
+                <Wissel<"flexibel" | "vast">
+                  opties={[
+                    { id: "flexibel", titel: "Flexibel", uitleg: "Boodschappen, uit eten" },
+                    { id: "vast", titel: "Vast bedrag", uitleg: "Huur, abonnementen" },
+                  ]}
+                  waarde={kind}
+                  onChange={setKind}
+                />
+              </fieldset>
 
               <fieldset>
                 <legend className="mb-1.5 text-sm font-medium">Voor wie</legend>

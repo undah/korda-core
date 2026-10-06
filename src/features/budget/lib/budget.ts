@@ -129,12 +129,12 @@ export function maakUitnodigingscode(lengte = 6): string {
 }
 
 /** Starter pots offered on an empty household; limits are only suggestions. */
-export const VOORGESTELDE_POTJES: Array<{ name: string; emoji: string; monthly_limit: number }> = [
+export const VOORGESTELDE_POTJES: Array<{ name: string; emoji: string; monthly_limit: number; kind?: "vast" }> = [
   { name: "Boodschappen", emoji: "🛒", monthly_limit: 500 },
-  { name: "Vaste lasten", emoji: "🏠", monthly_limit: 1200 },
+  { name: "Vaste lasten", emoji: "🏠", monthly_limit: 1200, kind: "vast" },
   { name: "Uit eten", emoji: "🍝", monthly_limit: 150 },
   { name: "Vervoer", emoji: "🚗", monthly_limit: 150 },
-  { name: "Abonnementen", emoji: "📺", monthly_limit: 60 },
+  { name: "Abonnementen", emoji: "📺", monthly_limit: 60, kind: "vast" },
   { name: "Kleding", emoji: "👕", monthly_limit: 75 },
   { name: "Huis & tuin", emoji: "🪴", monthly_limit: 75 },
   { name: "Cadeaus", emoji: "🎁", monthly_limit: 50 },

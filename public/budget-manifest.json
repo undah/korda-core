@@ -1,0 +1,17 @@
+{
+  "name": "KordaBudget",
+  "short_name": "Budget",
+  "description": "Samen grip op je huishoudbudget",
+  "id": "/budget/",
+  "start_url": "/budget/overzicht",
+  "scope": "/budget/",
+  "display": "standalone",
+  "background_color": "#f4f3ee",
+  "theme_color": "#f4f3ee",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/web-app-manifest-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/web-app-manifest-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

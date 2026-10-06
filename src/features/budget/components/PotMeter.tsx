@@ -18,16 +18,19 @@ export function Meter({
   limiet,
   tempo,
   dik = false,
+  vast = false,
   label,
 }: {
   uitgegeven: number;
   limiet: number;
+  /** Fixed pot: filling up is the plan, so only "over" changes the colour. */
+  vast?: boolean;
   /** Share of the month elapsed (0..1); draws the even-spending marker. */
   tempo?: number;
   dik?: boolean;
   label: string;
 }) {
-  const status = potStatus(uitgegeven, limiet);
+  const status = vast ? (uitgegeven > limiet ? "over" : "ok") : potStatus(uitgegeven, limiet);
   const vulling = limiet > 0 ? Math.min(1, uitgegeven / limiet) : uitgegeven > 0 ? 1 : 0;
   return (
     <div
@@ -42,7 +45,7 @@ export function Meter({
         className={`h-full rounded-full transition-[width] duration-700 ease-out ${KLEUR[status].vulling}`}
         style={{ width: `${vulling * 100}%` }}
       />
-      {tempo !== undefined && tempo > 0 && tempo < 1 && limiet > 0 && (
+      {!vast && tempo !== undefined && tempo > 0 && tempo < 1 && limiet > 0 && (
         <span
           aria-hidden="true"
           className="absolute inset-y-0 w-[2px] bg-kb-ink/40"
@@ -60,6 +63,8 @@ export type PotSignaal = {
 };
 
 export function potSignaal(uitgegeven: number, pot: BudgetPot, maand: BudgetMonth): PotSignaal {
+  // Rent being paid isn't news: a fixed pot only signals when it goes over.
+  if (pot.kind === "vast") return { status: uitgegeven > pot.monthly_limit ? "over" : "ok", opDag: null };
   const status = potStatus(uitgegeven, pot.monthly_limit);
   return { status, opDag: status === "over" ? null : opDatum(uitgegeven, pot.monthly_limit, maand) };
 }
@@ -100,6 +105,12 @@ export function PotStatusRegel({
         Leeg op {korteDatum(maand, opDag)} bij dit tempo
       </p>
     );
+  if (pot.kind === "vast")
+    return (
+      <p className="text-xs text-kb-ink3">
+        {euroRond(uitgegeven)} van {euroRond(pot.monthly_limit)} betaald
+      </p>
+    );
   return <p className="text-xs text-kb-ink3">van {euroRond(pot.monthly_limit)}</p>;
 }
 
@@ -132,11 +143,13 @@ export function PotTegel({
         >
           {pot.emoji}
         </span>
-        {pot.scope === "personal" && (
+        {pot.scope === "personal" ? (
           <span className="flex items-center gap-1 text-[0.68rem] font-medium text-kb-ink2">
             <Lock className="h-3 w-3" strokeWidth={2} /> Alleen jij
           </span>
-        )}
+        ) : pot.kind === "vast" ? (
+          <span className="rounded-full bg-kb-sunk px-2 py-0.5 text-[0.68rem] font-medium text-kb-ink2">Vast</span>
+        ) : null}
       </div>
       <p className="mt-3 truncate text-sm font-medium text-kb-ink2">{pot.name}</p>
       <p
@@ -150,6 +163,7 @@ export function PotTegel({
           uitgegeven={uitgegeven}
           limiet={pot.monthly_limit}
           tempo={tempo}
+          vast={pot.kind === "vast"}
           label={`${pot.name}: ${euro(uitgegeven)} uitgegeven`}
         />
       </div>

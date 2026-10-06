@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronRight, Copy, Home, Landmark, LogOut, Share2, UserPlus, Users } from "lucide-react";
+import { Bell, CalendarClock, ChevronRight, Copy, Handshake, Home, Landmark, LogOut, Share2, Smartphone, UserPlus, Users } from "lucide-react";
+import { meldingenAan, meldingenOndersteund, useInstalleren, zetMeldingen } from "@/features/budget/lib/meldingen";
 import { useAuth } from "@/auth/AuthProvider";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { Kaart, Knop, Pagina, Veld, foutTekst } from "@/features/budget/components/ui";
@@ -41,22 +42,31 @@ export default function BudgetMeer() {
   return (
     <Pagina titel="Meer">
       <div className="max-w-2xl space-y-6">
-        <Link
-          to="/budget/huishoudens"
-          className="flex min-h-[3.75rem] items-center gap-3 rounded-2xl border border-kb-line bg-kb-surface px-4 transition-colors hover:bg-kb-sunk/60"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-kb-accent-soft text-kb-accent-ink">
-            <Home className="h-4 w-4" strokeWidth={1.75} />
-          </span>
-          <span className="flex-1">
-            <span className="block text-sm font-medium">Huishoudens beheren</span>
-            <span className="block text-xs text-kb-ink2">
-              {huishoudens.length === 1 ? "1 huishouden" : `${huishoudens.length} huishoudens`} ·
-              aanmaken, verwijderen, verlaten
-            </span>
-          </span>
-          <ChevronRight className="h-4 w-4 text-kb-ink3" />
-        </Link>
+        <nav className="divide-y divide-kb-line overflow-hidden rounded-2xl border border-kb-line bg-kb-surface" aria-label="Meer">
+          {[
+            { to: "/budget/vaste-lasten", icon: CalendarClock, titel: "Vaste lasten", sub: "Wat terugkomt, abonnementen-radar" },
+            { to: "/budget/verrekenen", icon: Handshake, titel: "Verrekenen", sub: "Wie betaalde wat voor het huishouden" },
+            {
+              to: "/budget/huishoudens",
+              icon: Home,
+              titel: "Huishoudens beheren",
+              sub: `${huishoudens.length === 1 ? "1 huishouden" : `${huishoudens.length} huishoudens`} · aanmaken, verwijderen, verlaten`,
+            },
+          ].map((l) => (
+            <Link key={l.to} to={l.to} className="flex min-h-[3.75rem] items-center gap-3 px-4 transition-colors hover:bg-kb-sunk/60">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-kb-accent-soft text-kb-accent-ink">
+                <l.icon className="h-4 w-4" strokeWidth={1.75} />
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm font-medium">{l.titel}</span>
+                <span className="block text-xs text-kb-ink2">{l.sub}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-kb-ink3" />
+            </Link>
+          ))}
+        </nav>
+
+        <AppInstellingen />
 
         <Kaart className="p-5">
           <div className="flex items-center gap-2">
@@ -183,5 +193,59 @@ export default function BudgetMeer() {
         </Knop>
       </div>
     </Pagina>
+  );
+}
+
+/** Notifications and "install as app" are per device, so they aren't stored in the household. */
+function AppInstellingen() {
+  const [aan, setAan] = useState(meldingenAan);
+  const { geinstalleerd, ios, kan, installeer } = useInstalleren();
+  if (!meldingenOndersteund() && geinstalleerd) return null;
+  return (
+    <Kaart className="divide-y divide-kb-line overflow-hidden">
+      {meldingenOndersteund() && (
+        <label className="flex items-center gap-3 px-4 py-3.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-kb-accent-soft text-kb-accent-ink">
+            <Bell className="h-4 w-4" strokeWidth={1.75} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-medium">Meldingen op dit apparaat</span>
+            <span className="block text-xs text-kb-ink2">Als een potje bijna op is, en op zondag je week.</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={aan}
+            onChange={async (e) => {
+              const gelukt = await zetMeldingen(e.target.checked);
+              setAan(gelukt);
+              if (e.target.checked && !gelukt) toast.error("Meldingen zijn geblokkeerd in je browser");
+            }}
+            className="h-5 w-5 accent-kb-accent"
+          />
+        </label>
+      )}
+      {!geinstalleerd && (
+        <div className="flex items-center gap-3 px-4 py-3.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-kb-accent-soft text-kb-accent-ink">
+            <Smartphone className="h-4 w-4" strokeWidth={1.75} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-medium">Als app op je telefoon</span>
+            <span className="block text-xs text-kb-ink2">
+              {kan
+                ? "Eén tik, dan staat KordaBudget op je beginscherm."
+                : ios
+                  ? "Tik in Safari op Deel en kies Zet op beginscherm."
+                  : "Open deze pagina op je telefoon en kies Toevoegen aan beginscherm."}
+            </span>
+          </span>
+          {kan && (
+            <Knop variant="zacht" className="min-h-[2.25rem] px-3" onClick={installeer}>
+              Installeren
+            </Knop>
+          )}
+        </div>
+      )}
+    </Kaart>
   );
 }

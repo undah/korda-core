@@ -111,6 +111,7 @@ export default function BudgetPotDetail() {
               uitgegeven={uit}
               limiet={pot.monthly_limit}
               tempo={ditIsNu ? maandVoortgang(maand) : undefined}
+              vast={pot.kind === "vast"}
               label={`${pot.name}: ${euro(uit)} van ${euroRond(pot.monthly_limit)}`}
             />
           </div>

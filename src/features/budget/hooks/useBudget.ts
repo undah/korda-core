@@ -196,6 +196,7 @@ export type PotInvoer = {
   emoji: string;
   monthly_limit: number;
   scope: BudgetScope;
+  kind: "flexibel" | "vast";
 };
 
 export function useBewaarPotje(householdId: string | undefined) {
@@ -224,7 +225,7 @@ export function useBewaarPotje(householdId: string | undefined) {
 export function useVoegPotjesToe(householdId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (rijen: Array<Omit<PotInvoer, "scope"> & { sort_order: number }>) => {
+    mutationFn: async (rijen: Array<Omit<PotInvoer, "scope" | "kind"> & { sort_order: number; kind?: "vast" }>) => {
       const { error } = await supabase
         .from("budget_pots")
         .insert(rijen.map((r) => ({ ...r, scope: "shared", household_id: householdId! })));
@@ -259,7 +260,7 @@ export function useUitgavenPerPotje(householdId: string | undefined, maand: Budg
     enabled: !!householdId,
     queryFn: async (): Promise<Record<string, number>> => {
       const { data, error } = await supabase
-        .from("budget_transactions")
+        .from("budget_tx_lines") // splits count per part
         .select("pot_id, amount")
         .eq("household_id", householdId!)
         .gte("booked_on", van)
@@ -290,7 +291,7 @@ export function useUitgavenHistorie(householdId: string | undefined, tot: Budget
     enabled: !!householdId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("budget_transactions")
+        .from("budget_tx_lines")
         .select("pot_id, amount, booked_on")
         .eq("household_id", householdId!)
         .gte("booked_on", van)
@@ -312,22 +313,33 @@ export function useUitgavenHistorie(householdId: string | undefined, tot: Budget
   });
 }
 
-/** Transactions booked into one pot during a month, newest first. */
+/**
+ * What landed in one pot during a month, newest first. Reads lines, so a split
+ * transaction shows here with only the part that belongs to this pot.
+ */
 export function usePotTransacties(potId: string | undefined, maand: BudgetMonth) {
   const { van, tot } = maandGrenzen(maand);
   return useQuery({
     queryKey: ["budget_pot_tx", potId, van],
     enabled: !!potId,
     queryFn: async (): Promise<BudgetTransaction[]> => {
-      const { data, error } = await supabase
-        .from("budget_transactions")
-        .select("*")
+      const { data: regels, error } = await supabase
+        .from("budget_tx_lines")
+        .select("transaction_id, amount")
         .eq("pot_id", potId!)
         .gte("booked_on", van)
-        .lt("booked_on", tot)
-        .order("booked_on", { ascending: false });
+        .lt("booked_on", tot);
       if (error) throw error;
-      return (data ?? []).map((t) => ({ ...t, amount: num(t.amount) }));
+      if (!regels?.length) return [];
+      const { data: txs, error: e2 } = await supabase
+        .from("budget_transactions")
+        .select("*")
+        .in("id", [...new Set(regels.map((r) => r.transaction_id))])
+        .order("booked_on", { ascending: false });
+      if (e2) throw e2;
+      const deel = new Map<string, number>();
+      for (const r of regels) deel.set(r.transaction_id, (deel.get(r.transaction_id) ?? 0) + num(r.amount));
+      return (txs ?? []).map((t) => ({ ...t, amount: deel.get(t.id) ?? num(t.amount) }));
     },
   });
 }

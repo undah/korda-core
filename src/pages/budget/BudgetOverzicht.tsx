@@ -1,5 +1,5 @@
 // src/pages/budget/BudgetOverzicht.tsx — this month at a glance
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { AlertOctagon, AlertTriangle, ChevronRight, Landmark, PiggyBank, TrendingUp, UserPlus } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
@@ -7,13 +7,20 @@ import type { BudgetOutletContext } from "@/features/budget/components/BudgetLay
 import { PotTegel, potSignaal } from "@/features/budget/components/PotMeter";
 import { Avatars, Kaart, Knop, MaandKiezer, Pagina, Sectie } from "@/features/budget/components/ui";
 import { usePotjes, useUitgavenPerPotje } from "@/features/budget/hooks/useBudget";
+import { useTransacties, useVasteLasten } from "@/features/budget/hooks/useBudgetData";
+import {
+  KomtEraanKaart,
+  MaandAfsluiting,
+  VerrekenKaart,
+  WeekKaart,
+} from "@/features/budget/components/OverzichtKaarten";
+import { komtEraan, vasteLastenDezeMaand, veiligeRuimte, weekoverzicht } from "@/features/budget/lib/inzicht";
+import { meldEenmalig, weekSleutel } from "@/features/budget/lib/meldingen";
 import {
   huidigeMaand,
   isZelfdeMaand,
   korteDatum,
   maandVoortgang,
-  resterendeDagen,
-  veiligPerDag,
 } from "@/features/budget/lib/budget";
 import type { BudgetMonth, BudgetPot } from "@/features/budget/types";
 
@@ -34,6 +41,17 @@ export default function BudgetOverzicht() {
   const { data: uitgaven = {} } = useUitgavenPerPotje(hhId, maand);
   const ditIsNu = isZelfdeMaand(maand, huidigeMaand());
   const tempo = ditIsNu ? maandVoortgang(maand) : undefined;
+  const { data: lasten = [] } = useVasteLasten(hhId);
+  const { data: maandTx = [] } = useTransacties(hhId, maand);
+  const { data: recenteTx = [] } = useTransacties(hhId, huidigeMaand(), 2);
+  const aankomend = useMemo(
+    () => (ditIsNu ? komtEraan(vasteLastenDezeMaand(lasten, maandTx, maand)) : []),
+    [ditIsNu, lasten, maandTx, maand],
+  );
+  const ruimte = useMemo(
+    () => veiligeRuimte(potjes, uitgaven, aankomend, maand),
+    [potjes, uitgaven, aankomend, maand],
+  );
 
   const totaal = useMemo(() => {
     const limiet = potjes.reduce((s, p) => s + p.monthly_limit, 0);
@@ -49,6 +67,29 @@ export default function BudgetOverzicht() {
       .filter((r) => r.status !== "ok" || r.opDag)
       .sort((a, b) => gewicht[a.status] - gewicht[b.status] || (a.opDag ?? 99) - (b.opDag ?? 99));
   }, [potjes, uitgaven, maand]);
+
+  // Local notifications: a pot crossing 80% or its limit (once per pot per month),
+  // and on Sundays a weekly recap (once per week). Shown when the app is opened.
+  useEffect(() => {
+    if (!ditIsNu || potjes.length === 0) return;
+    const m = `${maand.year}-${maand.month}`;
+    for (const r of aandacht) {
+      const url = `/budget/potjes/${r.pot.id}`;
+      if (r.status === "over")
+        meldEenmalig(`${r.pot.id}:${m}:over`, `${r.pot.emoji} ${r.pot.name} is over de limiet`, "Kijk in KordaBudget wat er nog kan.", url);
+      else if (r.status === "bijna")
+        meldEenmalig(`${r.pot.id}:${m}:bijna`, `${r.pot.emoji} ${r.pot.name} is bijna op`, "Je zit boven de 80% van de limiet.", url);
+    }
+    const w = weekoverzicht(recenteTx, potjes);
+    if (w.deze > 0 && new Date().getDay() === 0) {
+      const vergelijk = w.vorige > 0 ? `, ${w.verschil > 0 ? "meer" : "minder"} dan vorige week` : "";
+      meldEenmalig(
+        `week:${huishouden.household.id}:${weekSleutel()}`,
+        "Je week in KordaBudget",
+        `€ ${Math.round(w.deze)} uitgegeven${vergelijk}.`,
+      );
+    }
+  }, [ditIsNu, aandacht, recenteTx, potjes, maand, huishouden.household.id]);
 
   const gesorteerd = [...potjes].sort((a, b) =>
     a.scope === b.scope ? a.sort_order - b.sort_order : a.scope === "shared" ? -1 : 1,
@@ -77,8 +118,11 @@ export default function BudgetOverzicht() {
               </Knop>
             </Kaart>
           ) : (
-            <HeldKaart maand={maand} totaal={totaal} tempo={tempo} />
+            <HeldKaart totaal={totaal} tempo={tempo} ruimte={ruimte} />
           )}
+
+          {ditIsNu && <MaandAfsluiting huishouden={huishouden} />}
+          {ditIsNu && <VerrekenKaart huishouden={huishouden} />}
 
           {aandacht.length > 0 && (
             <Sectie titel="Let op">
@@ -122,6 +166,8 @@ export default function BudgetOverzicht() {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-10">
+          <KomtEraanKaart aankomend={aankomend} />
+          <WeekKaart transacties={recenteTx} potjes={potjes} />
           <Kaart className="p-5">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">{huishouden.household.name}</p>
@@ -160,17 +206,16 @@ export default function BudgetOverzicht() {
 
 /** The one dark card: the number that answers "can I spend this?". */
 function HeldKaart({
-  maand,
   totaal,
   tempo,
+  ruimte,
 }: {
-  maand: BudgetMonth;
   totaal: { limiet: number; uit: number; over: number };
   tempo?: number;
+  ruimte: ReturnType<typeof veiligeRuimte>;
 }) {
   const { euro, euroRond } = useBedragen();
-  const perDag = veiligPerDag(totaal.over, maand);
-  const dagen = resterendeDagen(maand);
+  const { perDag, dagen, vrij, gereserveerd } = ruimte;
   const verbruikt = totaal.limiet > 0 ? Math.min(1, totaal.uit / totaal.limiet) : 0;
   const tekort = totaal.over < 0;
 
@@ -190,11 +235,14 @@ function HeldKaart({
         </p>
         <p className="mt-3 text-sm text-white/75">
           {perDag !== null
-            ? tekort
-              ? `${euroRond(-totaal.over)} boven budget · nog ${dagen} ${dagen === 1 ? "dag" : "dagen"}`
-              : `${euroRond(totaal.over)} over voor nog ${dagen} ${dagen === 1 ? "dag" : "dagen"}`
+            ? `${euroRond(vrij)} vrij voor nog ${dagen} ${dagen === 1 ? "dag" : "dagen"}`
             : `${euro(totaal.uit)} van ${euroRond(totaal.limiet)} uitgegeven`}
         </p>
+        {perDag !== null && gereserveerd > 0 && (
+          <p className="mt-1 text-xs text-white/60">
+            {euroRond(gereserveerd)} is al gereserveerd voor vaste lasten die nog komen
+          </p>
+        )}
 
         <div className="relative mt-7">
           {tempo !== undefined && tempo > 0 && tempo < 1 && (

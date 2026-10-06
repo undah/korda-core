@@ -73,11 +73,21 @@ export default function BudgetLayout() {
   const { actief, kies } = useActiefHuishouden(huishoudens);
 
   // The rest of Korda is dark; this app is light, so paint the page behind it too.
+  // Swap in the budget manifest and theme colour so "Add to Home Screen" installs
+  // KordaBudget (scope /budget/) rather than the tracker.
   useEffect(() => {
     const vorige = document.body.style.background;
     document.body.style.background = PAPIER;
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const thema = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const oudManifest = manifest?.getAttribute("href");
+    const oudThema = thema?.getAttribute("content");
+    manifest?.setAttribute("href", "/budget-manifest.json");
+    thema?.setAttribute("content", PAPIER);
     return () => {
       document.body.style.background = vorige;
+      if (oudManifest) manifest?.setAttribute("href", oudManifest);
+      if (oudThema) thema?.setAttribute("content", oudThema);
     };
   }, []);
 

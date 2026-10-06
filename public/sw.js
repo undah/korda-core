@@ -20,7 +20,8 @@ self.addEventListener('message', evt => {
         body: evt.data.body,
         icon: '/web-app-manifest-192x192.png',
         badge: '/favicon-96x96.png',
-        tag: 'daily-checkin',
+        // Each app passes its own tag so a budget alert never replaces the tracker's reminder.
+        tag: evt.data.tag || 'daily-checkin',
         renotify: false,
         data: { url: evt.data.url || '/tracker/progress' },
       })

@@ -7,6 +7,8 @@ export interface BudgetHousehold {
   name: string;
   created_by: string;
   created_at: string;
+  savings_balance: number | null;
+  savings_updated_at: string | null;
 }
 
 export interface BudgetMember {
@@ -14,6 +16,8 @@ export interface BudgetMember {
   user_id: string;
   display_name: string;
   role: "owner" | "member";
+  /** Share in shared costs = weight / sum of weights. */
+  split_weight: number;
   joined_at: string;
 }
 
@@ -35,6 +39,8 @@ export interface BudgetPot {
   emoji: string;
   monthly_limit: number;
   scope: BudgetScope;
+  /** "vast": reserved money (rent, subscriptions) — no pace forecast, not in safe-to-spend. */
+  kind: "flexibel" | "vast";
   owner_id: string | null;
   sort_order: number;
   archived_at: string | null;
@@ -52,6 +58,119 @@ export interface BudgetTransaction {
   description: string | null;
   pot_id: string | null;
   pot_status: "unassigned" | "suggested" | "confirmed";
+  note: string | null;
+}
+
+export interface BudgetAccount {
+  id: string;
+  household_id: string;
+  owner_id: string;
+  name: string;
+  iban: string | null;
+  visibility: "shared" | "private";
+  provider: string;
+  is_joint: boolean;
+}
+
+export interface BudgetSplit {
+  id: string;
+  transaction_id: string;
+  household_id: string;
+  pot_id: string | null;
+  amount: number;
+}
+
+/** A transaction with its splits and account, as the transactions screen needs it. */
+export interface TxMetDelen extends BudgetTransaction {
+  splits: BudgetSplit[];
+  account: Pick<BudgetAccount, "id" | "owner_id" | "provider" | "is_joint" | "name"> | null;
+}
+
+export interface BudgetRule {
+  id: string;
+  household_id: string;
+  counterparty: string;
+  pot_id: string;
+}
+
+export interface BudgetRecurring {
+  id: string;
+  household_id: string;
+  name: string;
+  counterparty: string | null;
+  amount: number;
+  previous_amount: number | null;
+  price_changed_at: string | null;
+  cadence: "maand" | "jaar";
+  day_of_month: number;
+  month_of_year: number | null;
+  is_subscription: boolean;
+  pot_id: string | null;
+  scope: BudgetScope;
+  owner_id: string | null;
+  source: "handmatig" | "herkend";
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface BudgetGoal {
+  id: string;
+  household_id: string;
+  name: string;
+  emoji: string;
+  target: number;
+  deadline: string | null;
+  scope: BudgetScope;
+  owner_id: string | null;
+  receives_leftover: boolean;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface BudgetGoalEntry {
+  id: string;
+  goal_id: string;
+  household_id: string;
+  amount: number;
+  kind: "storting" | "opname" | "restant";
+  month: string | null;
+  note: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface BudgetMonthClose {
+  household_id: string;
+  month: string;
+  leftover: number;
+  goal_id: string | null;
+  closed_by: string;
+  closed_at: string;
+}
+
+export interface BudgetSettlement {
+  id: string;
+  household_id: string;
+  from_user: string;
+  to_user: string;
+  amount: number;
+  note: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface BudgetWish {
+  id: string;
+  household_id: string;
+  owner_id: string;
+  scope: BudgetScope;
+  name: string;
+  price: number | null;
+  url: string | null;
+  wait_until: string;
+  status: "wachten" | "gekocht" | "geschrapt";
+  decided_at: string | null;
+  created_at: string;
 }
 
 /** A calendar month, e.g. { year: 2026, month: 10 } for October 2026 (1-based). */

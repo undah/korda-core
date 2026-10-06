@@ -1,0 +1,184 @@
+import { describe, expect, it } from "vitest";
+import {
+  herkenVasteLasten,
+  komtEraan,
+  limietVoorstel,
+  overboekingen,
+  vasteLastenDezeMaand,
+  veiligeRuimte,
+  verrekenSaldi,
+  weekoverzicht,
+} from "./inzicht";
+import { opDatum } from "./budget";
+import type { BudgetMember, BudgetPot, BudgetRecurring, BudgetSettlement, TxMetDelen } from "../types";
+
+const tx = (o: Partial<TxMetDelen>): TxMetDelen => ({
+  id: Math.random().toString(36),
+  account_id: "acc",
+  household_id: "hh",
+  booked_on: "2026-10-01",
+  amount: -10,
+  currency: "EUR",
+  counterparty: "x",
+  description: null,
+  pot_id: null,
+  pot_status: "unassigned",
+  note: null,
+  splits: [],
+  account: null,
+  ...o,
+});
+
+const pot = (o: Partial<BudgetPot>): BudgetPot => ({
+  id: "p",
+  household_id: "hh",
+  name: "Pot",
+  emoji: "💶",
+  monthly_limit: 100,
+  scope: "shared",
+  kind: "flexibel",
+  owner_id: null,
+  sort_order: 0,
+  archived_at: null,
+  created_at: "",
+  ...o,
+});
+
+const last = (o: Partial<BudgetRecurring>): BudgetRecurring => ({
+  id: "r",
+  household_id: "hh",
+  name: "Huur",
+  counterparty: "vesteda",
+  amount: 1000,
+  previous_amount: null,
+  price_changed_at: null,
+  cadence: "maand",
+  day_of_month: 1,
+  month_of_year: null,
+  is_subscription: false,
+  pot_id: null,
+  scope: "shared",
+  owner_id: null,
+  source: "handmatig",
+  reviewed_at: null,
+  created_at: "",
+  ...o,
+});
+
+const lid = (id: string, w = 1): BudgetMember => ({
+  household_id: "hh",
+  user_id: id,
+  display_name: id,
+  role: "member",
+  split_weight: w,
+  joined_at: "",
+});
+
+describe("verrekenen", () => {
+  it("splits shared spending 50/50 and zeroes out after paying back", () => {
+    const leden = [lid("a"), lid("b")];
+    const voor = verrekenSaldi(leden, { a: 100 }, 100, []);
+    expect(voor.map((s) => s.saldo)).toEqual([50, -50]);
+    expect(overboekingen(voor)).toEqual([expect.objectContaining({ bedrag: 50 })]);
+    expect(overboekingen(voor)[0].van.userId).toBe("b");
+
+    const terug: BudgetSettlement = {
+      id: "s", household_id: "hh", from_user: "b", to_user: "a", amount: 50,
+      note: null, created_by: "b", created_at: "",
+    };
+    expect(verrekenSaldi(leden, { a: 100 }, 100, [terug]).map((s) => s.saldo)).toEqual([0, 0]);
+  });
+
+  it("respects an income-based key (60/40)", () => {
+    const saldi = verrekenSaldi([lid("a", 60), lid("b", 40)], { a: 50, b: 50 }, 100, []);
+    expect(saldi.map((s) => s.saldo)).toEqual([-10, 10]);
+  });
+});
+
+describe("vaste lasten", () => {
+  it("marks a fixed cost paid when a matching transaction exists, and spots a price change", () => {
+    const st = vasteLastenDezeMaand(
+      [last({}), last({ id: "n", name: "Netflix", counterparty: "netflix", amount: 13.99, day_of_month: 20 })],
+      [tx({ counterparty: "Vesteda Huur", amount: -1000 }), tx({ counterparty: "NETFLIX.COM", amount: -15.99 })],
+      { year: 2026, month: 10 },
+    );
+    expect(st[0].betaald).not.toBeNull();
+    expect(st[1].nieuwePrijs).toBe(15.99);
+    expect(komtEraan(st)).toHaveLength(0);
+  });
+
+  it("only expects yearly items in their own month", () => {
+    const st = vasteLastenDezeMaand([last({ cadence: "jaar", month_of_year: 3 })], [], { year: 2026, month: 10 });
+    expect(komtEraan(st)).toHaveLength(0);
+  });
+
+  it("recognises a monthly cost but not groceries", () => {
+    const h = herkenVasteLasten(
+      [
+        tx({ counterparty: "Spotify", amount: -11.99, booked_on: "2026-08-03" }),
+        tx({ counterparty: "Spotify", amount: -11.99, booked_on: "2026-09-03" }),
+        ...["2026-08-02", "2026-08-09", "2026-08-16", "2026-09-02", "2026-09-09"].map((d) =>
+          tx({ counterparty: "Albert Heijn", amount: -40, booked_on: d }),
+        ),
+      ],
+      [],
+    );
+    expect(h.map((x) => x.tegenpartij)).toEqual(["spotify"]);
+    expect(h[0].lijktAbonnement).toBe(true);
+  });
+});
+
+describe("veilig per dag", () => {
+  it("leaves fixed pots out and reserves fixed costs still due in flexible pots", () => {
+    const r = veiligeRuimte(
+      [pot({ id: "flex", monthly_limit: 400 }), pot({ id: "vast", kind: "vast", monthly_limit: 1000 })],
+      { flex: 100 },
+      komtEraan(vasteLastenDezeMaand([last({ amount: 50, pot_id: "flex", day_of_month: 28 })], [], { year: 2026, month: 10 })),
+      { year: 2026, month: 10 },
+      new Date(2026, 9, 22),
+    );
+    expect(r.gereserveerd).toBe(50);
+    expect(r.vrij).toBe(250);
+    expect(r.dagen).toBe(10);
+    expect(r.perDag).toBe(25);
+  });
+});
+
+describe("limietvoorstel", () => {
+  it("suggests the rounded average of complete months when it is well off", () => {
+    const reeks = [8, 9].map((m) => ({ maand: { year: 2026, month: m }, bedrag: 470 }));
+    expect(limietVoorstel(reeks, 300, new Date(2026, 9, 5))).toEqual({ bedrag: 470, maanden: 2 });
+    expect(limietVoorstel(reeks, 460, new Date(2026, 9, 5))).toBeNull();
+  });
+});
+
+describe("tempo", () => {
+  it("forecasts the day a pot runs out, but not in the first days", () => {
+    expect(opDatum(200, 500, { year: 2026, month: 10 }, new Date(2026, 9, 10))).toBe(25);
+    expect(opDatum(200, 500, { year: 2026, month: 10 }, new Date(2026, 9, 2))).toBeNull();
+  });
+});
+
+describe("weekoverzicht", () => {
+  it("compares the last 7 days with the 7 before and counts split parts", () => {
+    const w = weekoverzicht(
+      [
+        tx({ booked_on: "2026-10-20", amount: -30, pot_id: "p" }),
+        tx({
+          booked_on: "2026-10-19",
+          amount: -50,
+          splits: [
+            { id: "1", transaction_id: "t", household_id: "hh", pot_id: "p", amount: -20 },
+            { id: "2", transaction_id: "t", household_id: "hh", pot_id: "q", amount: -30 },
+          ],
+        }),
+        tx({ booked_on: "2026-10-10", amount: -40 }),
+      ],
+      [pot({ id: "p" })],
+      new Date(2026, 9, 21),
+    );
+    expect(w.deze).toBe(80);
+    expect(w.vorige).toBe(40);
+    expect(w.topPot?.bedrag).toBe(50);
+  });
+});

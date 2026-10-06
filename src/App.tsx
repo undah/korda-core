@@ -67,7 +67,10 @@ import BudgetPotjes from "./pages/budget/BudgetPotjes";
 import BudgetMeer from "./pages/budget/BudgetMeer";
 import BudgetPotDetail from "./pages/budget/BudgetPotDetail";
 import BudgetHuishoudens from "./pages/budget/BudgetHuishoudens";
-import { BudgetTransacties, BudgetDoelen } from "./pages/budget/BudgetBinnenkort";
+import BudgetTransacties from "./pages/budget/BudgetTransacties";
+import BudgetDoelen from "./pages/budget/BudgetDoelen";
+import BudgetVasteLasten from "./pages/budget/BudgetVasteLasten";
+import BudgetVerrekenen from "./pages/budget/BudgetVerrekenen";
 import TrackerDashboard from "./pages/tracker/TrackerDashboard";
 import TrackerGraph from "./pages/tracker/TrackerGraph";
 import TrackerProgress from "./pages/tracker/TrackerProgress";
@@ -149,6 +152,8 @@ function AnimatedRoutes() {
               <Route path="/budget/doelen"      element={<BudgetDoelen />} />
               <Route path="/budget/meer"        element={<BudgetMeer />} />
               <Route path="/budget/huishoudens" element={<BudgetHuishoudens />} />
+              <Route path="/budget/vaste-lasten" element={<BudgetVasteLasten />} />
+              <Route path="/budget/verrekenen"  element={<BudgetVerrekenen />} />
             </Route>
           </Route>
 
