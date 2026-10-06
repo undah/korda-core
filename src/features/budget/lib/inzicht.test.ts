@@ -181,4 +181,13 @@ describe("weekoverzicht", () => {
     expect(w.vorige).toBe(40);
     expect(w.topPot?.bedrag).toBe(50);
   });
+
+  it("leaves fixed pots like rent out", () => {
+    const w = weekoverzicht(
+      [tx({ booked_on: "2026-10-20", amount: -1000, pot_id: "huur" }), tx({ booked_on: "2026-10-20", amount: -30, pot_id: "p" })],
+      [pot({ id: "huur", kind: "vast" }), pot({ id: "p" })],
+      new Date(2026, 9, 21),
+    );
+    expect(w.deze).toBe(30);
+  });
 });

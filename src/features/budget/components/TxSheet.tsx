@@ -120,7 +120,12 @@ export function TxSheet({
             {tx.account && <p className="mt-1 text-xs text-kb-ink2">Van {tx.account.name}</p>}
           </div>
 
-          {!splitsen ? (
+          {tx.splits.length > 0 && !tx.account ? (
+            <p className="rounded-xl bg-kb-sunk px-4 py-3 text-sm text-kb-ink2">
+              Deze betaling is verdeeld door wie hem deed. Je ziet alleen het deel dat in een gedeeld
+              potje valt; aanpassen kan alleen de ander.
+            </p>
+          ) : !splitsen ? (
             <div>
               <p className="mb-2 text-sm font-medium">In welk potje?</p>
               <PotKiezer potjes={potjes} waarde={potId} onKies={setPotId} metGeen />
@@ -135,7 +140,8 @@ export function TxSheet({
                   Voortaan {tx.counterparty} altijd hier
                 </label>
               )}
-              {tx.amount < 0 && (
+              {/* Splitting needs the whole payment in view; a partner's private account isn't. */}
+              {tx.amount < 0 && tx.account && (
                 <button
                   type="button"
                   onClick={() => setSplitsen(true)}

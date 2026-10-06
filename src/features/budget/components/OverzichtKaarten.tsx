@@ -87,6 +87,7 @@ export function WeekKaart({ transacties, potjes }: { transacties: TxMetDelen[]; 
   return (
     <Kaart className="p-4">
       <p className="text-sm font-semibold">Afgelopen 7 dagen</p>
+      <p className="text-xs text-kb-ink2">Dagelijkse uitgaven, zonder vaste lasten</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight">{euro(w.deze)}</p>
       {w.vorige > 0 && (
         <p className="mt-1 flex items-center gap-1.5 text-xs text-kb-ink2">

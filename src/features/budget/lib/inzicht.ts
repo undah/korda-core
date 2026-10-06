@@ -97,8 +97,10 @@ export function herkenVasteLasten(transacties: TxMetDelen[], bekend: BudgetRecur
     const mediaan = bedragen[Math.floor(bedragen.length / 2)];
     // Groceries also recur; a fixed cost is one payment per month at a stable price.
     if (lijst.length > maanden.size * 1.5) continue;
-    if (bedragen.some((b) => Math.abs(b - mediaan) > mediaan * 0.1)) continue;
+    if (bedragen.some((b) => Math.abs(b - mediaan) > mediaan * 0.05)) continue;
     const dagen = lijst.map((t) => Number(t.booked_on.slice(8, 10))).sort((a, b) => a - b);
+    // A fixed cost lands around the same day each month; a restaurant visit doesn't.
+    if (dagen[dagen.length - 1] - dagen[0] > 6) continue;
     uit.push({
       tegenpartij: tp,
       naam: lijst[0].counterparty ?? tp,
@@ -217,7 +219,9 @@ function regels(t: TxMetDelen): Array<{ pot: string | null; bedrag: number }> {
     : [{ pot: t.pot_id, bedrag: t.amount }];
 }
 
+/** Day-to-day spending of the last 7 days. Fixed pots (rent) are left out: they'd drown the signal. */
 export function weekoverzicht(transacties: TxMetDelen[], potjes: BudgetPot[], nu = new Date()) {
+  const vast = new Set(potjes.filter((p) => p.kind === "vast").map((p) => p.id));
   const dag = 86400000;
   const vandaag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate()).getTime();
   const van = vandaag - 6 * dag;
@@ -228,7 +232,7 @@ export function weekoverzicht(transacties: TxMetDelen[], potjes: BudgetPot[], nu
   for (const t of transacties) {
     const d = new Date(t.booked_on + "T00:00:00").getTime();
     for (const r of regels(t)) {
-      if (r.bedrag >= 0) continue;
+      if (r.bedrag >= 0 || (r.pot && vast.has(r.pot))) continue;
       if (d >= van && d <= vandaag) {
         deze += -r.bedrag;
         if (r.pot) perPot.set(r.pot, (perPot.get(r.pot) ?? 0) - r.bedrag);

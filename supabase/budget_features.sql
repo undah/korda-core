@@ -77,14 +77,27 @@ create policy tx_categorize on public.budget_transactions for update
 
 alter table public.budget_tx_splits enable row level security;
 drop policy if exists splits_all on public.budget_tx_splits;
-create policy splits_all on public.budget_tx_splits for all
-  using (exists (select 1 from budget_transactions t where t.id = budget_tx_splits.transaction_id))
-  with check (
-    budget_is_member(household_id)
-    and exists (select 1 from budget_transactions t
-                   where t.id = budget_tx_splits.transaction_id and t.household_id = budget_tx_splits.household_id)
-  );
-grant select, insert, update, delete on public.budget_tx_splits to authenticated;
+-- Zien: alleen delen in potjes die je zelf mag zien. Anders zou je partner het
+-- bedrag van jouw persoonlijke deel kunnen lezen.
+drop policy if exists splits_select on public.budget_tx_splits;
+create policy splits_select on public.budget_tx_splits for select using (
+  exists (select 1 from budget_transactions t where t.id = budget_tx_splits.transaction_id)
+  and (pot_id is null or exists (select 1 from budget_pots p where p.id = budget_tx_splits.pot_id))
+);
+-- Wijzigen: alleen wie de rekening ziet (eigenaar, of iedereen bij een gedeelde
+-- rekening). Wie maar een deel ziet, zou anders de rest kapot verdelen.
+drop policy if exists splits_insert on public.budget_tx_splits;
+create policy splits_insert on public.budget_tx_splits for insert with check (
+  budget_is_member(household_id)
+  and exists (select 1 from budget_transactions t join budget_accounts a on a.id = t.account_id
+              where t.id = budget_tx_splits.transaction_id and t.household_id = budget_tx_splits.household_id)
+);
+drop policy if exists splits_delete on public.budget_tx_splits;
+create policy splits_delete on public.budget_tx_splits for delete using (
+  exists (select 1 from budget_transactions t join budget_accounts a on a.id = t.account_id
+          where t.id = budget_tx_splits.transaction_id)
+);
+grant select, insert, delete on public.budget_tx_splits to authenticated;
 
 -- Eén regel per (deel van een) uitgave: onverdeelde transacties plus splitsregels.
 -- security_invoker: de RLS van de onderliggende tabellen blijft gelden.

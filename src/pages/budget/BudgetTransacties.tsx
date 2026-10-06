@@ -65,7 +65,8 @@ export default function BudgetTransacties() {
 
   return (
     <Pagina titel="Transacties">
-      <div className="max-w-2xl space-y-5">
+      {/* Bottom padding keeps the last amount clear of the floating + button. */}
+      <div className="max-w-2xl space-y-5 pb-20 md:pb-0">
         <div className="-mt-3 flex justify-center sm:justify-start">
           <MaandKiezer maand={maand} onChange={setMaand} />
         </div>
