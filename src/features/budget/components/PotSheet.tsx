@@ -7,10 +7,11 @@ import { useArchiveerPotje, useBewaarPotje, useUitgavenHistorie, type PotInvoer 
 import { formatEuroRond, huidigeMaand, parseBedrag } from "../lib/budget";
 import { GROEPEN, limietVoorstel } from "../lib/inzicht";
 import { Wissel } from "./Blad";
+import { IcoonKiezer } from "./IcoonKiezer";
 import type { BudgetPot, BudgetScope, PotGroep } from "../types";
 import { Knop, Veld, foutTekst } from "./ui";
 
-const EMOJI = ["🛒", "🏠", "🍝", "🚗", "📺", "👕", "🪴", "🎁", "💡", "🐶", "👶", "💊", "🎉", "✈️", "📚", "💶"];
+const STANDAARD_ICOON = "🛒";
 
 export function PotSheet({
   open,
@@ -30,7 +31,7 @@ export function PotSheet({
   onVerwijderd?: () => void;
 }) {
   const [naam, setNaam] = useState("");
-  const [emoji, setEmoji] = useState(EMOJI[0]);
+  const [emoji, setEmoji] = useState(STANDAARD_ICOON);
   const [limiet, setLimiet] = useState("");
   const [scope, setScope] = useState<BudgetScope>("shared");
   const [kind, setKind] = useState<"flexibel" | "vast">("flexibel");
@@ -49,7 +50,7 @@ export function PotSheet({
   useEffect(() => {
     if (!open) return;
     setNaam(pot?.name ?? "");
-    setEmoji(pot?.emoji ?? EMOJI[0]);
+    setEmoji(pot?.emoji ?? STANDAARD_ICOON);
     setLimiet(pot ? String(pot.monthly_limit).replace(".", ",") : "");
     setScope(pot?.scope ?? "shared");
     setKind(pot?.kind ?? "flexibel");
@@ -120,24 +121,10 @@ export function PotSheet({
                 required
               />
 
-              <fieldset>
+              {/* min-w-0: a fieldset won't shrink below its widest child (the scrolling tab row) otherwise. */}
+              <fieldset className="min-w-0">
                 <legend className="mb-1.5 text-sm font-medium">Icoon</legend>
-                <div className="grid grid-cols-8 gap-1.5">
-                  {EMOJI.map((e) => (
-                    <button
-                      key={e}
-                      type="button"
-                      aria-label={`Icoon ${e}`}
-                      aria-pressed={emoji === e}
-                      onClick={() => setEmoji(e)}
-                      className={`flex aspect-square items-center justify-center rounded-xl text-xl transition-colors ${
-                        emoji === e ? "bg-kb-accent-soft ring-2 ring-kb-accent" : "bg-kb-bg hover:bg-kb-sunk"
-                      }`}
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
+                <IcoonKiezer waarde={emoji} onChange={setEmoji} />
               </fieldset>
 
               <Veld
