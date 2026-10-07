@@ -11,6 +11,7 @@ import type {
   BudgetScope,
   BudgetTransaction,
   PotGroep,
+  TxMetDelen,
 } from "../types";
 import { maakUitnodigingscode, maandGrenzen, verschuifMaand } from "../lib/budget";
 
@@ -339,7 +340,9 @@ export function usePotTransacties(potId: string | undefined, maand: BudgetMonth)
   return useQuery({
     queryKey: ["budget_pot_tx", potId, van],
     enabled: !!potId,
-    queryFn: async (): Promise<BudgetTransaction[]> => {
+    // `deel`: the part of the payment in this pot (all of it unless it was split);
+    // `amount` stays the whole payment, so the transaction sheet can edit it.
+    queryFn: async (): Promise<Array<TxMetDelen & { deel: number }>> => {
       const { data: regels, error } = await supabase
         .from("budget_tx_lines")
         .select("transaction_id, amount")
@@ -350,13 +353,18 @@ export function usePotTransacties(potId: string | undefined, maand: BudgetMonth)
       if (!regels?.length) return [];
       const { data: txs, error: e2 } = await supabase
         .from("budget_transactions")
-        .select("*")
+        .select("*, splits:budget_tx_splits(*), account:budget_accounts(id, owner_id, provider, is_joint, name)")
         .in("id", [...new Set(regels.map((r) => r.transaction_id))])
         .order("booked_on", { ascending: false });
       if (e2) throw e2;
       const deel = new Map<string, number>();
       for (const r of regels) deel.set(r.transaction_id, (deel.get(r.transaction_id) ?? 0) + num(r.amount));
-      return (txs ?? []).map((t) => ({ ...t, amount: deel.get(t.id) ?? num(t.amount) }));
+      return (txs ?? []).map((t) => ({
+        ...t,
+        amount: num(t.amount),
+        splits: (t.splits ?? []).map((s: { amount: unknown }) => ({ ...s, amount: num(s.amount) })),
+        deel: deel.get(t.id) ?? num(t.amount),
+      })) as Array<TxMetDelen & { deel: number }>;
     },
   });
 }

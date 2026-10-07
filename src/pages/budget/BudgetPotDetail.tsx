@@ -1,12 +1,16 @@
 // src/pages/budget/BudgetPotDetail.tsx — one pot: this month, its pace, its history
 import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { Lock, Pencil, Receipt } from "lucide-react";
+import { ChevronRight, Lock, Pencil, Receipt, Split } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { MaandGrafiek } from "@/features/budget/components/MaandGrafiek";
 import { Meter, PotStatusRegel } from "@/features/budget/components/PotMeter";
 import { PotSheet } from "@/features/budget/components/PotSheet";
+import { TxSheet } from "@/features/budget/components/TxSheet";
+import { useRegels } from "@/features/budget/hooks/useBudgetData";
+import { regelVoor } from "@/features/budget/lib/inzicht";
+import type { TxMetDelen } from "@/features/budget/types";
 import { Kaart, Knop, MaandKiezer, Pagina, Sectie } from "@/features/budget/components/ui";
 import {
   usePotjes,
@@ -38,6 +42,9 @@ export default function BudgetPotDetail() {
   const { data: uitgaven = {} } = useUitgavenPerPotje(hhId, maand);
   const { data: historie = [] } = useUitgavenHistorie(hhId, maand, 6);
   const { data: transacties = [] } = usePotTransacties(potId, maand);
+  const { data: regels = [] } = useRegels(hhId);
+  const [open, setOpen] = useState<TxMetDelen | null>(null);
+  const zichtbaar = useMemo(() => new Set(potjes.map((p) => p.id)), [potjes]);
   const pot = potjes.find((p) => p.id === potId);
 
   const cijfers = useMemo(() => {
@@ -164,23 +171,43 @@ export default function BudgetPotDetail() {
           ) : (
             <Kaart className="divide-y divide-kb-line overflow-hidden">
               {transacties.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3">
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setOpen(t)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-kb-sunk/60"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{t.counterparty ?? t.description ?? "Onbekend"}</p>
-                    <p className="text-xs text-kb-ink2 first-letter:uppercase">{dag(t.booked_on)}</p>
+                    <p className="flex items-center gap-1 text-xs text-kb-ink2">
+                      <span className="first-letter:uppercase">{dag(t.booked_on)}</span>
+                      {t.splits.length > 0 && (
+                        <>
+                          · <Split className="h-3 w-3" /> deel van {euro(Math.abs(t.amount))}
+                        </>
+                      )}
+                      {t.in_behandeling && " · in behandeling"}
+                    </p>
                   </div>
-                  <p
-                    className={`text-sm font-medium tabular-nums ${t.amount > 0 ? "text-kb-good-ink" : ""}`}
-                  >
-                    {t.amount > 0 ? "+" : "−"}
-                    {euro(Math.abs(t.amount))}
+                  <p className={`text-sm font-medium tabular-nums ${t.deel > 0 ? "text-kb-good-ink" : ""}`}>
+                    {t.deel > 0 ? "+" : "−"}
+                    {euro(Math.abs(t.deel))}
                   </p>
-                </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-kb-ink3" />
+                </button>
               ))}
             </Kaart>
           )}
         </Sectie>
       </div>
+
+      <TxSheet
+        tx={open}
+        potjes={potjes}
+        voorstel={open ? regelVoor(open, regels, zichtbaar) : null}
+        householdId={hhId}
+        onSluit={() => setOpen(null)}
+      />
 
       <PotSheet
         open={bewerken}
