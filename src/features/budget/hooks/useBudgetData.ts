@@ -539,7 +539,7 @@ export function useKoppelBank() {
 
 export function useRondKoppelingAf() {
   return useSchrijf((p: { code: string; state: string }) =>
-    bankFetch<{ rekeningen: number; nieuw: number }>("terug", p),
+    bankFetch<{ rekeningen: number; nieuw: number; aangesloten?: number }>("terug", p),
   );
 }
 
@@ -547,11 +547,34 @@ export function useBankBijwerken() {
   return useSchrijf((p: { householdId: string; alleenOud?: boolean }) => bankFetch<SyncUitkomst>("sync", p));
 }
 
-/** Stop syncing (and with `verwijderen`, also delete the account and its history). */
+/**
+ * Withdraw your own consent for an account (history stays; a co-holder's
+ * consent keeps it updating). With `verwijderen`, the owner deletes the
+ * account and its history, and every consent on it is closed.
+ */
 export function useOntkoppel() {
   return useSchrijf(async (p: { accountId: string; verwijderen?: boolean }) => {
-    await bankFetch("ontkoppel", { accountId: p.accountId });
-    if (p.verwijderen) await ok(supabase.rpc("budget_delete_account", { p_account: p.accountId }));
+    await bankFetch("ontkoppel", { accountId: p.accountId, verwijderen: !!p.verwijderen });
+  });
+}
+
+export type MijnToegang = { account_id: string; valid_until: string | null; sync_error: string | null };
+
+/** Your own bank consents, per account: a joint account can have one per holder. */
+export function useMijnToegang(householdId: string | undefined) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["budget_account_links", householdId, user?.id],
+    enabled: !!householdId && !!user,
+    queryFn: async (): Promise<Record<string, MijnToegang>> => {
+      const { data, error } = await supabase
+        .from("budget_account_links")
+        .select("account_id, valid_until, sync_error")
+        .eq("user_id", user!.id);
+      // Before budget_gedeeld.sql has run the table isn't there; the account summary still works.
+      if (error) return {};
+      return Object.fromEntries((data ?? []).map((t) => [t.account_id, t as MijnToegang]));
+    },
   });
 }
 

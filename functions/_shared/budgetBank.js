@@ -225,15 +225,26 @@ const consentWeg = (e) =>
   [401, 403].includes(e?.bankStatus) ||
   /expired|revoked|not authori[sz]ed|closed/i.test(`${e?.bankCode ?? ''} ${e?.message ?? ''}`);
 
+const nuIso = () => new Date().toISOString();
+const patch = (env, pad, velden) =>
+  db(env, pad, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(velden) });
+
+/** A consent is usable while its link is active and not past its end date. */
+export const isActief = (toegang) =>
+  toegang?.link?.status === 'active' &&
+  (!toegang.valid_until || new Date(toegang.valid_until).getTime() > Date.now());
+
 /**
- * Fetch new transactions for one account and store them. Returns how many
- * were new. `rekening` needs id, household_id, provider_account_id,
- * last_synced_at, link_id.
+ * Fetch new transactions for one account through one holder's consent and
+ * store them. `rekening` needs id, household_id, last_synced_at; `toegang` is
+ * a budget_account_links row (provider_account_id, link_id, user_id).
+ * Returns { nieuw, fout }.
  */
-export async function syncRekening(env, rekening) {
+export async function syncRekening(env, rekening, toegang) {
   const vanaf = rekening.last_synced_at
     ? new Date(new Date(rekening.last_synced_at).getTime() - dagen(OVERLAP_DAGEN))
     : new Date(Date.now() - dagen(EERSTE_SYNC_DAGEN));
+  const deze = `budget_account_links?account_id=eq.${q(rekening.id)}&user_id=eq.${q(toegang.user_id)}`;
 
   try {
     const alles = [];
@@ -241,7 +252,7 @@ export async function syncRekening(env, rekening) {
     for (let pagina = 0; pagina < 25; pagina++) {
       const params = new URLSearchParams({ date_from: isoDatum(vanaf) });
       if (sleutel) params.set('continuation_key', sleutel);
-      const data = await eb(env, `/accounts/${q(rekening.provider_account_id)}/transactions?${params}`);
+      const data = await eb(env, `/accounts/${q(toegang.provider_account_id)}/transactions?${params}`);
       alles.push(...(data?.transactions ?? []));
       sleutel = data?.continuation_key;
       if (!sleutel) break;
@@ -258,43 +269,50 @@ export async function syncRekening(env, rekening) {
       nieuw += ingevoegd?.length ?? 0;
     }
 
-    await db(env, `budget_accounts?id=eq.${q(rekening.id)}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ last_synced_at: new Date().toISOString(), sync_error: null }),
-    });
+    await patch(env, `budget_accounts?id=eq.${q(rekening.id)}`, { last_synced_at: nuIso(), sync_error: null });
+    await patch(env, deze, { sync_error: null }).catch(() => {});
     return { nieuw, fout: null };
   } catch (e) {
     const verlopen = consentWeg(e);
     const melding = verlopen ? 'Toestemming verlopen: koppel opnieuw' : (e?.message ?? 'Bijwerken mislukt').slice(0, 200);
-    await db(env, `budget_accounts?id=eq.${q(rekening.id)}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ sync_error: melding }),
-    }).catch(() => {});
-    if (verlopen && rekening.link_id) {
-      await db(env, `budget_bank_links?id=eq.${q(rekening.link_id)}`, {
-        method: 'PATCH',
-        headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({ status: 'expired', updated_at: new Date().toISOString() }),
-      }).catch(() => {});
+    await patch(env, deze, { sync_error: melding }).catch(() => {});
+    if (verlopen && toegang.link_id) {
+      await patch(env, `budget_bank_links?id=eq.${q(toegang.link_id)}`, { status: 'expired', updated_at: nuIso() }).catch(
+        () => {},
+      );
     }
     return { nieuw: 0, fout: melding };
   }
 }
 
+/**
+ * Keep the summary on budget_accounts in step with its consents: linked while
+ * any consent exists (an expired one too, so the app can ask to renew), valid
+ * until the latest active one ends.
+ */
+export async function werkSamenvattingBij(env, accountId) {
+  const toegang =
+    (await db(
+      env,
+      `budget_account_links?account_id=eq.${q(accountId)}&select=link_id,valid_until,sync_error,link:budget_bank_links(status)`,
+    )) ?? [];
+  const actief = toegang.filter(isActief);
+  const eind = actief.map((t) => t.valid_until).filter(Boolean).sort().at(-1) ?? null;
+  await patch(env, `budget_accounts?id=eq.${q(accountId)}`, {
+    link_id: (actief[0] ?? toegang[0])?.link_id ?? null,
+    consent_valid_until: eind,
+    sync_error: toegang.length && !actief.length ? (toegang[0].sync_error ?? 'Toestemming verlopen: koppel opnieuw') : null,
+  });
+}
+
 /** Close a session at Enable Banking (which revokes the bank consent) once no account uses it. */
 export async function sluitLinkAlsLeeg(env, linkId) {
   if (!linkId) return;
-  const nogInGebruik = await db(env, `budget_accounts?link_id=eq.${q(linkId)}&select=id&limit=1`);
+  const nogInGebruik = await db(env, `budget_account_links?link_id=eq.${q(linkId)}&select=account_id&limit=1`);
   if (nogInGebruik?.length) return;
   const [link] = (await db(env, `budget_bank_links?id=eq.${q(linkId)}&select=session_id,status`)) ?? [];
   if (link?.session_id && link.status === 'active') {
     await eb(env, `/sessions/${q(link.session_id)}`, { method: 'DELETE' }).catch(() => {});
   }
-  await db(env, `budget_bank_links?id=eq.${q(linkId)}`, {
-    method: 'PATCH',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ status: 'revoked', updated_at: new Date().toISOString() }),
-  });
+  await patch(env, `budget_bank_links?id=eq.${q(linkId)}`, { status: 'revoked', updated_at: nuIso() });
 }

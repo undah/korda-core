@@ -3,16 +3,18 @@
  *
  * Fetches new transactions for the household's linked accounts.
  *
- * - Your own accounts are always synced (the "Bijwerken" button), unless
- *   `alleenOud` is set: then only those not synced in the last few minutes.
- *   The app sends that when it opens or comes back to the foreground. You're
- *   using the app then, so PSD2's cap on unattended bank calls doesn't apply.
- * - A partner's linked accounts are synced too when hours old, so a joint
- *   account linked by one of you is fresh whoever opens the app. For them it
- *   counts as unattended access (max 4 a day at ING), hence the longer gap. Only the
- *   count for your own accounts is returned; their private ones stay theirs.
+ * Every account can carry a consent per holder (budget_account_links). The
+ * one used is yours when you have one: you have the app open, so for ING
+ * you're present and its cap on unattended reads doesn't apply. Then an
+ * account is synced on every call, or with `alleenOud` (sent when the app
+ * opens or comes back to the foreground) when it's more than a few minutes old.
+ *
+ * Accounts you have no consent for (a partner's, or a joint account only they
+ * linked) are synced through their consent when hours old: for ING that's
+ * unattended access, capped at 4 a day. Only counts for accounts you hold
+ * are returned; someone else's private account stays theirs.
  */
-import { db, foutAntwoord, json, leesBody, syncRekening, vereisLid } from '../../../_shared/budgetBank.js';
+import { db, foutAntwoord, isActief, json, leesBody, syncRekening, vereisLid, werkSamenvattingBij } from '../../../_shared/budgetBank.js';
 
 const q = encodeURIComponent;
 const EIGEN_OUD_NA_MIN = 5;
@@ -23,38 +25,58 @@ export async function onRequestPost({ request, env, data }) {
     const { householdId, alleenOud = false } = await leesBody(request);
     await vereisLid(env, householdId, data.userId);
 
-    const rekeningen =
+    const [rekeningen, leden] = await Promise.all([
+      db(env, `budget_accounts?household_id=eq.${q(householdId)}&provider=eq.enable_banking&select=id,household_id,owner_id,last_synced_at`),
+      db(env, `budget_members?household_id=eq.${q(householdId)}&select=user_id`),
+    ]);
+    if (!rekeningen?.length) return json({ nieuw: 0, bijgewerkt: 0, fouten: [] });
+    const lid = new Set((leden ?? []).map((m) => m.user_id));
+
+    const toegangen =
       (await db(
         env,
-        `budget_accounts?household_id=eq.${q(householdId)}&provider=eq.enable_banking&link_id=not.is.null` +
-          `&select=id,household_id,owner_id,provider_account_id,last_synced_at,link_id,link:budget_bank_links(status,valid_until)`,
+        `budget_account_links?account_id=in.(${rekeningen.map((r) => q(r.id)).join(',')})` +
+          `&select=*,link:budget_bank_links(status,valid_until)&order=created_at.asc`,
       )) ?? [];
 
     const leeftijd = (r) => (r.last_synced_at ? Date.now() - new Date(r.last_synced_at).getTime() : Infinity);
-    const isOud = (r) =>
-      leeftijd(r) > (r.owner_id === data.userId ? EIGEN_OUD_NA_MIN * 60_000 : ANDER_OUD_NA_UREN * 3600_000);
 
     let nieuw = 0;
     let bijgewerkt = 0;
     const fouten = [];
     for (const r of rekeningen) {
-      const eigen = r.owner_id === data.userId;
-      if (!(eigen && !alleenOud) && !isOud(r)) continue;
-      if (r.link?.status !== 'active' || !r.provider_account_id) continue;
-      if (r.link.valid_until && new Date(r.link.valid_until).getTime() < Date.now()) {
-        await db(env, `budget_accounts?id=eq.${q(r.id)}`, {
-          method: 'PATCH',
-          headers: { Prefer: 'return=minimal' },
-          body: JSON.stringify({ sync_error: 'Toestemming verlopen: koppel opnieuw' }),
-        });
-        if (eigen) fouten.push({ rekening: r.id, fout: 'Toestemming verlopen: koppel opnieuw' });
+      const vanRekening = toegangen.filter((t) => t.account_id === r.id);
+      if (!vanRekening.length) continue;
+      const mijn = vanRekening.find((t) => t.user_id === data.userId);
+      // Someone who left the household no longer feeds it, even if their consent still runs.
+      const anderen = vanRekening.filter((t) => t.user_id !== data.userId && lid.has(t.user_id) && isActief(t));
+      const ikHoudBij = !!mijn || r.owner_id === data.userId;
+
+      const pogingen = [];
+      if (mijn && isActief(mijn) && (!alleenOud || leeftijd(r) > EIGEN_OUD_NA_MIN * 60_000)) pogingen.push(mijn);
+      if (leeftijd(r) > ANDER_OUD_NA_UREN * 3600_000) pogingen.push(...anderen);
+      if (!pogingen.length) {
+        if (ikHoudBij && mijn && !isActief(mijn) && !anderen.length) {
+          fouten.push({ rekening: r.id, fout: 'Toestemming verlopen: koppel opnieuw' });
+        }
         continue;
       }
-      const uitkomst = await syncRekening(env, r);
-      if (eigen) {
-        nieuw += uitkomst.nieuw;
+
+      let gelukt = false;
+      let laatsteFout = null;
+      for (const t of pogingen) {
+        const uitkomst = await syncRekening(env, r, t);
+        if (!uitkomst.fout) {
+          gelukt = true;
+          if (ikHoudBij) nieuw += uitkomst.nieuw;
+          break;
+        }
+        laatsteFout = uitkomst.fout;
+      }
+      if (!gelukt) await werkSamenvattingBij(env, r.id);
+      if (ikHoudBij) {
         bijgewerkt += 1;
-        if (uitkomst.fout) fouten.push({ rekening: r.id, fout: uitkomst.fout });
+        if (!gelukt) fouten.push({ rekening: r.id, fout: laatsteFout });
       }
     }
 

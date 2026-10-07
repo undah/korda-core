@@ -5,7 +5,10 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { Kaart, Pagina, foutTekst } from "@/features/budget/components/ui";
 import { useRondKoppelingAf } from "@/features/budget/hooks/useBudgetData";
 
-type Stand = { soort: "bezig" } | { soort: "klaar"; rekeningen: number; nieuw: number } | { soort: "fout"; tekst: string };
+type Stand =
+  | { soort: "bezig" }
+  | { soort: "klaar"; rekeningen: number; nieuw: number; aangesloten: number }
+  | { soort: "fout"; tekst: string };
 
 export default function BudgetBankTerug() {
   const [params] = useSearchParams();
@@ -32,7 +35,7 @@ export default function BudgetBankTerug() {
     }
     afronden
       .mutateAsync({ code, state })
-      .then((u) => setStand({ soort: "klaar", rekeningen: u.rekeningen, nieuw: u.nieuw }))
+      .then((u) => setStand({ soort: "klaar", rekeningen: u.rekeningen, nieuw: u.nieuw, aangesloten: u.aangesloten ?? 0 }))
       .catch((e) => setStand({ soort: "fout", tekst: foutTekst(e) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -54,8 +57,10 @@ export default function BudgetBankTerug() {
               {stand.rekeningen === 1 ? "1 rekening gekoppeld" : `${stand.rekeningen} rekeningen gekoppeld`}
             </p>
             <p className="mt-1 text-sm text-kb-ink2">
-              {stand.nieuw ? `${stand.nieuw} transacties binnengehaald.` : "Nog geen transacties gevonden."} Ze staan op
-              privé; kies per rekening of je hem deelt.
+              {stand.nieuw ? `${stand.nieuw} nieuwe transacties binnengehaald.` : "Geen nieuwe transacties gevonden."}{" "}
+              {stand.aangesloten
+                ? "Een gezamenlijke rekening was al gekoppeld; jouw toestemming houdt hem nu ook voor jou actueel."
+                : "Nieuwe rekeningen staan op privé; kies per rekening of je hem deelt."}
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link

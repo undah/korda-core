@@ -1,15 +1,28 @@
 /**
- * POST /api/budget/bank/terug  { code, state }  ->  { rekeningen, nieuw }
+ * POST /api/budget/bank/terug  { code, state }  ->  { rekeningen, nieuw, aangesloten }
  *
  * Finishes a link after ING sent the user back. The state must belong to a
  * pending link this same user started, so a stolen or replayed return URL
  * can't attach someone's bank account to another household.
  *
- * Accounts are matched on IBAN within the household: linking again (after the
- * consent ran out) re-attaches the existing account and keeps its history and
- * settings instead of creating a twin.
+ * Accounts are matched on IBAN within the household, whoever linked them:
+ * - linking again after the consent ran out re-attaches your own account and
+ *   keeps its history and settings instead of creating a twin;
+ * - the second holder of a joint account linking it with their own ING login
+ *   adds their consent to the same account (`aangesloten`), so both can keep
+ *   it current and nothing is counted twice.
  */
-import { Fout, db, eb, foutAntwoord, json, leesBody, sluitLinkAlsLeeg, syncRekening } from '../../../_shared/budgetBank.js';
+import {
+  Fout,
+  db,
+  eb,
+  foutAntwoord,
+  json,
+  leesBody,
+  sluitLinkAlsLeeg,
+  syncRekening,
+  werkSamenvattingBij,
+} from '../../../_shared/budgetBank.js';
 
 const q = encodeURIComponent;
 
@@ -44,38 +57,26 @@ export async function onRequestPost({ request, env, data }) {
       }),
     });
 
-    const rekeningen = [];
+    const gekoppeld = []; // [{ rekening, toegang }]
     const oudeLinks = new Set();
+    let aangesloten = 0;
     for (const a of sessie?.accounts ?? []) {
       const iban = a?.account_id?.iban ?? null;
       const naam = (a?.name || a?.product || (iban ? `ING ••${iban.slice(-4)}` : 'ING-rekening')).slice(0, 80);
-      const velden = {
-        provider_account_id: a.uid,
-        link_id: link.id,
-        consent_valid_until: geldigTot,
-        sync_error: null,
-      };
 
       const [bestaand] = iban
         ? ((await db(
             env,
-            `budget_accounts?household_id=eq.${q(link.household_id)}&owner_id=eq.${q(data.userId)}` +
-              `&provider=eq.enable_banking&iban=eq.${q(iban)}&select=*`,
+            `budget_accounts?household_id=eq.${q(link.household_id)}&provider=eq.enable_banking` +
+              `&iban=eq.${q(iban)}&select=*&order=created_at.asc&limit=1`,
           )) ?? [])
         : [];
 
-      let rij;
-      if (bestaand) {
-        if (bestaand.link_id && bestaand.link_id !== link.id) oudeLinks.add(bestaand.link_id);
-        [rij] = await db(env, `budget_accounts?id=eq.${q(bestaand.id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify(velden),
-        });
-      } else {
-        [rij] = await db(env, 'budget_accounts', {
+      let rekening = bestaand;
+      if (!rekening) {
+        [rekening] = await db(env, 'budget_accounts', {
           method: 'POST',
           body: JSON.stringify({
-            ...velden,
             household_id: link.household_id,
             owner_id: data.userId,
             name: naam,
@@ -85,17 +86,47 @@ export async function onRequestPost({ request, env, data }) {
             provider: 'enable_banking',
           }),
         });
+      } else if (bestaand.owner_id !== data.userId) {
+        aangesloten += 1;
+        // Two holders: a joint account, and one both already see in full at
+        // ING, so keeping it private from one of them would hide nothing.
+        await db(env, `budget_accounts?id=eq.${q(bestaand.id)}`, {
+          method: 'PATCH',
+          headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ is_joint: true, visibility: 'shared' }),
+        });
       }
-      rekeningen.push(rij);
+
+      const [vorige] =
+        (await db(
+          env,
+          `budget_account_links?account_id=eq.${q(rekening.id)}&user_id=eq.${q(data.userId)}&select=link_id`,
+        )) ?? [];
+      if (vorige?.link_id && vorige.link_id !== link.id) oudeLinks.add(vorige.link_id);
+
+      const [toegang] = await db(env, 'budget_account_links?on_conflict=account_id,user_id', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({
+          account_id: rekening.id,
+          user_id: data.userId,
+          link_id: link.id,
+          provider_account_id: a.uid,
+          valid_until: geldigTot,
+          sync_error: null,
+        }),
+      });
+      await werkSamenvattingBij(env, rekening.id);
+      gekoppeld.push({ rekening, toegang });
     }
 
     // The previous consent for these accounts is now unused: close it at the bank.
     for (const id of oudeLinks) await sluitLinkAlsLeeg(env, id).catch(() => {});
 
     let nieuw = 0;
-    for (const r of rekeningen) nieuw += (await syncRekening(env, r)).nieuw;
+    for (const { rekening, toegang } of gekoppeld) nieuw += (await syncRekening(env, rekening, toegang)).nieuw;
 
-    return json({ rekeningen: rekeningen.length, nieuw });
+    return json({ rekeningen: gekoppeld.length, nieuw, aangesloten });
   } catch (e) {
     return foutAntwoord(e);
   }

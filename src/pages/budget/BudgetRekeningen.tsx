@@ -10,11 +10,13 @@ import { Kaart, Knop, Pagina, Sectie, foutTekst } from "@/features/budget/compon
 import {
   useBankBijwerken,
   useKoppelBank,
+  useMijnToegang,
   useOntkoppel,
   useRekeningen,
   useZetGezamenlijk,
   useZetZichtbaarheid,
 } from "@/features/budget/hooks/useBudgetData";
+import type { MijnToegang } from "@/features/budget/hooks/useBudgetData";
 import type { BudgetAccount } from "@/features/budget/types";
 
 const datum = (iso: string) => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long" }).format(new Date(iso));
@@ -40,6 +42,7 @@ export default function BudgetRekeningen() {
   const { data: rekeningen = [], isLoading } = useRekeningen(hhId);
   const koppel = useKoppelBank();
   const bijwerken = useBankBijwerken();
+  const { data: mijnToegang = {} } = useMijnToegang(hhId);
 
   const bank = rekeningen.filter((r) => r.provider === "enable_banking");
   const eigen = bank.filter((r) => r.owner_id === user?.id);
@@ -105,7 +108,13 @@ export default function BudgetRekeningen() {
           >
             <div className="space-y-3">
               {eigen.map((r) => (
-                <EigenRekening key={r.id} rekening={r} heeftPartner={huishouden.members.length > 1} onOpnieuw={start} />
+                <EigenRekening
+                  key={r.id}
+                  rekening={r}
+                  toegang={mijnToegang[r.id]}
+                  heeftPartner={huishouden.members.length > 1}
+                  onOpnieuw={start}
+                />
               ))}
             </div>
             <Knop variant="rustig" className="mt-3 w-full" onClick={start} disabled={koppel.isPending}>
@@ -117,22 +126,18 @@ export default function BudgetRekeningen() {
 
         {vanAnderen.length > 0 && (
           <Sectie titel="Gedeeld door anderen">
-            <Kaart className="divide-y divide-kb-line overflow-hidden">
+            <div className="space-y-3">
               {vanAnderen.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-kb-sunk text-kb-ink2">
-                    <Users className="h-4 w-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{r.name}</span>
-                    <span className="block text-xs text-kb-ink2">
-                      Van {naamVan(r.owner_id)}
-                      {r.last_synced_at && ` · bijgewerkt ${geleden(r.last_synced_at)}`}
-                    </span>
-                  </span>
-                </div>
+                <RekeningVanAnder
+                  key={r.id}
+                  rekening={r}
+                  naam={naamVan(r.owner_id)}
+                  toegang={mijnToegang[r.id]}
+                  onKoppel={start}
+                  bezig={koppel.isPending}
+                />
               ))}
-            </Kaart>
+            </div>
           </Sectie>
         )}
 
@@ -149,12 +154,101 @@ export default function BudgetRekeningen() {
   );
 }
 
+/**
+ * Someone else's account you can see. If it's joint, you can link it with your
+ * own ING login too, so it's current for you without waiting on their consent.
+ */
+function RekeningVanAnder({
+  rekening: r,
+  naam,
+  toegang,
+  onKoppel,
+  bezig,
+}: {
+  rekening: BudgetAccount;
+  naam: string;
+  toegang: MijnToegang | undefined;
+  onKoppel: () => void;
+  bezig: boolean;
+}) {
+  const ontkoppel = useOntkoppel();
+  const verloopt = toegang?.valid_until ? dagenTot(toegang.valid_until) : null;
+  return (
+    <Kaart className="p-4">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-kb-sunk text-kb-ink2">
+          <Users className="h-[1.1rem] w-[1.1rem]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">{r.name}</p>
+          <p className="text-xs text-kb-ink2">
+            {[`Van ${naam}`, r.is_joint ? "gezamenlijk" : null, r.last_synced_at ? `bijgewerkt ${geleden(r.last_synced_at)}` : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+      </div>
+      {toegang ? (
+        <div className="mt-3 flex items-center gap-2 text-xs text-kb-ink2">
+          {toegang.sync_error || (verloopt !== null && verloopt <= 14) ? (
+            <>
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-kb-warn-ink" />
+              <span className="flex-1 text-kb-warn-ink">
+                {toegang.sync_error ?? `Jouw toestemming verloopt over ${verloopt} ${verloopt === 1 ? "dag" : "dagen"}`}
+              </span>
+              <button type="button" onClick={onKoppel} className="font-medium text-kb-warn-ink underline">
+                Opnieuw koppelen
+              </button>
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-kb-good-ink" />
+              <span className="flex-1">
+                Ook met jouw ING-login gekoppeld{toegang.valid_until ? `, tot ${datum(toegang.valid_until)}` : ""}
+              </span>
+              <button
+                type="button"
+                disabled={ontkoppel.isPending}
+                onClick={() =>
+                  ontkoppel.mutate(
+                    { accountId: r.id },
+                    {
+                      onSuccess: () => toast.success("Jouw toestemming is ingetrokken"),
+                      onError: (e) => toast.error(foutTekst(e)),
+                    },
+                  )
+                }
+                className="font-medium hover:text-kb-crit-ink"
+              >
+                Intrekken
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-xl bg-kb-bg p-3">
+          <p className="text-sm">Staat jouw naam ook op deze rekening?</p>
+          <p className="mt-0.5 text-xs text-kb-ink2">
+            Koppel hem met je eigen ING-login. Dan is hij voor jou altijd actueel, ook als {naam} de app een tijd niet opent.
+          </p>
+          <Knop variant="zacht" className="mt-3 w-full" onClick={onKoppel} disabled={bezig}>
+            {bezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
+            Ook met mijn ING koppelen
+          </Knop>
+        </div>
+      )}
+    </Kaart>
+  );
+}
+
 function EigenRekening({
   rekening: r,
+  toegang,
   heeftPartner,
   onOpnieuw,
 }: {
   rekening: BudgetAccount;
+  toegang: MijnToegang | undefined;
   heeftPartner: boolean;
   onOpnieuw: () => void;
 }) {
@@ -164,11 +258,13 @@ function EigenRekening({
   const [bevestig, setBevestig] = useState<"ontkoppelen" | "verwijderen" | null>(null);
 
   const gekoppeld = !!r.link_id;
-  const verloopt = r.consent_valid_until ? dagenTot(r.consent_valid_until) : null;
+  // Your own consent decides how current it is for you; the account summary covers the rest.
+  const geldigTot = toegang?.valid_until ?? r.consent_valid_until ?? null;
+  const verloopt = geldigTot ? dagenTot(geldigTot) : null;
   const waarschuwing = !gekoppeld
     ? "Niet meer gekoppeld: er komen geen nieuwe transacties binnen"
-    : r.sync_error
-      ? r.sync_error
+    : toegang?.sync_error || r.sync_error
+      ? (toegang?.sync_error ?? r.sync_error)
       : verloopt !== null && verloopt <= 14
         ? `Je toestemming verloopt over ${verloopt} ${verloopt === 1 ? "dag" : "dagen"}`
         : null;
@@ -196,8 +292,8 @@ function EigenRekening({
               .filter(Boolean)
               .join(" · ")}
           </p>
-          {gekoppeld && r.consent_valid_until && !waarschuwing && (
-            <p className="text-xs text-kb-ink2">Toestemming tot {datum(r.consent_valid_until)}</p>
+          {gekoppeld && geldigTot && !waarschuwing && (
+            <p className="text-xs text-kb-ink2">Toestemming tot {datum(geldigTot)}</p>
           )}
         </div>
       </div>
@@ -253,7 +349,7 @@ function EigenRekening({
         <div className="mt-4 rounded-xl bg-kb-sunk p-3">
           <p className="text-sm">
             {bevestig === "ontkoppelen"
-              ? "Stoppen met bijwerken? Wat er al staat blijft staan, en ING trekt je toestemming in."
+              ? "Je toestemming intrekken? Wat er al staat blijft staan. Heeft je partner hem ook gekoppeld, dan blijft hij via je partner bijwerken."
               : "Rekening en al zijn transacties verwijderen? Dit kan niet ongedaan worden."}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
