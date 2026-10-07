@@ -85,8 +85,13 @@ export function WeekKaart({ transacties, potjes }: { transacties: TxMetDelen[]; 
   if (w.deze === 0 && w.vorige === 0) return null;
   const meer = w.verschil > 0;
   return (
-    <Kaart className="p-4">
-      <p className="text-sm font-semibold">Afgelopen 7 dagen</p>
+    <Link
+      to="/budget/week"
+      className="block rounded-2xl border border-kb-line bg-kb-surface p-4 transition-colors hover:bg-kb-sunk/60"
+    >
+      <p className="flex items-center justify-between text-sm font-semibold">
+        Afgelopen 7 dagen <ChevronRight className="h-4 w-4 text-kb-ink3" />
+      </p>
       <p className="text-xs text-kb-ink2">Dagelijkse uitgaven, zonder vaste lasten</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight">{euro(w.deze)}</p>
       {w.vorige > 0 && (
@@ -100,7 +105,7 @@ export function WeekKaart({ transacties, potjes }: { transacties: TxMetDelen[]; 
           Meeste in {w.topPot.pot.emoji} {w.topPot.pot.name}: {euro(w.topPot.bedrag)}
         </p>
       )}
-    </Kaart>
+    </Link>
   );
 }
 

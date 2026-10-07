@@ -2,14 +2,14 @@
 import { useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, Inbox, Plus, Split } from "lucide-react";
+import { ArrowLeftRight, Check, Inbox, Plus, Split, Wallet } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { TxSheet } from "@/features/budget/components/TxSheet";
 import { UitgaveSheet } from "@/features/budget/components/UitgaveSheet";
 import { Kaart, MaandKiezer, Pagina, foutTekst } from "@/features/budget/components/ui";
 import { usePotjes } from "@/features/budget/hooks/useBudget";
-import { useOnthoudRegel, useRegels, useTransacties, useZetPotje } from "@/features/budget/hooks/useBudgetData";
+import { useOnthoudRegel, useRegels, useTransacties, useZetPotje, useZetSoort } from "@/features/budget/hooks/useBudgetData";
 import { huidigeMaand } from "@/features/budget/lib/budget";
 import { regelVoor } from "@/features/budget/lib/inzicht";
 import type { TxMetDelen } from "@/features/budget/types";
@@ -30,15 +30,17 @@ export default function BudgetTransacties() {
   const { data: regels = [] } = useRegels(hhId);
   const zetPotje = useZetPotje();
   const onthoud = useOnthoudRegel();
+  const zetSoort = useZetSoort();
 
   const zichtbaar = useMemo(() => new Set(potjes.map((p) => p.id)), [potjes]);
   const potVan = (id: string | null) => potjes.find((p) => p.id === id);
-  const teIndelen = transacties.filter((t) => !t.pot_id && t.splits.length === 0);
+  const teIndelen = transacties.filter((t) => !t.pot_id && t.splits.length === 0 && !t.soort);
   const lijst = tab === "indelen" ? teIndelen : transacties;
   const inUit = useMemo(
     () => ({
-      uit: transacties.filter((t) => t.amount < 0).reduce((s, t) => s - t.amount, 0),
-      in: transacties.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
+      // Moving money between your own accounts is neither.
+      uit: transacties.filter((t) => t.amount < 0 && t.soort !== "overboeking").reduce((s, t) => s - t.amount, 0),
+      in: transacties.filter((t) => t.amount > 0 && t.soort !== "overboeking").reduce((s, t) => s + t.amount, 0),
     }),
     [transacties],
   );
@@ -58,6 +60,15 @@ export default function BudgetTransacties() {
       await zetPotje.mutateAsync({ txId: t.id, potId });
       if (t.counterparty) await onthoud.mutateAsync({ householdId: hhId, tegenpartij: t.counterparty, potId });
       toast.success(`${potVan(potId)?.name ?? "Potje"} ✓`);
+    } catch (err) {
+      toast.error(foutTekst(err));
+    }
+  };
+
+  const alsInkomen = async (t: TxMetDelen) => {
+    try {
+      await zetSoort.mutateAsync({ txId: t.id, soort: "inkomen" });
+      toast.success("Inkomen ✓");
     } catch (err) {
       toast.error(foutTekst(err));
     }
@@ -127,7 +138,8 @@ export default function BudgetTransacties() {
                 <h2 className="mb-2 px-1 text-xs font-medium text-kb-ink2 first-letter:uppercase">{dagKop(g.dag)}</h2>
                 <Kaart className="divide-y divide-kb-line overflow-hidden">
                   {g.items.map((t) => {
-                    const voorstel = !t.pot_id && !t.splits.length ? regelVoor(t, regels, zichtbaar) : null;
+                    const open_ = !t.pot_id && !t.splits.length && !t.soort;
+                    const voorstel = open_ ? regelVoor(t, regels, zichtbaar) : null;
                     const pot = potVan(t.pot_id);
                     return (
                       <div key={t.id} className="flex items-center gap-3 px-4 py-3">
@@ -139,6 +151,14 @@ export default function BudgetTransacties() {
                             {t.splits.length ? (
                               <>
                                 <Split className="h-3 w-3" /> Verdeeld over {t.splits.length} potjes
+                              </>
+                            ) : t.soort === "inkomen" ? (
+                              <>
+                                <Wallet className="h-3 w-3" /> Inkomen
+                              </>
+                            ) : t.soort === "overboeking" ? (
+                              <>
+                                <ArrowLeftRight className="h-3 w-3" /> Overboeking
                               </>
                             ) : pot ? (
                               `${pot.emoji} ${pot.name}`
@@ -156,6 +176,15 @@ export default function BudgetTransacties() {
                             aria-label={`In ${potVan(voorstel)?.name} zetten`}
                           >
                             {potVan(voorstel)?.emoji} <Check className="h-3.5 w-3.5" />
+                          </button>
+                        ) : open_ && t.amount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => alsInkomen(t)}
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-kb-accent-soft px-2.5 py-1.5 text-xs font-medium text-kb-accent-ink hover:bg-kb-accent-soft/70"
+                            aria-label="Als inkomen markeren"
+                          >
+                            Inkomen <Check className="h-3.5 w-3.5" />
                           </button>
                         ) : null}
                         <button

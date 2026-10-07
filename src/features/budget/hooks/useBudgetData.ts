@@ -17,6 +17,7 @@ import type {
   BudgetSettlement,
   BudgetWish,
   TxMetDelen,
+  TxSoort,
 } from "../types";
 
 const num = (v: unknown) => Number(v ?? 0);
@@ -69,13 +70,31 @@ export function useTransacties(householdId: string | undefined, maand: BudgetMon
 }
 
 export function useZetPotje() {
-  return useSchrijf(async (p: { txId: string; potId: string | null }) => {
+  return useSchrijf(async (p: { txId: string; potId: string | null; wisSoort?: boolean }) => {
     // Assigning a whole transaction removes any earlier split.
     await ok(supabase.from("budget_tx_splits").delete().eq("transaction_id", p.txId));
     await ok(
       supabase
         .from("budget_transactions")
-        .update({ pot_id: p.potId, pot_status: p.potId ? "confirmed" : "unassigned" })
+        .update({
+          pot_id: p.potId,
+          pot_status: p.potId ? "confirmed" : "unassigned",
+          // Only touch soort when there is one to clear, so this works before budget_soort.sql runs.
+          ...(p.wisSoort ? { soort: null } : {}),
+        })
+        .eq("id", p.txId),
+    );
+  });
+}
+
+/** Mark as income or own transfer: no pot, no split, out of the inbox. */
+export function useZetSoort() {
+  return useSchrijf(async (p: { txId: string; soort: TxSoort }) => {
+    await ok(supabase.from("budget_tx_splits").delete().eq("transaction_id", p.txId));
+    await ok(
+      supabase
+        .from("budget_transactions")
+        .update({ pot_id: null, soort: p.soort, pot_status: "confirmed" })
         .eq("id", p.txId),
     );
   });
@@ -83,7 +102,7 @@ export function useZetPotje() {
 
 export function useSplits() {
   return useSchrijf(
-    async (p: { txId: string; householdId: string; delen: Array<{ potId: string; amount: number }> }) => {
+    async (p: { txId: string; householdId: string; delen: Array<{ potId: string; amount: number }>; wisSoort?: boolean }) => {
       await ok(supabase.from("budget_tx_splits").delete().eq("transaction_id", p.txId));
       await ok(
         supabase.from("budget_tx_splits").insert(
@@ -96,7 +115,10 @@ export function useSplits() {
         ),
       );
       await ok(
-        supabase.from("budget_transactions").update({ pot_id: null, pot_status: "confirmed" }).eq("id", p.txId),
+        supabase
+          .from("budget_transactions")
+          .update({ pot_id: null, pot_status: "confirmed", ...(p.wisSoort ? { soort: null } : {}) })
+          .eq("id", p.txId),
       );
     },
   );

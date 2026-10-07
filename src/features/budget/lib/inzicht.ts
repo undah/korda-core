@@ -230,6 +230,7 @@ export function weekoverzicht(transacties: TxMetDelen[], potjes: BudgetPot[], nu
   let vorige = 0;
   const perPot = new Map<string, number>();
   for (const t of transacties) {
+    if (t.soort) continue;
     const d = new Date(t.booked_on + "T00:00:00").getTime();
     for (const r of regels(t)) {
       if (r.bedrag >= 0 || (r.pot && vast.has(r.pot))) continue;
@@ -245,6 +246,66 @@ export function weekoverzicht(transacties: TxMetDelen[], potjes: BudgetPot[], nu
     vorige: rond(vorige),
     verschil: rond(deze - vorige),
     topPot: top ? { pot: potjes.find((p) => p.id === top[0]) ?? null, bedrag: rond(top[1]) } : null,
+  };
+}
+
+const dagSleutel = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/**
+ * The week page: the same 7 days as weekoverzicht, broken down per day and per
+ * pot, with last week's amount per pot to compare. Fixed pots stay out of the
+ * totals, but their payments are listed so nothing seems to be missing.
+ */
+export function weekDetail(transacties: TxMetDelen[], potjes: BudgetPot[], nu = new Date()) {
+  const vast = new Set(potjes.filter((p) => p.kind === "vast").map((p) => p.id));
+  const dagen: string[] = [];
+  for (let i = 6; i >= 0; i--) dagen.push(dagSleutel(new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - i)));
+  const vorigeDagen = new Set<string>();
+  for (let i = 13; i >= 7; i--) vorigeDagen.add(dagSleutel(new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - i)));
+  const dezeDagen = new Set(dagen);
+
+  const perDag = new Map(dagen.map((d) => [d, 0]));
+  const perPot = new Map<string | null, { deze: number; vorige: number }>();
+  const lijst: TxMetDelen[] = [];
+  let vasteLasten = 0;
+
+  for (const t of transacties) {
+    const deze = dezeDagen.has(t.booked_on);
+    const vorige = vorigeDagen.has(t.booked_on);
+    if (!deze && !vorige) continue;
+    if (t.soort) continue;
+    if (deze && t.amount < 0) lijst.push(t);
+    for (const r of regels(t)) {
+      if (r.bedrag >= 0) continue;
+      if (r.pot && vast.has(r.pot)) {
+        if (deze) vasteLasten += -r.bedrag;
+        continue;
+      }
+      const rij = perPot.get(r.pot) ?? { deze: 0, vorige: 0 };
+      if (deze) {
+        rij.deze += -r.bedrag;
+        perDag.set(t.booked_on, (perDag.get(t.booked_on) ?? 0) - r.bedrag);
+      } else rij.vorige += -r.bedrag;
+      perPot.set(r.pot, rij);
+    }
+  }
+
+  const totaal = [...perDag.values()].reduce((s, v) => s + v, 0);
+  return {
+    dagen: dagen.map((datum) => ({ datum, bedrag: rond(perDag.get(datum) ?? 0) })),
+    totaal: rond(totaal),
+    gemiddeld: rond(totaal / 7),
+    vasteLasten: rond(vasteLasten),
+    potten: [...perPot.entries()]
+      .map(([id, b]) => ({
+        pot: id ? (potjes.find((p) => p.id === id) ?? null) : null,
+        deze: rond(b.deze),
+        vorige: rond(b.vorige),
+      }))
+      .filter((r) => r.deze > 0 || r.vorige > 0)
+      .sort((a, b) => b.deze - a.deze || b.vorige - a.vorige),
+    transacties: lijst,
   };
 }
 

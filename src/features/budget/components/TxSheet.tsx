@@ -9,14 +9,16 @@ import {
   useVerwijderHandmatig,
   useZetNotitie,
   useZetPotje,
+  useZetSoort,
 } from "../hooks/useBudgetData";
 import { formatEuro, parseBedrag } from "../lib/budget";
-import type { BudgetPot, TxMetDelen } from "../types";
+import type { BudgetPot, TxMetDelen, TxSoort } from "../types";
 import { useBedragen } from "./Bedrag";
-import { Blad, PotKiezer } from "./Blad";
+import { Blad, PotKiezer, Wissel } from "./Blad";
 import { IcoonKnop, Knop, foutTekst } from "./ui";
 
 type Deel = { key: string; potId: string | null; bedrag: string };
+type Keuze = "potje" | TxSoort;
 const sleutel = () => Math.random().toString(36).slice(2, 8);
 const lang = (iso: string) =>
   new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(new Date(iso));
@@ -43,6 +45,8 @@ export function TxSheet({
   const [notitie, setNotitie] = useState("");
   const [onthoud, setOnthoud] = useState(true);
   const [zeker, setZeker] = useState(false);
+  const [keuze, setKeuze] = useState<Keuze>("potje");
+  const zetSoort = useZetSoort();
   const zetPotje = useZetPotje();
   const zetSplits = useSplits();
   const zetNotitie = useZetNotitie();
@@ -65,6 +69,8 @@ export function TxSheet({
     setNotitie(tx.note ?? "");
     setOnthoud(true);
     setZeker(false);
+    // Money in with no pot is most likely income; suggest it, the user still saves.
+    setKeuze(tx.soort ?? (tx.amount > 0 && !tx.pot_id && !gesplitst ? "inkomen" : "potje"));
   }, [tx, voorstel]);
 
   const totaal = tx ? Math.abs(tx.amount) : 0;
@@ -79,21 +85,34 @@ export function TxSheet({
   const bewaar = async () => {
     if (!tx) return;
     try {
-      if (splitsen) {
+      if (keuze !== "potje") {
+        await zetSoort.mutateAsync({ txId: tx.id, soort: keuze });
+      } else if (splitsen) {
         const teken = tx.amount < 0 ? -1 : 1;
         await zetSplits.mutateAsync({
           txId: tx.id,
           householdId,
           delen: delen.map((d) => ({ potId: d.potId!, amount: teken * parseBedrag(d.bedrag) })),
+          wisSoort: !!tx.soort,
         });
       } else {
-        await zetPotje.mutateAsync({ txId: tx.id, potId });
+        await zetPotje.mutateAsync({ txId: tx.id, potId, wisSoort: !!tx.soort });
         if (onthoud && potId && tx.counterparty) {
           await regel.mutateAsync({ householdId, tegenpartij: tx.counterparty, potId });
         }
       }
       if ((tx.note ?? "") !== notitie) await zetNotitie.mutateAsync({ txId: tx.id, note: notitie });
-      toast.success(splitsen ? "Gesplitst" : potId ? "Ingedeeld" : "Opgeslagen");
+      toast.success(
+        keuze === "inkomen"
+          ? "Gemarkeerd als inkomen"
+          : keuze === "overboeking"
+            ? "Gemarkeerd als overboeking"
+            : splitsen
+              ? "Gesplitst"
+              : potId
+                ? "Ingedeeld"
+                : "Opgeslagen",
+      );
       onSluit();
     } catch (err) {
       toast.error(foutTekst(err));
@@ -124,6 +143,24 @@ export function TxSheet({
             <p className="rounded-xl bg-kb-sunk px-4 py-3 text-sm text-kb-ink2">
               Deze betaling is verdeeld door wie hem deed. Je ziet alleen het deel dat in een gedeeld
               potje valt; aanpassen kan alleen de ander.
+            </p>
+          ) : (
+            <Wissel<Keuze>
+              opties={[
+                { id: "potje", titel: tx.amount < 0 ? "Uitgave" : "In potje", uitleg: tx.amount < 0 ? "In een potje" : "Terugbetaling" },
+                ...(tx.amount > 0 ? [{ id: "inkomen" as const, titel: "Inkomen", uitleg: "Salaris e.d." }] : []),
+                { id: "overboeking", titel: "Overboeking", uitleg: "Eigen rekening" },
+              ]}
+              waarde={keuze}
+              onChange={setKeuze}
+            />
+          )}
+
+          {tx.splits.length > 0 && !tx.account ? null : keuze !== "potje" ? (
+            <p className="text-sm text-kb-ink2">
+              {keuze === "inkomen"
+                ? "Telt niet als uitgave en hoort in geen potje."
+                : "Geld tussen je eigen rekeningen: telt niet als uitgave of inkomen."}
             </p>
           ) : !splitsen ? (
             <div>
@@ -229,8 +266,11 @@ export function TxSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Knop onClick={bewaar} disabled={(splitsen && !kanSplitsen) || zetPotje.isPending || zetSplits.isPending}>
-              {splitsen ? "Verdeling opslaan" : "Opslaan"}
+            <Knop
+              onClick={bewaar}
+              disabled={(keuze === "potje" && splitsen && !kanSplitsen) || zetPotje.isPending || zetSplits.isPending || zetSoort.isPending}
+            >
+              {keuze === "potje" && splitsen ? "Verdeling opslaan" : "Opslaan"}
             </Knop>
             {isHandmatig && (
               <Knop

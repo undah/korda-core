@@ -59,7 +59,11 @@ export interface BudgetTransaction {
   pot_id: string | null;
   pot_status: "unassigned" | "suggested" | "confirmed";
   note: string | null;
+  /** Income or a transfer between own accounts: not spending, no pot. */
+  soort?: TxSoort | null;
 }
+
+export type TxSoort = "inkomen" | "overboeking";
 
 export interface BudgetAccount {
   id: string;

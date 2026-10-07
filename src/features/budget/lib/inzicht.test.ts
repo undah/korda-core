@@ -7,6 +7,7 @@ import {
   vasteLastenDezeMaand,
   veiligeRuimte,
   verrekenSaldi,
+  weekDetail,
   weekoverzicht,
 } from "./inzicht";
 import { opDatum } from "./budget";
@@ -189,5 +190,36 @@ describe("weekoverzicht", () => {
       new Date(2026, 9, 21),
     );
     expect(w.deze).toBe(30);
+  });
+});
+
+describe("weekDetail", () => {
+  it("splits the week per day and per pot, leaving fixed pots out of the totals", () => {
+    const potjes = [pot({ id: "p", name: "Boodschappen" }), pot({ id: "huur", name: "Huur", kind: "vast" })];
+    const w = weekDetail(
+      [
+        tx({ booked_on: "2026-10-20", amount: -30, pot_id: "p" }),
+        tx({ booked_on: "2026-10-14", amount: -12, pot_id: null }),
+        tx({ booked_on: "2026-10-15", amount: -900, pot_id: "huur" }),
+        tx({ booked_on: "2026-10-16", amount: 2500 }),
+        tx({ booked_on: "2026-10-10", amount: -20, pot_id: "p" }),
+        tx({ booked_on: "2026-10-01", amount: -99, pot_id: "p" }),
+      ],
+      potjes,
+      new Date(2026, 9, 20, 12),
+    );
+    expect(w.dagen.map((d) => d.datum)).toEqual([
+      "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18", "2026-10-19", "2026-10-20",
+    ]);
+    expect(w.dagen[0].bedrag).toBe(12);
+    expect(w.dagen[6].bedrag).toBe(30);
+    expect(w.totaal).toBe(42);
+    expect(w.vasteLasten).toBe(900);
+    expect(w.potten).toEqual([
+      { pot: potjes[0], deze: 30, vorige: 20 },
+      { pot: null, deze: 12, vorige: 0 },
+    ]);
+    // Rent is listed (it left the account), income is not.
+    expect(w.transacties.map((t) => t.amount).sort()).toEqual([-12, -30, -900].sort());
   });
 });
