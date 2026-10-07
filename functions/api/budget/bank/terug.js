@@ -124,7 +124,9 @@ export async function onRequestPost({ request, env, data }) {
     for (const id of oudeLinks) await sluitLinkAlsLeeg(env, id).catch(() => {});
 
     let nieuw = 0;
-    for (const { rekening, toegang } of gekoppeld) nieuw += (await syncRekening(env, rekening, toegang)).nieuw;
+    // A fresh consent is when banks are most generous with history: ask for all of it.
+    // Linking again later does the same, filling in what's missing; duplicates are skipped.
+    for (const { rekening, toegang } of gekoppeld) nieuw += (await syncRekening(env, rekening, toegang, { diep: true })).nieuw;
 
     return json({ rekeningen: gekoppeld.length, nieuw, aangesloten });
   } catch (e) {

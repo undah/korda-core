@@ -58,8 +58,10 @@ export default function BudgetTransacties() {
   const bevestig = async (t: TxMetDelen, potId: string) => {
     try {
       await zetPotje.mutateAsync({ txId: t.id, potId });
-      if (t.counterparty) await onthoud.mutateAsync({ householdId: hhId, tegenpartij: t.counterparty, potId });
-      toast.success(`${potVan(potId)?.name ?? "Potje"} ✓`);
+      const eerdere = t.counterparty
+        ? await onthoud.mutateAsync({ householdId: hhId, tegenpartij: t.counterparty, potId })
+        : 0;
+      toast.success(`${potVan(potId)?.name ?? "Potje"} ✓${eerdere ? `, plus ${eerdere} eerdere` : ""}`);
     } catch (err) {
       toast.error(foutTekst(err));
     }

@@ -85,6 +85,7 @@ export function TxSheet({
   const bewaar = async () => {
     if (!tx) return;
     try {
+      let eerdere = 0;
       if (keuze !== "potje") {
         await zetSoort.mutateAsync({ txId: tx.id, soort: keuze });
       } else if (splitsen) {
@@ -98,7 +99,7 @@ export function TxSheet({
       } else {
         await zetPotje.mutateAsync({ txId: tx.id, potId, wisSoort: !!tx.soort });
         if (onthoud && potId && tx.counterparty) {
-          await regel.mutateAsync({ householdId, tegenpartij: tx.counterparty, potId });
+          eerdere = await regel.mutateAsync({ householdId, tegenpartij: tx.counterparty, potId });
         }
       }
       if ((tx.note ?? "") !== notitie) await zetNotitie.mutateAsync({ txId: tx.id, note: notitie });
@@ -110,7 +111,9 @@ export function TxSheet({
             : splitsen
               ? "Gesplitst"
               : potId
-                ? "Ingedeeld"
+                ? eerdere
+                  ? `Ingedeeld, plus ${eerdere} eerdere van ${tx.counterparty}`
+                  : "Ingedeeld"
                 : "Opgeslagen",
       );
       onSluit();

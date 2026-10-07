@@ -175,15 +175,42 @@ export function useRegels(householdId: string | undefined) {
 /** Remember "this counterparty goes in that pot" — upsert on (household, counterparty). */
 export function useOnthoudRegel() {
   const { user } = useAuth();
-  return useSchrijf(async (p: { householdId: string; tegenpartij: string; potId: string }) => {
+  /** Saves the rule, then sorts earlier unsorted payments to the same party. Returns how many. */
+  return useSchrijf(async (p: { householdId: string; tegenpartij: string; potId: string }): Promise<number> => {
     const counterparty = normaliseerTegenpartij(p.tegenpartij);
-    if (!counterparty) return;
+    if (!counterparty) return 0;
     await ok(
       supabase.from("budget_rules").upsert(
         { household_id: p.householdId, counterparty, pot_id: p.potId, created_by: user!.id },
         { onConflict: "household_id,counterparty" },
       ),
     );
+
+    // Same party, still unsorted, not split, not marked income/transfer. ilike narrows it
+    // down server-side; the exact match uses the same normalising as the rule.
+    const patroon = p.tegenpartij.trim().replace(/[%_\\]/g, (c) => `\\${c}`).replace(/\s+/g, "%");
+    const kandidaten =
+      (await ok(
+        supabase
+          .from("budget_transactions")
+          .select("*, splits:budget_tx_splits(id)")
+          .eq("household_id", p.householdId)
+          .is("pot_id", null)
+          .ilike("counterparty", patroon)
+          .limit(1000),
+      )) ?? [];
+    const ids = kandidaten
+      .filter(
+        (t: { counterparty: string | null; soort?: string | null; splits: unknown[] }) =>
+          normaliseerTegenpartij(t.counterparty) === counterparty && !t.soort && t.splits.length === 0,
+      )
+      .map((t: { id: string }) => t.id);
+    if (ids.length) {
+      await ok(
+        supabase.from("budget_transactions").update({ pot_id: p.potId, pot_status: "confirmed" }).in("id", ids),
+      );
+    }
+    return ids.length;
   });
 }
 

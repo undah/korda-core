@@ -119,8 +119,12 @@ export default function BudgetRekeningen() {
             </div>
             <Knop variant="rustig" className="mt-3 w-full" onClick={start} disabled={koppel.isPending}>
               {koppel.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
-              Nog een rekening koppelen
+              Opnieuw of nog een rekening koppelen
             </Knop>
+            <p className="mt-2 px-1 text-xs text-kb-ink2">
+              Opnieuw koppelen haalt ook oudere transacties op, tot twee jaar terug als ING dat toestaat. Wat er al
+              staat blijft staan.
+            </p>
           </Sectie>
         )}
 

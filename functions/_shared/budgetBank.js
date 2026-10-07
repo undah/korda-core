@@ -16,8 +16,13 @@ const EB = 'https://api.enablebanking.com';
 /** Registered in the Enable Banking portal; the bank refuses any other. */
 export const REDIRECT_URL = 'https://kordacore.com/budget/bank/terug';
 
-/** First sync after linking reaches back this far; PSD2 guarantees 90 days. */
+/** PSD2 guarantees 90 days of history; anything beyond is up to the bank. */
 const EERSTE_SYNC_DAGEN = 89;
+/**
+ * Right after you approve a link, many banks hand out more. We ask for this
+ * much then, and fall back to 89 days when the bank says no.
+ */
+const DIEPE_SYNC_DAGEN = 730;
 /** Later syncs overlap a week, so late-booked payments still come in. */
 const OVERLAP_DAGEN = 7;
 
@@ -238,24 +243,41 @@ export const isActief = (toegang) =>
  * Fetch new transactions for one account through one holder's consent and
  * store them. `rekening` needs id, household_id, last_synced_at; `toegang` is
  * a budget_account_links row (provider_account_id, link_id, user_id).
+ * With `diep` (right after linking) it reaches back as far as the bank allows.
  * Returns { nieuw, fout }.
  */
-export async function syncRekening(env, rekening, toegang) {
-  const vanaf = rekening.last_synced_at
-    ? new Date(new Date(rekening.last_synced_at).getTime() - dagen(OVERLAP_DAGEN))
-    : new Date(Date.now() - dagen(EERSTE_SYNC_DAGEN));
+export async function syncRekening(env, rekening, toegang, { diep = false } = {}) {
   const deze = `budget_account_links?account_id=eq.${q(rekening.id)}&user_id=eq.${q(toegang.user_id)}`;
 
-  try {
+  const haal = async (vanaf) => {
     const alles = [];
     let sleutel = null;
-    for (let pagina = 0; pagina < 25; pagina++) {
+    for (let pagina = 0; pagina < 60; pagina++) {
       const params = new URLSearchParams({ date_from: isoDatum(vanaf) });
       if (sleutel) params.set('continuation_key', sleutel);
       const data = await eb(env, `/accounts/${q(toegang.provider_account_id)}/transactions?${params}`);
       alles.push(...(data?.transactions ?? []));
       sleutel = data?.continuation_key;
       if (!sleutel) break;
+    }
+    return alles;
+  };
+
+  try {
+    let alles;
+    if (diep) {
+      try {
+        alles = await haal(new Date(Date.now() - dagen(DIEPE_SYNC_DAGEN)));
+      } catch (e) {
+        if (consentWeg(e)) throw e;
+        alles = await haal(new Date(Date.now() - dagen(EERSTE_SYNC_DAGEN)));
+      }
+    } else {
+      alles = await haal(
+        rekening.last_synced_at
+          ? new Date(new Date(rekening.last_synced_at).getTime() - dagen(OVERLAP_DAGEN))
+          : new Date(Date.now() - dagen(EERSTE_SYNC_DAGEN)),
+      );
     }
 
     const rijen = naarRijen(alles, rekening);
