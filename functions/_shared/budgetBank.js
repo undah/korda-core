@@ -177,19 +177,23 @@ export async function vereisLid(env, householdId, userId) {
 
 // ─── transactions ────────────────────────────────────────────────────────────
 
+const isGeboekt = (t) => !t.status || t.status === 'BOOK';
+const isPending = (t) => t.status === 'PDNG' || t.status === 'PEND';
+
 /**
- * Turn Enable Banking transactions into budget_transactions rows. Only booked
- * ones: pending card payments change amount or vanish, and would leave ghosts.
+ * Turn Enable Banking transactions into budget_transactions rows: booked ones,
+ * or with `pending` the ones still pending (card payments not yet booked).
  *
  * The bank's entry reference is the stable id. When a bank leaves both ids
  * empty, a fingerprint of the payment stands in, numbered so two identical
- * coffees on the same day stay two rows.
+ * coffees on the same day stay two rows. Pending ids get a "p:" prefix so they
+ * never collide with the booked version of the same payment.
  */
-export function naarRijen(transacties, rekening) {
+export function naarRijen(transacties, rekening, { pending = false } = {}) {
   const gezien = new Map();
   const rijen = [];
   for (const t of transacties) {
-    if (t.status && t.status !== 'BOOK') continue;
+    if (pending ? !isPending(t) : !isGeboekt(t)) continue;
     const datum = t.booking_date ?? t.value_date ?? t.transaction_date;
     const bedrag = Math.abs(Number(t.transaction_amount?.amount));
     if (!datum || !Number.isFinite(bedrag) || bedrag === 0) continue;
@@ -219,7 +223,7 @@ export function naarRijen(transacties, rekening) {
       currency: t.transaction_amount?.currency ?? 'EUR',
       counterparty: tegenpartij,
       description: omschrijving,
-      provider_tx_id: String(id).slice(0, 300),
+      provider_tx_id: `${pending ? 'p:' : ''}${id}`.slice(0, 300),
     });
   }
   return rijen;
@@ -240,13 +244,113 @@ export const isActief = (toegang) =>
   (!toegang.valid_until || new Date(toegang.valid_until).getTime() > Date.now());
 
 /**
+ * Headers telling the bank the account holder is using the app right now. With
+ * them, ING doesn't count the read against its 4-a-day cap for unattended
+ * access. Only for a request from the person whose consent it is: never from
+ * the background job, never with someone else's consent.
+ */
+export function aanwezig(request) {
+  const ip = request.headers.get('CF-Connecting-IP');
+  if (!ip) return null;
+  return { 'Psu-Ip-Address': ip, 'Psu-User-Agent': (request.headers.get('User-Agent') ?? '').slice(0, 300) };
+}
+
+const normNaam = (s) => (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+const dagVan = (iso) => Math.round(new Date(`${iso}T12:00:00Z`).getTime() / 86400000);
+
+/**
+ * Pending card payments, kept in step with the bank. The sorting someone did on
+ * a pending payment must survive its booking, so a booked payment that matches
+ * a pending row (same amount, same party or none known, within 4 days) turns
+ * that row into the booked one instead of arriving as a new, unsorted twin.
+ * Pending rows the bank no longer lists, and that didn't get booked, are gone
+ * (a cancelled reservation) and are removed. Returns how many pending rows were
+ * new, or null when the database doesn't have the column yet.
+ */
+export async function werkPendingBij(env, rekening, alles, geboekt) {
+  let bestaand;
+  try {
+    bestaand = await db(
+      env,
+      `budget_transactions?account_id=eq.${q(rekening.id)}&in_behandeling=eq.true&select=id,provider_tx_id,amount,counterparty,booked_on`,
+    );
+  } catch {
+    return null; // budget_pending.sql hasn't run: booked only, as before
+  }
+  const pending = naarRijen(alles, rekening, { pending: true }).map((r) => ({ ...r, in_behandeling: true }));
+  const nogPending = new Set(pending.map((r) => r.provider_tx_id));
+
+  // Pair existing pending rows with booked payments.
+  const gebruikt = new Set();
+  const paren = [];
+  for (const e of bestaand ?? []) {
+    const b = geboekt.find(
+      (g) =>
+        !gebruikt.has(g.provider_tx_id) &&
+        g.amount === Number(e.amount) &&
+        Math.abs(dagVan(g.booked_on) - dagVan(e.booked_on)) <= 4 &&
+        (!e.counterparty || !g.counterparty || normNaam(e.counterparty) === normNaam(g.counterparty)),
+    );
+    if (b) {
+      gebruikt.add(b.provider_tx_id);
+      paren.push({ e, b });
+    }
+  }
+
+  // A booked payment that's already stored means its pending row is a leftover.
+  const alGeboekt = new Set();
+  if (paren.length) {
+    const lijst = paren.map((x) => `"${x.b.provider_tx_id.replace(/["\\]/g, (c) => `\\${c}`)}"`).join(',');
+    const rijen = await db(
+      env,
+      `budget_transactions?account_id=eq.${q(rekening.id)}&provider_tx_id=in.(${q(lijst)})&select=provider_tx_id`,
+    );
+    for (const r of rijen ?? []) alGeboekt.add(r.provider_tx_id);
+  }
+
+  const weg = [];
+  for (const { e, b } of paren) {
+    if (alGeboekt.has(b.provider_tx_id)) weg.push(e.id);
+    else
+      await patch(env, `budget_transactions?id=eq.${q(e.id)}`, {
+        provider_tx_id: b.provider_tx_id,
+        booked_on: b.booked_on,
+        counterparty: b.counterparty ?? e.counterparty,
+        description: b.description,
+        in_behandeling: false,
+      });
+  }
+  const gekoppeld = new Set(paren.map((x) => x.e.id));
+  for (const e of bestaand ?? []) if (!gekoppeld.has(e.id) && !nogPending.has(e.provider_tx_id)) weg.push(e.id);
+  if (weg.length) {
+    await db(env, `budget_transactions?id=in.(${weg.map(q).join(',')})`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+  }
+
+  // Still pending at the bank: add what's new, leave what's there (and sorted).
+  const bekend = new Set((bestaand ?? []).map((e) => e.provider_tx_id));
+  const nieuwePending = pending.filter((r) => !bekend.has(r.provider_tx_id));
+  if (nieuwePending.length) {
+    await db(env, 'budget_transactions?on_conflict=account_id,provider_tx_id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+      body: JSON.stringify(nieuwePending),
+    });
+  }
+  return nieuwePending.length;
+}
+
+/**
  * Fetch new transactions for one account through one holder's consent and
  * store them. `rekening` needs id, household_id, last_synced_at; `toegang` is
  * a budget_account_links row (provider_account_id, link_id, user_id).
- * With `diep` (right after linking) it reaches back as far as the bank allows.
- * Returns { nieuw, fout }.
+ * With `diep` (right after linking) it reaches back as far as the bank allows;
+ * `psu` marks the holder as present (see aanwezig).
+ * Returns { nieuw, fout, ... }.
  */
-export async function syncRekening(env, rekening, toegang, { diep = false } = {}) {
+export async function syncRekening(env, rekening, toegang, { diep = false, psu = null } = {}) {
   const deze = `budget_account_links?account_id=eq.${q(rekening.id)}&user_id=eq.${q(toegang.user_id)}`;
 
   const haal = async (vanaf, langst = false) => {
@@ -259,7 +363,9 @@ export async function syncRekening(env, rekening, toegang, { diep = false } = {}
       // period is too long. It may answer with an empty page plus a continuation key.
       if (langst) params.set('strategy', 'longest');
       if (sleutel) params.set('continuation_key', sleutel);
-      const data = await eb(env, `/accounts/${q(toegang.provider_account_id)}/transactions?${params}`);
+      const data = await eb(env, `/accounts/${q(toegang.provider_account_id)}/transactions?${params}`, {
+        headers: psu ?? {},
+      });
       alles.push(...(data?.transactions ?? []));
       sleutel = data?.continuation_key;
       if (!sleutel) break;
@@ -288,7 +394,10 @@ export async function syncRekening(env, rekening, toegang, { diep = false } = {}
     }
 
     const rijen = naarRijen(alles, rekening);
-    let nieuw = 0;
+    // Pending first: it may turn pending rows into these booked ones.
+    const nieuwPending = await werkPendingBij(env, rekening, alles, rijen);
+    if (nieuwPending !== null) for (const r of rijen) r.in_behandeling = false;
+    let nieuw = nieuwPending ?? 0;
     for (let i = 0; i < rijen.length; i += 500) {
       const ingevoegd = await db(env, 'budget_transactions?on_conflict=account_id,provider_tx_id&select=id', {
         method: 'POST',

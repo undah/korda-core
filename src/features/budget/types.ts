@@ -64,6 +64,8 @@ export interface BudgetTransaction {
   pot_id: string | null;
   pot_status: "unassigned" | "suggested" | "confirmed";
   note: string | null;
+  /** Not booked by the bank yet (a card payment); the amount can still change. */
+  in_behandeling?: boolean;
   /** Income or a transfer between own accounts: not spending, no pot. */
   soort?: TxSoort | null;
 }

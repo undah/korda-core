@@ -14,6 +14,7 @@
  */
 import {
   Fout,
+  aanwezig,
   db,
   eb,
   foutAntwoord,
@@ -130,7 +131,7 @@ export async function onRequestPost({ request, env, data }) {
     // A fresh consent is when banks are most generous with history: ask for all of it.
     // Linking again later does the same, filling in what's missing; duplicates are skipped.
     for (const { rekening, toegang } of gekoppeld) {
-      const u = await syncRekening(env, rekening, toegang, { diep: true });
+      const u = await syncRekening(env, rekening, toegang, { diep: true, psu: aanwezig(request) });
       nieuw += u.nieuw;
       opgehaald += u.opgehaald ?? 0;
       if (u.oudste && (!oudste || u.oudste < oudste)) oudste = u.oudste;

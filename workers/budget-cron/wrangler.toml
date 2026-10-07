@@ -1,0 +1,13 @@
+# Deploy: npx wrangler deploy  (from this folder, after `npx wrangler login`)
+# Or paste index.js into a new Worker in the dashboard and add the cron there.
+name = "budget-cron"
+main = "index.js"
+compatibility_date = "2026-10-01"
+
+[triggers]
+# UTC: 07:00, 12:00, 17:00 and 21:00 Dutch summer time (an hour earlier in winter).
+# Four runs: ING allows four unattended reads per account per day.
+crons = ["0 5,10,15,19 * * *"]
+
+[vars]
+SITE_URL = "https://kordacore.com"

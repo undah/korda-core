@@ -14,7 +14,17 @@
  * unattended access, capped at 4 a day. Only counts for accounts you hold
  * are returned; someone else's private account stays theirs.
  */
-import { db, foutAntwoord, isActief, json, leesBody, syncRekening, vereisLid, werkSamenvattingBij } from '../../../_shared/budgetBank.js';
+import {
+  aanwezig,
+  db,
+  foutAntwoord,
+  isActief,
+  json,
+  leesBody,
+  syncRekening,
+  vereisLid,
+  werkSamenvattingBij,
+} from '../../../_shared/budgetBank.js';
 
 const q = encodeURIComponent;
 const EIGEN_OUD_NA_MIN = 5;
@@ -65,7 +75,8 @@ export async function onRequestPost({ request, env, data }) {
       let gelukt = false;
       let laatsteFout = null;
       for (const t of pogingen) {
-        const uitkomst = await syncRekening(env, r, t);
+        // Present only for your own consent; someone else's is unattended for ING.
+        const uitkomst = await syncRekening(env, r, t, { psu: t.user_id === data.userId ? aanwezig(request) : null });
         if (!uitkomst.fout) {
           gelukt = true;
           if (ikHoudBij) nieuw += uitkomst.nieuw;

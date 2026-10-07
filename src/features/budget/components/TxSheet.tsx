@@ -144,6 +144,11 @@ export function TxSheet({
               <p className="mt-1 text-xs text-kb-ink2">{tx.description}</p>
             )}
             {tx.account && <p className="mt-1 text-xs text-kb-ink2">Van {tx.account.name}</p>}
+            {tx.in_behandeling && (
+              <p className="mt-1 text-xs text-kb-ink2">
+                In behandeling bij de bank: het bedrag kan nog veranderen. Je indeling blijft staan als hij geboekt wordt.
+              </p>
+            )}
           </div>
 
           {tx.splits.length > 0 && !tx.account ? (

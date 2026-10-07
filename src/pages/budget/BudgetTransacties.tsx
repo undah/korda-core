@@ -168,6 +168,9 @@ export default function BudgetTransacties() {
                             {t.counterparty ?? t.description ?? "Onbekend"}
                           </span>
                           <span className="mt-0.5 flex items-center gap-1 truncate text-xs text-kb-ink2">
+                            {t.in_behandeling && (
+                              <span className="rounded bg-kb-sunk px-1.5 py-px font-medium text-kb-ink2">In behandeling</span>
+                            )}
                             {t.splits.length ? (
                               <>
                                 <Split className="h-3 w-3" /> Verdeeld over {t.splits.length} potjes
