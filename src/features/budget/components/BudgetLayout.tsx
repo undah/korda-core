@@ -56,9 +56,9 @@ function useActiefHuishouden(huishoudens: Huishouden[] | undefined) {
 }
 
 /**
- * When the app opens, fetch new bank transactions in the background, at most
- * every half hour per household. The server only goes to the bank for accounts
- * that haven't been synced in the last few hours.
+ * Fetch new bank transactions when the app opens and whenever it comes back to
+ * the foreground (switching back from the ING app, unlocking the phone). The
+ * server skips accounts synced in the last few minutes, so this stays cheap.
  */
 function AutoBijwerken({ householdId }: { householdId: string }) {
   const { data: rekeningen } = useRekeningen(householdId);
@@ -66,15 +66,19 @@ function AutoBijwerken({ householdId }: { householdId: string }) {
   const gekoppeld = !!rekeningen?.some((r) => r.provider === "enable_banking" && r.link_id);
   useEffect(() => {
     if (!gekoppeld) return;
-    const sleutel = `kb-sync:${householdId}`;
-    try {
-      const vorige = Number(sessionStorage.getItem(sleutel));
-      if (vorige && Date.now() - vorige < 30 * 60_000) return;
-      sessionStorage.setItem(sleutel, String(Date.now()));
-    } catch {
-      // No storage: still sync; the server's own staleness check keeps it cheap.
-    }
-    mutate({ householdId, alleenOud: true });
+    let laatste = 0;
+    const werkBij = () => {
+      if (document.visibilityState !== "visible" || Date.now() - laatste < 60_000) return;
+      laatste = Date.now();
+      mutate({ householdId, alleenOud: true });
+    };
+    werkBij();
+    document.addEventListener("visibilitychange", werkBij);
+    window.addEventListener("focus", werkBij);
+    return () => {
+      document.removeEventListener("visibilitychange", werkBij);
+      window.removeEventListener("focus", werkBij);
+    };
   }, [gekoppeld, householdId, mutate]);
   return null;
 }
