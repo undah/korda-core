@@ -7,7 +7,15 @@ import { useRondKoppelingAf } from "@/features/budget/hooks/useBudgetData";
 
 type Stand =
   | { soort: "bezig" }
-  | { soort: "klaar"; rekeningen: number; nieuw: number; aangesloten: number }
+  | {
+      soort: "klaar";
+      rekeningen: number;
+      nieuw: number;
+      aangesloten: number;
+      opgehaald: number;
+      oudste: string | null;
+      diepFout: string | null;
+    }
   | { soort: "fout"; tekst: string };
 
 export default function BudgetBankTerug() {
@@ -35,7 +43,17 @@ export default function BudgetBankTerug() {
     }
     afronden
       .mutateAsync({ code, state })
-      .then((u) => setStand({ soort: "klaar", rekeningen: u.rekeningen, nieuw: u.nieuw, aangesloten: u.aangesloten ?? 0 }))
+      .then((u) =>
+        setStand({
+          soort: "klaar",
+          rekeningen: u.rekeningen,
+          nieuw: u.nieuw,
+          aangesloten: u.aangesloten ?? 0,
+          opgehaald: u.opgehaald ?? 0,
+          oudste: u.oudste ?? null,
+          diepFout: u.diepFout ?? null,
+        }),
+      )
       .catch((e) => setStand({ soort: "fout", tekst: foutTekst(e) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,6 +79,12 @@ export default function BudgetBankTerug() {
               {stand.aangesloten
                 ? "Een gezamenlijke rekening was al gekoppeld; jouw toestemming houdt hem nu ook voor jou actueel."
                 : "Nieuwe rekeningen staan op privé; kies per rekening of je hem deelt."}
+            </p>
+            <p className="mt-3 rounded-xl bg-kb-sunk px-3 py-2 text-xs text-kb-ink2">
+              ING gaf {stand.opgehaald} transacties
+              {stand.oudste &&
+                `, terug tot ${new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${stand.oudste}T12:00:00`))}`}
+              .{stand.diepFout && <span className="mt-1 block">Langere geschiedenis geweigerd: {stand.diepFout}</span>}
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link

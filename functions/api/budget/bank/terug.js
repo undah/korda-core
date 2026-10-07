@@ -124,11 +124,21 @@ export async function onRequestPost({ request, env, data }) {
     for (const id of oudeLinks) await sluitLinkAlsLeeg(env, id).catch(() => {});
 
     let nieuw = 0;
+    let opgehaald = 0;
+    let oudste = null;
+    let diepFout = null;
     // A fresh consent is when banks are most generous with history: ask for all of it.
     // Linking again later does the same, filling in what's missing; duplicates are skipped.
-    for (const { rekening, toegang } of gekoppeld) nieuw += (await syncRekening(env, rekening, toegang, { diep: true })).nieuw;
+    for (const { rekening, toegang } of gekoppeld) {
+      const u = await syncRekening(env, rekening, toegang, { diep: true });
+      nieuw += u.nieuw;
+      opgehaald += u.opgehaald ?? 0;
+      if (u.oudste && (!oudste || u.oudste < oudste)) oudste = u.oudste;
+      diepFout ??= u.diepFout ?? (u.fout || null);
+    }
 
-    return json({ rekeningen: gekoppeld.length, nieuw, aangesloten });
+    // opgehaald / oudste / diepFout tell how much history the bank gave, and why not more.
+    return json({ rekeningen: gekoppeld.length, nieuw, aangesloten, opgehaald, oudste, diepFout });
   } catch (e) {
     return foutAntwoord(e);
   }

@@ -566,7 +566,14 @@ export function useKoppelBank() {
 
 export function useRondKoppelingAf() {
   return useSchrijf((p: { code: string; state: string }) =>
-    bankFetch<{ rekeningen: number; nieuw: number; aangesloten?: number }>("terug", p),
+    bankFetch<{
+      rekeningen: number;
+      nieuw: number;
+      aangesloten?: number;
+      opgehaald?: number;
+      oudste?: string | null;
+      diepFout?: string | null;
+    }>("terug", p),
   );
 }
 

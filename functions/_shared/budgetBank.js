@@ -269,11 +269,14 @@ export async function syncRekening(env, rekening, toegang, { diep = false } = {}
 
   try {
     let alles;
+    let diepFout = null;
     if (diep) {
       try {
         alles = await haal(new Date(Date.now() - dagen(DIEPE_SYNC_DAGEN)), true);
       } catch (e) {
         if (consentWeg(e)) throw e;
+        // Keep the bank's own words: they say whether it's a limit or a hiccup.
+        diepFout = (e?.message ?? 'onbekend').slice(0, 200);
         alles = await haal(new Date(Date.now() - dagen(EERSTE_SYNC_DAGEN)));
       }
     } else {
@@ -297,7 +300,8 @@ export async function syncRekening(env, rekening, toegang, { diep = false } = {}
 
     await patch(env, `budget_accounts?id=eq.${q(rekening.id)}`, { last_synced_at: nuIso(), sync_error: null });
     await patch(env, deze, { sync_error: null }).catch(() => {});
-    return { nieuw, fout: null };
+    const datums = rijen.map((r) => r.booked_on).sort();
+    return { nieuw, fout: null, opgehaald: rijen.length, oudste: datums[0] ?? null, diepFout };
   } catch (e) {
     const verlopen = consentWeg(e);
     const melding = verlopen ? 'Toestemming verlopen: koppel opnieuw' : (e?.message ?? 'Bijwerken mislukt').slice(0, 200);
