@@ -5,6 +5,7 @@ import { ArrowLeftRight, Eye, EyeOff, Home, Loader2, Menu, PiggyBank, Target } f
 import { useAuth } from "@/auth/AuthProvider";
 import { useMijnHuishoudens, type Huishouden } from "../hooks/useBudget";
 import { useBankBijwerken, useRekeningen } from "../hooks/useBudgetData";
+import { useHoudPushBij } from "../lib/meldingen";
 import { BedragProvider, useBedragen } from "./Bedrag";
 import { BudgetOnboarding } from "./BudgetOnboarding";
 import { HuishoudenKiezer } from "./HuishoudenKiezer";
@@ -61,6 +62,7 @@ function useActiefHuishouden(huishoudens: Huishouden[] | undefined) {
  * server skips accounts synced in the last few minutes, so this stays cheap.
  */
 function AutoBijwerken({ householdId }: { householdId: string }) {
+  useHoudPushBij();
   const { data: rekeningen } = useRekeningen(householdId);
   const { mutate } = useBankBijwerken();
   const gekoppeld = !!rekeningen?.some((r) => r.provider === "enable_banking" && r.link_id);

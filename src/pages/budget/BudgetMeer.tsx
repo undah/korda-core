@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { Bell, CalendarClock, ChevronRight, Copy, Handshake, Home, Landmark, LogOut, Share2, Smartphone, UserPlus, Users } from "lucide-react";
-import { meldingenAan, meldingenOndersteund, useInstalleren, zetMeldingen } from "@/features/budget/lib/meldingen";
+import { meldingenAan, meldingenOndersteund, pushOndersteund, useInstalleren, zetMeldingen } from "@/features/budget/lib/meldingen";
 import { useAuth } from "@/auth/AuthProvider";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { Kaart, Knop, Pagina, Veld, foutTekst } from "@/features/budget/components/ui";
@@ -199,7 +199,13 @@ function AppInstellingen() {
           </span>
           <span className="flex-1">
             <span className="block text-sm font-medium">Meldingen op dit apparaat</span>
-            <span className="block text-xs text-kb-ink2">Als een potje bijna op is, en op zondag je week.</span>
+            <span className="block text-xs text-kb-ink2">
+              {pushOndersteund()
+                ? "Potje bijna op, dubbel afgeschreven, en zondag je week. Ook als de app dicht is."
+                : ios && !geinstalleerd
+                  ? "Zet KordaBudget eerst op je beginscherm, dan komen ze ook als de app dicht is."
+                  : "Als een potje bijna op is, en op zondag je week."}
+            </span>
           </span>
           <input
             type="checkbox"

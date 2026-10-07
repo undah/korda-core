@@ -29,6 +29,28 @@ self.addEventListener('message', evt => {
   }
 });
 
+// A push from the server (KordaBudget's background job). The payload is
+// decrypted by the browser before it gets here: { title, body, tag, url }.
+self.addEventListener('push', evt => {
+  let data = {};
+  try {
+    data = evt.data ? evt.data.json() : {};
+  } catch {
+    data = { body: evt.data ? evt.data.text() : '' };
+  }
+  evt.waitUntil(
+    self.registration.showNotification(data.title || 'KordaBudget', {
+      body: data.body || '',
+      icon: '/web-app-manifest-192x192.png',
+      badge: '/favicon-96x96.png',
+      // Same tag as the app's own notice for the same event, so it shows once.
+      tag: data.tag || 'kb-push',
+      renotify: false,
+      data: { url: data.url || '/budget/overzicht' },
+    })
+  );
+});
+
 // Navigate to the right page when notification is tapped
 self.addEventListener('notificationclick', evt => {
   evt.notification.close();
