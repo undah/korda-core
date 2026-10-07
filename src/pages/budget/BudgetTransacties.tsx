@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, Inbox, Plus, Split, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronLeft, Inbox, Plus, Split, Wallet } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { TxSheet } from "@/features/budget/components/TxSheet";
@@ -10,7 +10,7 @@ import { UitgaveSheet } from "@/features/budget/components/UitgaveSheet";
 import { Kaart, MaandKiezer, Pagina, foutTekst } from "@/features/budget/components/ui";
 import { usePotjes } from "@/features/budget/hooks/useBudget";
 import { useOnthoudRegel, useRegels, useTransacties, useZetPotje, useZetSoort } from "@/features/budget/hooks/useBudgetData";
-import { huidigeMaand } from "@/features/budget/lib/budget";
+import { huidigeMaand, maandNaam, verschuifMaand } from "@/features/budget/lib/budget";
 import { regelVoor } from "@/features/budget/lib/inzicht";
 import type { TxMetDelen } from "@/features/budget/types";
 
@@ -205,6 +205,19 @@ export default function BudgetTransacties() {
             ))}
           </div>
         )}
+
+        {/* The month switcher sits at the top; at the end of a long list, offer the step back here. */}
+        <button
+          type="button"
+          onClick={() => {
+            setMaand((m) => verschuifMaand(m, -1));
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-kb-line bg-kb-surface py-3 text-sm font-medium text-kb-accent-ink hover:bg-kb-sunk/60"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="first-letter:uppercase">{maandNaam(verschuifMaand(maand, -1))}</span> bekijken
+        </button>
       </div>
 
       <button
