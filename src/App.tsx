@@ -73,6 +73,7 @@ import BudgetVasteLasten from "./pages/budget/BudgetVasteLasten";
 import BudgetVerrekenen from "./pages/budget/BudgetVerrekenen";
 import BudgetRekeningen from "./pages/budget/BudgetRekeningen";
 import BudgetWeek from "./pages/budget/BudgetWeek";
+import BudgetSnelIndelen from "./pages/budget/BudgetSnelIndelen";
 import BudgetBankTerug from "./pages/budget/BudgetBankTerug";
 import { BudgetPrivacy, BudgetVoorwaarden } from "./pages/budget/BudgetJuridisch";
 import TrackerDashboard from "./pages/tracker/TrackerDashboard";
@@ -162,6 +163,7 @@ function AnimatedRoutes() {
               <Route path="/budget/verrekenen"  element={<BudgetVerrekenen />} />
               <Route path="/budget/rekeningen"  element={<BudgetRekeningen />} />
               <Route path="/budget/week"        element={<BudgetWeek />} />
+              <Route path="/budget/indelen"     element={<BudgetSnelIndelen />} />
               <Route path="/budget/bank/terug"  element={<BudgetBankTerug />} />
             </Route>
           </Route>

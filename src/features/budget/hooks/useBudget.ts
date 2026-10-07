@@ -10,6 +10,7 @@ import type {
   BudgetPot,
   BudgetScope,
   BudgetTransaction,
+  PotGroep,
 } from "../types";
 import { maakUitnodigingscode, maandGrenzen, verschuifMaand } from "../lib/budget";
 
@@ -197,6 +198,8 @@ export type PotInvoer = {
   monthly_limit: number;
   scope: BudgetScope;
   kind: "flexibel" | "vast";
+  /** Left out (undefined) to not touch it, e.g. before budget_groep.sql has run. */
+  groep?: PotGroep | null;
 };
 
 export function useBewaarPotje(householdId: string | undefined) {
@@ -204,8 +207,10 @@ export function useBewaarPotje(householdId: string | undefined) {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (p: { id?: string; invoer: PotInvoer; sortOrder?: number }) => {
+      const { groep, ...rest } = p.invoer;
       const rij = {
-        ...p.invoer,
+        ...rest,
+        ...(groep !== undefined ? { groep } : {}),
         name: p.invoer.name.trim(),
         // The table enforces: personal pot <=> it has an owner.
         owner_id: p.invoer.scope === "personal" ? user!.id : null,
@@ -216,6 +221,18 @@ export function useBewaarPotje(householdId: string | undefined) {
             .from("budget_pots")
             .insert({ ...rij, household_id: householdId!, sort_order: p.sortOrder ?? 0 });
       const { error } = await query;
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_pots", householdId] }),
+  });
+}
+
+/** Set the needs/wants/saving group of one pot. */
+export function useZetGroep(householdId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { potId: string; groep: PotGroep | null }) => {
+      const { error } = await supabase.from("budget_pots").update({ groep: p.groep }).eq("id", p.potId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["budget_pots", householdId] }),

@@ -2,19 +2,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarCheck2, CalendarClock, ChevronRight, Handshake, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarCheck2,
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  CopyX,
+  Handshake,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
-import { usePotjes, useUitgavenPerPotje } from "../hooks/useBudget";
+import { usePotjes, useUitgavenPerPotje, useZetGroep } from "../hooks/useBudget";
 import {
   useAfsluitingen,
   useDoelen,
   useGedeeldBetaald,
   useSluitMaandAf,
+  useTransacties,
   useVerrekeningen,
 } from "../hooks/useBudgetData";
 import { huidigeMaand, korteDatum, maandGrenzen, maandNaam, verschuifMaand } from "../lib/budget";
-import { maandRestant, overboekingen, verrekenSaldi, weekoverzicht, type VasteLastStatus } from "../lib/inzicht";
-import type { BudgetPot, TxMetDelen } from "../types";
+import {
+  GROEPEN,
+  dubbeleAfschrijvingen,
+  inkomenVan,
+  maandRestant,
+  overboekingen,
+  verdeling,
+  verrekenSaldi,
+  weekoverzicht,
+  type VasteLastStatus,
+} from "../lib/inzicht";
+import type { BudgetMonth, BudgetPot, PotGroep, TxMetDelen } from "../types";
 import type { Huishouden } from "../hooks/useBudget";
 import { useBedragen } from "./Bedrag";
 import { Blad } from "./Blad";
@@ -228,5 +249,214 @@ export function MaandAfsluiting({ huishouden }: { huishouden: Huishouden }) {
         </Knop>
       </Blad>
     </>
+  );
+}
+
+// ─── dubbel afgeschreven ─────────────────────────────────────────────────────
+
+const korteDag = (iso: string) =>
+  new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short" }).format(new Date(`${iso}T12:00:00`));
+
+function leesNegeer(sleutel: string): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(sleutel) ?? "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Same shop, same amount, within a few days: worth a look. Dismissed pairs are remembered on this device. */
+export function DubbelKaart({ householdId }: { householdId: string }) {
+  const { euro } = useBedragen();
+  const { data: transacties = [] } = useTransacties(householdId, huidigeMaand(), 2);
+  const opslag = `kb-dubbel-ok:${householdId}`;
+  const [negeer, setNegeer] = useState(() => leesNegeer(opslag));
+  const paren = useMemo(() => dubbeleAfschrijvingen(transacties, negeer), [transacties, negeer]);
+  if (paren.length === 0) return null;
+
+  const klopt = (sleutel: string) => {
+    const nieuw = new Set(negeer).add(sleutel);
+    setNegeer(nieuw);
+    try {
+      localStorage.setItem(opslag, JSON.stringify([...nieuw]));
+    } catch {
+      // Not remembered in private mode; it's dismissed for this visit.
+    }
+  };
+
+  return (
+    <Kaart className="overflow-hidden">
+      <div className="flex items-center gap-2 bg-kb-warn-soft px-4 py-3 text-sm font-semibold text-kb-warn-ink">
+        <CopyX className="h-4 w-4" /> Mogelijk dubbel afgeschreven
+      </div>
+      <ul className="divide-y divide-kb-line">
+        {paren.slice(0, 3).map((p) => (
+          <li key={p.sleutel} className="px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="min-w-0 truncate text-sm font-medium">{p.a.counterparty ?? p.a.description}</p>
+              <p className="shrink-0 text-sm font-medium tabular-nums">2 × {euro(Math.abs(p.a.amount))}</p>
+            </div>
+            <p className="text-xs text-kb-ink2">
+              {p.dagen === 0 ? `Twee keer op ${korteDag(p.a.booked_on)}` : `${korteDag(p.a.booked_on)} en ${korteDag(p.b.booked_on)}`}
+              {p.a.account_id !== p.b.account_id && " · van twee rekeningen"}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <button type="button" onClick={() => klopt(p.sleutel)} className="text-xs font-medium text-kb-accent-ink hover:underline">
+                Klopt, was twee keer
+              </button>
+              <span className="text-xs text-kb-ink2">Fout? Vraag het terug bij de winkel of je bank.</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Kaart>
+  );
+}
+
+// ─── nodig / wil / sparen ────────────────────────────────────────────────────
+
+const KLEUR: Record<PotGroep, string> = { nodig: "bg-kb-nodig", wil: "bg-kb-wil", sparen: "bg-kb-sparen" };
+const pct = (deel: number, geheel: number) => (geheel > 0 ? Math.round((deel / geheel) * 100) : 0);
+
+/**
+ * How this month's spending splits into needs, wants and saving, measured
+ * against income (this month's, or last month's when salary hasn't come in
+ * yet). Without income it shows the split of spending, and asks to mark it.
+ */
+export function VerdelingKaart({
+  householdId,
+  maand,
+  potjes,
+  uitgaven,
+}: {
+  householdId: string;
+  maand: BudgetMonth;
+  potjes: BudgetPot[];
+  uitgaven: Record<string, number>;
+}) {
+  const { euro } = useBedragen();
+  const { data: tx = [] } = useTransacties(householdId, maand, 2);
+  const [indelen, setIndelen] = useState(false);
+  const zetGroep = useZetGroep(householdId);
+
+  const { inkomen, bron } = useMemo(() => {
+    const start = maandGrenzen(maand).van;
+    const deze = inkomenVan(tx.filter((t) => t.booked_on >= start));
+    if (deze > 0) return { inkomen: deze, bron: "deze maand" };
+    const vorige = inkomenVan(tx.filter((t) => t.booked_on < start));
+    return { inkomen: vorige, bron: vorige > 0 ? `van ${maandNaam(verschuifMaand(maand, -1)).split(" ")[0]}` : "" };
+  }, [tx, maand]);
+  const v = useMemo(() => verdeling(potjes, uitgaven, inkomen), [potjes, uitgaven, inkomen]);
+  if (potjes.length === 0) return null;
+
+  const geheel = inkomen > 0 ? Math.max(inkomen, v.uitgegeven) : v.uitgegeven;
+  const segmenten = [
+    ...GROEPEN.map((g) => ({ id: g.id as string, klasse: KLEUR[g.id], bedrag: v.per[g.id], titel: g.titel })),
+    { id: "zonder", klasse: "bg-kb-ink3", bedrag: v.per.zonder, titel: "Geen groep" },
+  ].filter((x) => x.bedrag > 0);
+  const passend = inkomen > 0 ? inkomen - v.totaalBudget : null;
+
+  return (
+    <Kaart className="p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="text-sm font-semibold">Nodig, wil, sparen</p>
+        {inkomen > 0 && (
+          <p className="text-xs text-kb-ink2">
+            Inkomen {bron}: <span className="font-medium tabular-nums text-kb-ink">{euro(inkomen)}</span>
+          </p>
+        )}
+      </div>
+
+      {/* One bar: each group's share of income (or of spending); the track is what's left. */}
+      <div
+        className="mt-4 flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-kb-sunk"
+        role="img"
+        aria-label={segmenten.map((x) => `${x.titel} ${euro(x.bedrag)}`).join(", ")}
+      >
+        {segmenten.map((x) => (
+          <div
+            key={x.id}
+            className={`${x.klasse} h-full`}
+            style={{ width: `${(x.bedrag / (geheel || 1)) * 100}%` }}
+            title={`${x.titel}: ${euro(x.bedrag)}`}
+          />
+        ))}
+      </div>
+
+      <ul className="mt-4 space-y-2.5">
+        {GROEPEN.map((g) => {
+          const bedrag = v.per[g.id] + (g.id === "sparen" && inkomen > 0 ? Math.max(0, v.over) : 0);
+          return (
+            <li key={g.id} className="flex items-center gap-3 text-sm">
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${KLEUR[g.id]}`} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{g.titel}</span>
+                <span className="block text-xs text-kb-ink2">
+                  {g.id === "sparen" && inkomen > 0 ? "Gespaard plus nog niet uitgegeven" : g.uitleg}
+                </span>
+              </span>
+              <span className="text-right tabular-nums">
+                <span className="block font-medium">{euro(bedrag)}</span>
+                <span className="block text-xs text-kb-ink2">
+                  {pct(bedrag, inkomen > 0 ? inkomen : v.uitgegeven)}% · richtlijn {Math.round(g.richtlijn * 100)}%
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {passend !== null ? (
+        <p className={`mt-4 flex items-start gap-2 text-sm ${passend < 0 ? "text-kb-crit-ink" : "text-kb-good-ink"}`}>
+          {passend < 0 ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
+          <span>
+            {passend < 0
+              ? `Je potjes samen (${euro(v.totaalBudget)}) zijn ${euro(-passend)} meer dan je inkomen.`
+              : `Je potjes samen (${euro(v.totaalBudget)}) passen in je inkomen; ${euro(passend)} is niet verdeeld.`}
+          </span>
+        </p>
+      ) : (
+        <p className="mt-4 text-xs text-kb-ink2">
+          Markeer je salaris als inkomen (tik in{" "}
+          <Link to="/budget/transacties" className="font-medium text-kb-accent-ink underline">
+            Transacties
+          </Link>{" "}
+          op de bijschrijving), dan zie je of je potjes in je inkomen passen.
+        </p>
+      )}
+
+      {v.zonderGroep.length > 0 && (
+        <button type="button" onClick={() => setIndelen(true)} className="mt-3 text-sm font-medium text-kb-accent-ink hover:underline">
+          {v.zonderGroep.length === 1 ? "1 potje heeft nog geen groep" : `${v.zonderGroep.length} potjes hebben nog geen groep`} →
+        </button>
+      )}
+
+      <Blad open={indelen} onOpenChange={setIndelen} titel="Potjes indelen" beschrijving="Nodig, wil of sparen? Tik per potje.">
+        <ul className="space-y-3">
+          {potjes.map((p) => (
+            <li key={p.id} className="rounded-xl border border-kb-line p-3">
+              <p className="text-sm font-medium">
+                {p.emoji} {p.name}
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {GROEPEN.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    aria-pressed={p.groep === g.id}
+                    onClick={() => zetGroep.mutate({ potId: p.id, groep: g.id }, { onError: (e) => toast.error(foutTekst(e)) })}
+                    className={`flex min-h-[2.5rem] items-center justify-center gap-1.5 rounded-lg border text-sm ${
+                      p.groep === g.id ? "border-kb-accent bg-kb-accent-soft font-medium text-kb-accent-ink" : "border-kb-line-strong bg-white"
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${KLEUR[g.id]}`} aria-hidden /> {g.titel}
+                  </button>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Blad>
+    </Kaart>
   );
 }

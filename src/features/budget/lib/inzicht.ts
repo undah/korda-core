@@ -2,6 +2,7 @@
 // No React, no Supabase: everything here is testable with plain data.
 import { dagenInMaand, huidigeMaand, isZelfdeMaand, resterendeDagen } from "./budget";
 import type {
+  PotGroep,
   BudgetMember,
   BudgetMonth,
   BudgetPot,
@@ -348,4 +349,81 @@ export function regelVoor(
     (r) => (tp.includes(r.counterparty) || r.counterparty.includes(tp)) && zichtbarePotjes.has(r.pot_id),
   );
   return deels?.pot_id ?? null;
+}
+
+// ─── dubbele afschrijvingen ──────────────────────────────────────────────────
+
+const naamVan = (t: TxMetDelen) => (t.counterparty ?? t.description ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+const dagNr = (iso: string) => Math.round(new Date(`${iso}T12:00:00`).getTime() / 86400000);
+
+/**
+ * Two payments to the same party for the exact same amount within a few days:
+ * a card terminal that charged twice, a subscription billed twice. Small
+ * amounts are left out (two coffees are just two coffees), and so are ones
+ * marked income or transfer. `negeer` holds pair keys the user said are fine.
+ */
+export function dubbeleAfschrijvingen(
+  transacties: TxMetDelen[],
+  negeer: ReadonlySet<string> = new Set(),
+  { binnenDagen = 3, vanaf = 5 } = {},
+) {
+  const groepen = new Map<string, TxMetDelen[]>();
+  for (const t of transacties) {
+    if (t.soort || t.amount > -vanaf) continue;
+    const naam = naamVan(t);
+    if (!naam) continue;
+    const k = `${naam}|${t.amount.toFixed(2)}`;
+    groepen.set(k, [...(groepen.get(k) ?? []), t]);
+  }
+  const paren: Array<{ sleutel: string; a: TxMetDelen; b: TxMetDelen; dagen: number }> = [];
+  for (const lijst of groepen.values()) {
+    if (lijst.length < 2) continue;
+    const opDatum = [...lijst].sort((x, y) => x.booked_on.localeCompare(y.booked_on) || x.id.localeCompare(y.id));
+    for (let i = 1; i < opDatum.length; i++) {
+      const [a, b] = [opDatum[i - 1], opDatum[i]];
+      const dagen = dagNr(b.booked_on) - dagNr(a.booked_on);
+      const sleutel = [a.id, b.id].sort().join("|");
+      if (dagen <= binnenDagen && !negeer.has(sleutel)) paren.push({ sleutel, a, b, dagen });
+    }
+  }
+  return paren.sort((x, y) => y.b.booked_on.localeCompare(x.b.booked_on));
+}
+
+// ─── nodig / wil / sparen ────────────────────────────────────────────────────
+
+export const GROEPEN: Array<{ id: PotGroep; titel: string; uitleg: string; richtlijn: number }> = [
+  { id: "nodig", titel: "Nodig", uitleg: "Wonen, boodschappen, vervoer", richtlijn: 0.5 },
+  { id: "wil", titel: "Wil", uitleg: "Uit eten, kleding, leuke dingen", richtlijn: 0.3 },
+  { id: "sparen", titel: "Sparen", uitleg: "Sparen en schulden aflossen", richtlijn: 0.2 },
+];
+
+/** Income marked as such in a set of transactions (transfers between own accounts excluded). */
+export const inkomenVan = (transacties: TxMetDelen[]) =>
+  rond(transacties.filter((t) => t.soort === "inkomen" && t.amount > 0).reduce((s, t) => s + t.amount, 0));
+
+/**
+ * Spending per 50/30/20 group, against income when there is one. What's left of
+ * income after needs and wants counts towards saving: money not spent is money
+ * kept, wherever it ends up.
+ */
+export function verdeling(potjes: BudgetPot[], uitgaven: Record<string, number>, inkomen: number) {
+  const per: Record<PotGroep | "zonder", number> = { nodig: 0, wil: 0, sparen: 0, zonder: 0 };
+  const budget: Record<PotGroep | "zonder", number> = { nodig: 0, wil: 0, sparen: 0, zonder: 0 };
+  for (const p of potjes) {
+    const g = p.groep ?? "zonder";
+    per[g] += uitgaven[p.id] ?? 0;
+    budget[g] += p.monthly_limit;
+  }
+  const uitgegeven = per.nodig + per.wil + per.sparen + per.zonder;
+  const over = inkomen > 0 ? inkomen - uitgegeven : 0;
+  return {
+    per: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, rond(v)])) as typeof per,
+    budget: Object.fromEntries(Object.entries(budget).map(([k, v]) => [k, rond(v)])) as typeof budget,
+    uitgegeven: rond(uitgegeven),
+    inkomen,
+    /** Not spent (yet): with sparen, the part that's kept. */
+    over: rond(over),
+    totaalBudget: rond(budget.nodig + budget.wil + budget.sparen + budget.zonder),
+    zonderGroep: potjes.filter((p) => !p.groep),
+  };
 }

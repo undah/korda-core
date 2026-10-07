@@ -9,8 +9,10 @@ import { Avatars, Kaart, Knop, MaandKiezer, Pagina, Sectie } from "@/features/bu
 import { usePotjes, useUitgavenPerPotje } from "@/features/budget/hooks/useBudget";
 import { useRekeningen, useTransacties, useVasteLasten } from "@/features/budget/hooks/useBudgetData";
 import {
+  DubbelKaart,
   KomtEraanKaart,
   MaandAfsluiting,
+  VerdelingKaart,
   VerrekenKaart,
   WeekKaart,
 } from "@/features/budget/components/OverzichtKaarten";
@@ -126,6 +128,7 @@ export default function BudgetOverzicht() {
 
           {ditIsNu && <MaandAfsluiting huishouden={huishouden} />}
           {ditIsNu && <VerrekenKaart huishouden={huishouden} />}
+          {ditIsNu && <DubbelKaart householdId={hhId} />}
 
           {aandacht.length > 0 && (
             <Sectie titel="Let op">
@@ -136,6 +139,8 @@ export default function BudgetOverzicht() {
               </Kaart>
             </Sectie>
           )}
+
+          <VerdelingKaart householdId={hhId} maand={maand} potjes={potjes} uitgaven={uitgaven} />
 
           {potjes.length > 0 && (
             <Sectie

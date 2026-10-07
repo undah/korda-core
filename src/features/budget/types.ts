@@ -32,6 +32,9 @@ export interface BudgetInvite {
   used_at: string | null;
 }
 
+/** Needs, wants, or saving and paying off debt: the 50/30/20 split. */
+export type PotGroep = "nodig" | "wil" | "sparen";
+
 export interface BudgetPot {
   id: string;
   household_id: string;
@@ -41,6 +44,8 @@ export interface BudgetPot {
   scope: BudgetScope;
   /** "vast": reserved money (rent, subscriptions) — no pace forecast, not in safe-to-spend. */
   kind: "flexibel" | "vast";
+  /** 50/30/20 group. Absent before budget_groep.sql has run, null until chosen. */
+  groep?: PotGroep | null;
   owner_id: string | null;
   sort_order: number;
   archived_at: string | null;

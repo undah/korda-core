@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, ChevronLeft, Inbox, Plus, Split, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, Inbox, Layers, Plus, Split, Wallet } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { TxSheet } from "@/features/budget/components/TxSheet";
@@ -116,6 +116,20 @@ export default function BudgetTransacties() {
             </button>
           ))}
         </div>
+
+        {tab === "indelen" && teIndelen.length > 1 && (
+          <Link
+            to="/budget/indelen"
+            className="flex items-center gap-3 rounded-2xl bg-kb-accent px-4 py-3.5 text-white shadow-[0_10px_30px_-14px_rgba(61,59,212,0.8)] hover:bg-kb-accent-ink"
+          >
+            <Layers className="h-5 w-5" />
+            <span className="flex-1">
+              <span className="block text-sm font-semibold">Snel indelen</span>
+              <span className="block text-xs text-white/80">Eén voor één, veeg of tik een potje</span>
+            </span>
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        )}
 
         {!isLoading && lijst.length === 0 ? (
           <Kaart className="px-6 py-12 text-center">

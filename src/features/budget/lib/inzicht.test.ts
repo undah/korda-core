@@ -7,6 +7,8 @@ import {
   vasteLastenDezeMaand,
   veiligeRuimte,
   verrekenSaldi,
+  dubbeleAfschrijvingen,
+  verdeling,
   weekDetail,
   weekoverzicht,
 } from "./inzicht";
@@ -221,5 +223,37 @@ describe("weekDetail", () => {
     ]);
     // Rent is listed (it left the account), income is not.
     expect(w.transacties.map((t) => t.amount).sort()).toEqual([-12, -30, -900].sort());
+  });
+});
+
+describe("dubbeleAfschrijvingen", () => {
+  it("pairs the same party and amount within 3 days, and skips small or dismissed ones", () => {
+    const a = tx({ id: "a", booked_on: "2026-10-01", amount: -42.95, counterparty: "Anytime Fitness" });
+    const b = tx({ id: "b", booked_on: "2026-10-03", amount: -42.95, counterparty: "anytime  fitness" });
+    const later = tx({ id: "c", booked_on: "2026-10-20", amount: -42.95, counterparty: "Anytime Fitness" });
+    const koffie1 = tx({ id: "k1", booked_on: "2026-10-01", amount: -3.1, counterparty: "Koffiebar" });
+    const koffie2 = tx({ id: "k2", booked_on: "2026-10-01", amount: -3.1, counterparty: "Koffiebar" });
+    const ander = tx({ id: "d", booked_on: "2026-10-02", amount: -42.94, counterparty: "Anytime Fitness" });
+    const paren = dubbeleAfschrijvingen([a, b, later, koffie1, koffie2, ander]);
+    expect(paren.map((p) => p.sleutel)).toEqual(["a|b"]);
+    expect(paren[0].dagen).toBe(2);
+    expect(dubbeleAfschrijvingen([a, b], new Set(["a|b"]))).toEqual([]);
+  });
+});
+
+describe("verdeling", () => {
+  it("adds spending per group and treats unspent income as kept", () => {
+    const potjes = [
+      pot({ id: "huur", monthly_limit: 1000, groep: "nodig" }),
+      pot({ id: "eten", monthly_limit: 300, groep: "wil" }),
+      pot({ id: "spaar", monthly_limit: 200, groep: "sparen" }),
+      pot({ id: "los", monthly_limit: 50 }),
+    ];
+    const v = verdeling(potjes, { huur: 1000, eten: 150, spaar: 200, los: 20 }, 3000);
+    expect(v.per).toEqual({ nodig: 1000, wil: 150, sparen: 200, zonder: 20 });
+    expect(v.uitgegeven).toBe(1370);
+    expect(v.over).toBe(1630);
+    expect(v.totaalBudget).toBe(1550);
+    expect(v.zonderGroep.map((p) => p.id)).toEqual(["los"]);
   });
 });

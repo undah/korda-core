@@ -40,6 +40,11 @@ export default {
           "crit-soft": "#f8dcdc",
           "crit-ink": "#a62a2a",
           "good-ink": "#1d6b35",
+          // Needs / wants / saving: categorical, validated for colour-blind separation
+          // against the surface. Never used as status colours; always with a label.
+          nodig: "#3d3bd4",
+          wil: "#e07a1f",
+          sparen: "#1fa3c4",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

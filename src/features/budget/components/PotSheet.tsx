@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { Lightbulb } from "lucide-react";
 import { useArchiveerPotje, useBewaarPotje, useUitgavenHistorie, type PotInvoer } from "../hooks/useBudget";
 import { formatEuroRond, huidigeMaand, parseBedrag } from "../lib/budget";
-import { limietVoorstel } from "../lib/inzicht";
+import { GROEPEN, limietVoorstel } from "../lib/inzicht";
 import { Wissel } from "./Blad";
-import type { BudgetPot, BudgetScope } from "../types";
+import type { BudgetPot, BudgetScope, PotGroep } from "../types";
 import { Knop, Veld, foutTekst } from "./ui";
 
 const EMOJI = ["🛒", "🏠", "🍝", "🚗", "📺", "👕", "🪴", "🎁", "💡", "🐶", "👶", "💊", "🎉", "✈️", "📚", "💶"];
@@ -34,6 +34,7 @@ export function PotSheet({
   const [limiet, setLimiet] = useState("");
   const [scope, setScope] = useState<BudgetScope>("shared");
   const [kind, setKind] = useState<"flexibel" | "vast">("flexibel");
+  const [groep, setGroep] = useState<PotGroep | null>(null);
   const { data: historie = [] } = useUitgavenHistorie(open && pot ? householdId : undefined, huidigeMaand(), 4);
   const voorstel = pot
     ? limietVoorstel(
@@ -52,12 +53,21 @@ export function PotSheet({
     setLimiet(pot ? String(pot.monthly_limit).replace(".", ",") : "");
     setScope(pot?.scope ?? "shared");
     setKind(pot?.kind ?? "flexibel");
+    setGroep(pot?.groep ?? null);
     setZekerVerwijderen(false);
   }, [open, pot]);
 
   const verstuur = async (e: FormEvent) => {
     e.preventDefault();
-    const invoer: PotInvoer = { name: naam, emoji, monthly_limit: parseBedrag(limiet), scope, kind };
+    const invoer: PotInvoer = {
+      name: naam,
+      emoji,
+      monthly_limit: parseBedrag(limiet),
+      scope,
+      kind,
+      // Only send the group once chosen, or when the column exists and it was cleared.
+      ...(groep !== null || pot?.groep !== undefined ? { groep } : {}),
+    };
     try {
       await bewaar.mutateAsync({ id: pot?.id, invoer, sortOrder: volgendeSortering });
       toast.success(pot ? "Potje bijgewerkt" : "Potje toegevoegd");
@@ -162,6 +172,15 @@ export function PotSheet({
                   ]}
                   waarde={kind}
                   onChange={setKind}
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend className="mb-1.5 text-sm font-medium">Waar valt het onder?</legend>
+                <Wissel<PotGroep>
+                  opties={GROEPEN.map((g) => ({ id: g.id, titel: g.titel, uitleg: g.uitleg.split(",")[0] }))}
+                  waarde={groep as PotGroep}
+                  onChange={setGroep}
                 />
               </fieldset>
 
