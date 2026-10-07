@@ -249,11 +249,15 @@ export const isActief = (toegang) =>
 export async function syncRekening(env, rekening, toegang, { diep = false } = {}) {
   const deze = `budget_account_links?account_id=eq.${q(rekening.id)}&user_id=eq.${q(toegang.user_id)}`;
 
-  const haal = async (vanaf) => {
+  const haal = async (vanaf, langst = false) => {
     const alles = [];
     let sleutel = null;
     for (let pagina = 0; pagina < 60; pagina++) {
       const params = new URLSearchParams({ date_from: isoDatum(vanaf) });
+      // "longest": Enable Banking searches for the earliest transaction the bank
+      // will give, treating date_from as a hint, instead of failing when the
+      // period is too long. It may answer with an empty page plus a continuation key.
+      if (langst) params.set('strategy', 'longest');
       if (sleutel) params.set('continuation_key', sleutel);
       const data = await eb(env, `/accounts/${q(toegang.provider_account_id)}/transactions?${params}`);
       alles.push(...(data?.transactions ?? []));
@@ -267,7 +271,7 @@ export async function syncRekening(env, rekening, toegang, { diep = false } = {}
     let alles;
     if (diep) {
       try {
-        alles = await haal(new Date(Date.now() - dagen(DIEPE_SYNC_DAGEN)));
+        alles = await haal(new Date(Date.now() - dagen(DIEPE_SYNC_DAGEN)), true);
       } catch (e) {
         if (consentWeg(e)) throw e;
         alles = await haal(new Date(Date.now() - dagen(EERSTE_SYNC_DAGEN)));
