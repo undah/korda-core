@@ -8,6 +8,7 @@ import {
   veiligeRuimte,
   verrekenSaldi,
   dubbeleAfschrijvingen,
+  inkomenPerMaand,
   verdeling,
   weekDetail,
   weekoverzicht,
@@ -255,5 +256,43 @@ describe("verdeling", () => {
     expect(v.over).toBe(1630);
     expect(v.totaalBudget).toBe(1550);
     expect(v.zonderGroep.map((p) => p.id)).toEqual(["los"]);
+  });
+});
+
+describe("inkomenPerMaand", () => {
+  it("gives one salary a month for a monthly payday", () => {
+    const loon = ["2026-07-24", "2026-08-25", "2026-09-24"].map((d) => tx({ booked_on: d, amount: 2400, soort: "inkomen" }));
+    const { perMaand } = inkomenPerMaand(loon, new Date(2026, 9, 7, 12));
+    expect(perMaand).toBeGreaterThan(2300);
+    expect(perMaand).toBeLessThan(2500);
+  });
+
+  it("turns a weekly salary into a steady monthly figure", () => {
+    // 13 weekly paydays of 500 over the last 91 days.
+    const nu = new Date(2026, 9, 7, 12);
+    const loon = Array.from({ length: 13 }, (_, i) => {
+      const d = new Date(2026, 9, 7 - i * 7);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return tx({ booked_on: iso, amount: 500, soort: "inkomen" });
+    });
+    const { perMaand } = inkomenPerMaand([...loon, tx({ booked_on: "2026-10-01", amount: 300 })], nu);
+    // 500 × 52 / 12 = 2167.
+    expect(perMaand).toBeGreaterThan(2150);
+    expect(perMaand).toBeLessThan(2185);
+  });
+
+  it("works with little history, and needs two paydays", () => {
+    const nu = new Date(2026, 9, 7, 12);
+    const kort = [
+      tx({ booked_on: "2026-09-09", amount: 500, soort: "inkomen" }),
+      tx({ booked_on: "2026-09-16", amount: 500, soort: "inkomen" }),
+      tx({ booked_on: "2026-09-23", amount: 500, soort: "inkomen" }),
+      tx({ booked_on: "2026-09-30", amount: 500, soort: "inkomen" }),
+      tx({ booked_on: "2026-10-07", amount: 500, soort: "inkomen" }),
+    ];
+    // Only 5 weeks of history still gives the same monthly figure.
+    expect(inkomenPerMaand(kort, nu).perMaand).toBeGreaterThan(2150);
+    expect(inkomenPerMaand(kort, nu).perMaand).toBeLessThan(2185);
+    expect(inkomenPerMaand(kort.slice(0, 1), new Date(2026, 8, 12)).perMaand).toBe(0);
   });
 });

@@ -175,16 +175,31 @@ export function useRegels(householdId: string | undefined) {
 /** Remember "this counterparty goes in that pot" — upsert on (household, counterparty). */
 export function useOnthoudRegel() {
   const { user } = useAuth();
-  /** Saves the rule, then sorts earlier unsorted payments to the same party. Returns how many. */
-  return useSchrijf(async (p: { householdId: string; tegenpartij: string; potId: string }): Promise<number> => {
+  /**
+   * Saves the rule (a pot, or a kind: income / own transfer), then sorts earlier
+   * unsorted payments to the same party. Returns how many.
+   */
+  return useSchrijf(
+    async (
+      p: { householdId: string; tegenpartij: string } & ({ potId: string; soort?: never } | { soort: TxSoort; potId?: never }),
+    ): Promise<number> => {
     const counterparty = normaliseerTegenpartij(p.tegenpartij);
     if (!counterparty) return 0;
     await ok(
       supabase.from("budget_rules").upsert(
-        { household_id: p.householdId, counterparty, pot_id: p.potId, created_by: user!.id },
+        {
+          household_id: p.householdId,
+          counterparty,
+          pot_id: p.potId ?? null,
+          ...(p.soort ? { soort: p.soort } : { soort: null }),
+          created_by: user!.id,
+        },
         { onConflict: "household_id,counterparty" },
       ),
     );
+
+    // Kind rules are applied by the database, the same way the bank sync does.
+    if (p.soort) return (await ok(supabase.rpc("budget_pas_soortregels", { p_household: p.householdId }))) ?? 0;
 
     // Same party, still unsorted, not split, not marked income/transfer. ilike narrows it
     // down server-side; the exact match uses the same normalising as the rule.
@@ -211,7 +226,8 @@ export function useOnthoudRegel() {
       );
     }
     return ids.length;
-  });
+    },
+  );
 }
 
 export function useVerwijderRegel() {

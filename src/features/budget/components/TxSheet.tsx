@@ -88,6 +88,9 @@ export function TxSheet({
       let eerdere = 0;
       if (keuze !== "potje") {
         await zetSoort.mutateAsync({ txId: tx.id, soort: keuze });
+        if (onthoud && tx.counterparty) {
+          eerdere = await regel.mutateAsync({ householdId, tegenpartij: tx.counterparty, soort: keuze });
+        }
       } else if (splitsen) {
         const teken = tx.amount < 0 ? -1 : 1;
         await zetSplits.mutateAsync({
@@ -103,11 +106,12 @@ export function TxSheet({
         }
       }
       if ((tx.note ?? "") !== notitie) await zetNotitie.mutateAsync({ txId: tx.id, note: notitie });
+      const ook = eerdere ? `, plus ${eerdere} eerdere` : "";
       toast.success(
         keuze === "inkomen"
-          ? "Gemarkeerd als inkomen"
+          ? `Gemarkeerd als inkomen${ook}`
           : keuze === "overboeking"
-            ? "Gemarkeerd als overboeking"
+            ? `Gemarkeerd als overboeking${ook}`
             : splitsen
               ? "Gesplitst"
               : potId
@@ -160,11 +164,24 @@ export function TxSheet({
           )}
 
           {tx.splits.length > 0 && !tx.account ? null : keuze !== "potje" ? (
-            <p className="text-sm text-kb-ink2">
-              {keuze === "inkomen"
-                ? "Telt niet als uitgave en hoort in geen potje."
-                : "Geld tussen je eigen rekeningen: telt niet als uitgave of inkomen."}
-            </p>
+            <div>
+              <p className="text-sm text-kb-ink2">
+                {keuze === "inkomen"
+                  ? "Telt niet als uitgave en hoort in geen potje."
+                  : "Geld tussen je eigen rekeningen: telt niet als uitgave of inkomen."}
+              </p>
+              {tx.counterparty && (
+                <label className="mt-3 flex items-center gap-2.5 text-sm text-kb-ink2">
+                  <input
+                    type="checkbox"
+                    checked={onthoud}
+                    onChange={(e) => setOnthoud(e.target.checked)}
+                    className="h-4 w-4 accent-kb-accent"
+                  />
+                  Voortaan {tx.counterparty} altijd als {keuze === "inkomen" ? "inkomen" : "overboeking"}
+                </label>
+              )}
+            </div>
           ) : !splitsen ? (
             <div>
               <p className="mb-2 text-sm font-medium">In welk potje?</p>

@@ -70,7 +70,11 @@ export default function BudgetTransacties() {
   const alsInkomen = async (t: TxMetDelen) => {
     try {
       await zetSoort.mutateAsync({ txId: t.id, soort: "inkomen" });
-      toast.success("Inkomen ✓");
+      // Remembered: a weekly salary then marks itself from now on.
+      const eerdere = t.counterparty
+        ? await onthoud.mutateAsync({ householdId: hhId, tegenpartij: t.counterparty, soort: "inkomen" })
+        : 0;
+      toast.success(`Inkomen ✓${eerdere ? `, plus ${eerdere} eerdere` : ""} · voortaan automatisch`);
     } catch (err) {
       toast.error(foutTekst(err));
     }

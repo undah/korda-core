@@ -105,7 +105,9 @@ export interface BudgetRule {
   id: string;
   household_id: string;
   counterparty: string;
-  pot_id: string;
+  /** A pot (suggested, you confirm) or a kind (applied directly); never both. */
+  pot_id: string | null;
+  soort?: TxSoort | null;
 }
 
 export interface BudgetRecurring {

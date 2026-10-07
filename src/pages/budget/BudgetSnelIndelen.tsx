@@ -86,7 +86,10 @@ export default function BudgetSnelIndelen() {
     const t = tx;
     try {
       await zetSoort.mutateAsync({ txId: t.id, soort });
+      let eerdere = 0;
+      if (onthouden && t.counterparty) eerdere = await onthoud.mutateAsync({ householdId: hhId, tegenpartij: t.counterparty, soort });
       afronden(t, soort === "inkomen" ? "Inkomen" : "Overboeking");
+      if (eerdere) toast.success(`Plus ${eerdere} eerdere van ${t.counterparty}`);
     } catch (e) {
       toast.error(foutTekst(e));
     }

@@ -298,6 +298,16 @@ export async function syncRekening(env, rekening, toegang, { diep = false } = {}
       nieuw += ingevoegd?.length ?? 0;
     }
 
+    // "Always income" / "always a transfer" rules apply without asking: a weekly
+    // salary shouldn't need marking every week. Pot rules stay suggestions.
+    if (nieuw > 0) {
+      await db(env, 'rpc/budget_pas_soortregels', {
+        method: 'POST',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ p_household: rekening.household_id }),
+      }).catch(() => {}); // before budget_soortregels.sql has run there's nothing to apply
+    }
+
     await patch(env, `budget_accounts?id=eq.${q(rekening.id)}`, { last_synced_at: nuIso(), sync_error: null });
     await patch(env, deze, { sync_error: null }).catch(() => {});
     const datums = rijen.map((r) => r.booked_on).sort();

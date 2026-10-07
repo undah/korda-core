@@ -402,6 +402,28 @@ export const inkomenVan = (transacties: TxMetDelen[]) =>
   rond(transacties.filter((t) => t.soort === "inkomen" && t.amount > 0).reduce((s, t) => s + t.amount, 0));
 
 /**
+ * Typical income per month, from the last ~3 months of marked income. Measured
+ * from payday to payday: everything after the first payday, over the days since
+ * it. That works for any rhythm (a weekly salary gives 4 or 5 paydays in a
+ * calendar month, a monthly one exactly one) and for however much history
+ * there is. Needs at least two paydays; with fewer it returns 0.
+ */
+export function inkomenPerMaand(transacties: TxMetDelen[], nu = new Date()) {
+  const vandaag = dagNr(dagSleutel(nu));
+  const perDag = new Map<number, number>();
+  for (const t of transacties) {
+    const d = dagNr(t.booked_on);
+    if (t.soort !== "inkomen" || t.amount <= 0 || d < vandaag - 91 || d > vandaag) continue;
+    perDag.set(d, (perDag.get(d) ?? 0) + t.amount);
+  }
+  const dagen = [...perDag.keys()].sort((a, b) => a - b);
+  if (dagen.length < 2) return { perMaand: 0, betaaldagen: dagen.length };
+  const [eerste, laatste] = [dagen[0], dagen[dagen.length - 1]];
+  const naEerste = [...perDag.entries()].filter(([d]) => d > eerste).reduce((s, [, v]) => s + v, 0);
+  return { perMaand: rond((naEerste / (laatste - eerste)) * (365.25 / 12)), betaaldagen: dagen.length };
+}
+
+/**
  * Spending per 50/30/20 group, against income when there is one. What's left of
  * income after needs and wants counts towards saving: money not spent is money
  * kept, wherever it ends up.

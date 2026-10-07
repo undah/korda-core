@@ -23,10 +23,11 @@ import {
   useTransacties,
   useVerrekeningen,
 } from "../hooks/useBudgetData";
-import { huidigeMaand, korteDatum, maandGrenzen, maandNaam, verschuifMaand } from "../lib/budget";
+import { huidigeMaand, isZelfdeMaand, korteDatum, maandGrenzen, maandNaam, verschuifMaand } from "../lib/budget";
 import {
   GROEPEN,
   dubbeleAfschrijvingen,
+  inkomenPerMaand,
   inkomenVan,
   maandRestant,
   overboekingen,
@@ -336,16 +337,23 @@ export function VerdelingKaart({
 }) {
   const { euro } = useBedragen();
   const { data: tx = [] } = useTransacties(householdId, maand, 2);
+  // Three months back from today, for the typical monthly income.
+  const { data: recent = [] } = useTransacties(householdId, huidigeMaand(), 4);
   const [indelen, setIndelen] = useState(false);
   const zetGroep = useZetGroep(householdId);
 
   const { inkomen, bron } = useMemo(() => {
     const start = maandGrenzen(maand).van;
     const deze = inkomenVan(tx.filter((t) => t.booked_on >= start));
-    if (deze > 0) return { inkomen: deze, bron: "deze maand" };
+    // A past month had its income; this one is still coming in, so use the
+    // typical month (weekly pay would otherwise look short until month end).
+    if (!isZelfdeMaand(maand, huidigeMaand())) return { inkomen: deze, bron: "die maand" };
+    const gemiddeld = inkomenPerMaand(recent).perMaand;
+    if (gemiddeld > 0) return { inkomen: gemiddeld, bron: "per maand, gemiddeld" };
+    if (deze > 0) return { inkomen: deze, bron: "deze maand tot nu" };
     const vorige = inkomenVan(tx.filter((t) => t.booked_on < start));
     return { inkomen: vorige, bron: vorige > 0 ? `van ${maandNaam(verschuifMaand(maand, -1)).split(" ")[0]}` : "" };
-  }, [tx, maand]);
+  }, [tx, recent, maand]);
   const v = useMemo(() => verdeling(potjes, uitgaven, inkomen), [potjes, uitgaven, inkomen]);
   if (potjes.length === 0) return null;
 
