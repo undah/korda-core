@@ -7,7 +7,7 @@ import type { BudgetOutletContext } from "@/features/budget/components/BudgetLay
 import { PotTegel, potSignaal } from "@/features/budget/components/PotMeter";
 import { Avatars, Kaart, Knop, MaandKiezer, Pagina, Sectie } from "@/features/budget/components/ui";
 import { usePotjes, useUitgavenPerPotje } from "@/features/budget/hooks/useBudget";
-import { useTransacties, useVasteLasten } from "@/features/budget/hooks/useBudgetData";
+import { useRekeningen, useTransacties, useVasteLasten } from "@/features/budget/hooks/useBudgetData";
 import {
   KomtEraanKaart,
   MaandAfsluiting,
@@ -38,6 +38,9 @@ export default function BudgetOverzicht() {
   const navigate = useNavigate();
   const [maand, setMaand] = useState(huidigeMaand);
   const { data: potjes = [], isLoading } = usePotjes(hhId);
+  const { data: rekeningen, isLoading: rekeningenLaden } = useRekeningen(hhId);
+  // Ask to link ING only until the household has a bank account it can see.
+  const heeftBank = rekeningenLaden || !!rekeningen?.some((r) => r.provider === "enable_banking");
   const { data: uitgaven = {} } = useUitgavenPerPotje(hhId, maand);
   const ditIsNu = isZelfdeMaand(maand, huidigeMaand());
   const tempo = ditIsNu ? maandVoortgang(maand) : undefined;
@@ -185,19 +188,23 @@ export default function BudgetOverzicht() {
               </Link>
             )}
           </Kaart>
-          <Kaart className="p-5">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-kb-accent-soft text-kb-accent-ink">
+          {!heeftBank && (
+            <Link
+              to="/budget/rekeningen"
+              className="flex items-center gap-3 rounded-2xl border border-kb-line bg-kb-surface p-4 hover:bg-kb-sunk/60"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-kb-accent-soft text-kb-accent-ink">
                 <Landmark className="h-4 w-4" strokeWidth={1.75} />
               </span>
-              <p className="text-sm font-semibold">ING koppelen</p>
-            </div>
-            <p className="mt-2 text-sm text-kb-ink2">
-              Dan vullen de potjes zich vanzelf met je uitgaven, en zie je wat er deze maand nog
-              afgaat.
-            </p>
-            <p className="mt-3 text-xs font-medium text-kb-ink2">Komt in de volgende stap</p>
-          </Kaart>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">ING koppelen</span>
+                <span className="block text-xs text-kb-ink2">
+                  Dan vullen de potjes zich vanzelf met je uitgaven.
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-kb-ink3" />
+            </Link>
+          )}
         </aside>
       </div>
     </Pagina>
