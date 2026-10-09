@@ -129,7 +129,7 @@ Titel: maximaal 6 woorden. Tekst: één of twee korte zinnen met een getal erin.
  */
 export async function beantwoord(env, householdId, userId, vraag, geschiedenis = []) {
   if (!env.ANTHROPIC_API_KEY) return { fout: 'ANTHROPIC_API_KEY ontbreekt' };
-  const { tekst: feiten } = await verzamelFeiten(env, householdId, userId);
+  const { tekst: feiten, transacties } = await verzamelFeiten(env, householdId, userId);
 
   // The last few turns, alternating, ending with the new question.
   const berichten = [];
@@ -152,12 +152,26 @@ export async function beantwoord(env, householdId, userId, vraag, geschiedenis =
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       output_config: { effort: 'medium' },
-      system: `${KARAKTER}
+      system: [
+        {
+          type: 'text',
+          text: `${KARAKTER}
 
 Je beantwoordt een vraag in de app. Antwoord in gewone tekst zonder opmaak: geen kopjes, geen tabellen, hooguit een kort lijstje met streepjes. Meestal 2 tot 5 zinnen.
 
-Feiten (wat deze persoon in de app kan zien):
-${feiten}`,
+Je krijgt een samenvatting en de lijst met alle transacties die deze persoon in de app kan zien (de laatste drie maanden). Gebruik die lijst om te tellen, op te tellen en te zoeken: "hoe vaak", "hoeveel bij", "wanneer voor het laatst". Gebruik je kennis van winkels en merken om te herkennen wat iets is (Domino's of New York Pizza is pizza, Albert Heijn en Jumbo zijn boodschappen, NS is de trein). Noem bij tellingen de datums of bedragen erbij, zodat het te controleren is. Staat iets niet in de lijst, zeg dan dat je het niet ziet.`,
+        },
+        {
+          type: 'text',
+          // The big, stable part: cached, so follow-up questions read it at a tenth of the price.
+          text: `Samenvatting:
+${feiten}
+
+Transacties (nieuwste eerst; datum · bedrag · tegenpartij (omschrijving) · potje):
+${transacties || '(geen)'}`,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: berichten,
     });
   } catch (e) {

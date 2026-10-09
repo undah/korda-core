@@ -30,8 +30,11 @@ function maandTerug(iso, n) {
 }
 
 /**
- * Returns { tekst, potjes } where tekst is the fact sheet for the model and
- * potjes maps short aliases (p1..) to pot ids, for links in the answer.
+ * Returns { tekst, alias, transacties }: tekst is the fact sheet for the
+ * model, alias maps short pot codes (p1..) to pot ids for links in the answer,
+ * and transacties lists every payment in view (newest first), so a question
+ * like "how often did we get pizza" can be answered from the payments
+ * themselves rather than from totals.
  */
 export async function verzamelFeiten(env, householdId, userId = null) {
   const vandaag = vandaagNL();
@@ -150,5 +153,26 @@ export async function verzamelFeiten(env, householdId, userId = null) {
     .filter(Boolean)
     .join('\n');
 
-  return { tekst, alias };
+  // Every payment in view, one line each. Pot names only for pots in view; a
+  // split payment says so (its parts are in the pot totals above).
+  const potNaam = new Map(pots.map((p) => [p.id, p.name]));
+  const splitIds = new Set((tx ?? []).filter((t) => t.splits?.length).map((t) => t.id));
+  const transacties = [...txs]
+    .sort((a, b) => b.booked_on.localeCompare(a.booked_on))
+    .slice(0, 1000)
+    .map((t) => {
+      const waar = t.soort === 'inkomen'
+        ? 'inkomen'
+        : t.soort === 'overboeking'
+          ? 'overboeking'
+          : splitIds.has(t.id)
+            ? 'verdeeld over potjes'
+            : potNaam.get(t.pot_id) ?? 'nog niet ingedeeld';
+      const naam = t.counterparty ?? (t.description ? t.description.slice(0, 60) : 'onbekend');
+      const extra = t.counterparty && t.description && t.description !== t.counterparty ? ` (${t.description.slice(0, 50)})` : '';
+      return `${t.booked_on} · ${t.amount < 0 ? '-' : '+'}${euro(Math.abs(t.amount))} · ${naam}${extra} · ${waar}`;
+    })
+    .join('\n');
+
+  return { tekst, alias, transacties };
 }
