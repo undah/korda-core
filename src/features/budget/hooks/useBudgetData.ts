@@ -779,6 +779,49 @@ export function useClaudeVoorstellen() {
   );
 }
 
+// ─── meldingen ───────────────────────────────────────────────────────────────
+
+/** The notification types you turned off (everything else is on). */
+export function useMeldingVoorkeuren() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["budget_melding_voorkeuren", user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase.from("budget_melding_voorkeuren").select("uit").eq("user_id", user!.id).maybeSingle();
+      // Before budget_meldingen.sql has run, everything is simply on.
+      if (error) return [];
+      return (data?.uit as string[] | undefined) ?? [];
+    },
+  });
+}
+
+export function useZetMeldingType() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { type: string; aan: boolean }) => {
+      const huidig = (qc.getQueryData<string[]>(["budget_melding_voorkeuren", user?.id]) ?? []).filter((t) => t !== p.type);
+      const uit = p.aan ? huidig : [...huidig, p.type];
+      await ok(
+        supabase
+          .from("budget_melding_voorkeuren")
+          .upsert({ user_id: user!.id, uit, updated_at: new Date().toISOString() }, { onConflict: "user_id" }),
+      );
+      return uit;
+    },
+    // Show the switch flipped straight away.
+    onMutate: (p) => {
+      const sleutel = ["budget_melding_voorkeuren", user?.id];
+      const vorige = qc.getQueryData<string[]>(sleutel) ?? [];
+      qc.setQueryData(sleutel, p.aan ? vorige.filter((t) => t !== p.type) : [...new Set([...vorige, p.type])]);
+      return { vorige };
+    },
+    onError: (_e, _p, ctx) => qc.setQueryData(["budget_melding_voorkeuren", user?.id], ctx?.vorige ?? []),
+    onSuccess: (uit) => qc.setQueryData(["budget_melding_voorkeuren", user?.id], uit),
+  });
+}
+
 // ─── Korda AI ────────────────────────────────────────────────────────────────
 
 /** The household's latest insights from Korda AI (null before the first). */

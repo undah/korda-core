@@ -69,7 +69,8 @@ export function KordaAIFiguur({ grootte = 56, zweeft = true }: { grootte?: numbe
  */
 export function KordaAIKnop({ nieuw }: { nieuw: boolean }) {
   const { pathname } = useLocation();
-  if (pathname.startsWith("/budget/ai")) return null;
+  // Not on its own page, and not on a page of switches it would cover.
+  if (pathname.startsWith("/budget/ai") || pathname.startsWith("/budget/meldingen")) return null;
   const boven = pathname.startsWith("/budget/transacties");
   return (
     <Link

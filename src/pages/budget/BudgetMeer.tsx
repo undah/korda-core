@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { Bell, CalendarClock, ChevronRight, Copy, Handshake, Home, Landmark, LogOut, Share2, Smartphone, UserPlus, Users } from "lucide-react";
+import { Bell, BellRing, CalendarClock, ChevronRight, Copy, Handshake, Home, Landmark, LogOut, Share2, Smartphone, UserPlus, Users } from "lucide-react";
 import { meldingenAan, meldingenOndersteund, pushOndersteund, useInstalleren, zetMeldingen } from "@/features/budget/lib/meldingen";
 import { useAuth } from "@/auth/AuthProvider";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
@@ -68,6 +68,19 @@ export default function BudgetMeer() {
         </nav>
 
         <AppInstellingen />
+        <Link
+          to="/budget/meldingen"
+          className="-mt-3 flex min-h-[3.25rem] items-center gap-3 rounded-2xl border border-kb-line bg-kb-surface px-4 transition-colors hover:bg-kb-sunk/60"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-kb-accent-soft text-kb-accent-ink">
+            <BellRing className="h-4 w-4" strokeWidth={1.75} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-medium">Welke meldingen</span>
+            <span className="block text-xs text-kb-ink2">Kies per soort wat je wilt krijgen</span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-kb-ink3" />
+        </Link>
 
         <Kaart className="p-5">
           <div className="flex items-center gap-2">

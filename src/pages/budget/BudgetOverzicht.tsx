@@ -7,7 +7,7 @@ import type { BudgetOutletContext } from "@/features/budget/components/BudgetLay
 import { PotTegel, potSignaal } from "@/features/budget/components/PotMeter";
 import { Avatars, Kaart, Knop, MaandKiezer, Pagina, Sectie } from "@/features/budget/components/ui";
 import { usePotjes, useUitgavenPerPotje } from "@/features/budget/hooks/useBudget";
-import { useRekeningen, useTransacties, useVasteLasten } from "@/features/budget/hooks/useBudgetData";
+import { useMeldingVoorkeuren, useRekeningen, useTransacties, useVasteLasten } from "@/features/budget/hooks/useBudgetData";
 import {
   DubbelKaart,
   KomtEraanKaart,
@@ -49,6 +49,7 @@ export default function BudgetOverzicht() {
   const { data: lasten = [] } = useVasteLasten(hhId);
   const { data: maandTx = [] } = useTransacties(hhId, maand);
   const { data: recenteTx = [] } = useTransacties(hhId, huidigeMaand(), 2);
+  const { data: uit = [] } = useMeldingVoorkeuren();
   const aankomend = useMemo(
     () => (ditIsNu ? komtEraan(vasteLastenDezeMaand(lasten, maandTx, maand)) : []),
     [ditIsNu, lasten, maandTx, maand],
@@ -80,13 +81,13 @@ export default function BudgetOverzicht() {
     const m = `${maand.year}-${maand.month}`;
     for (const r of aandacht) {
       const url = `/budget/potjes/${r.pot.id}`;
-      if (r.status === "over")
+      if (r.status === "over" && !uit.includes("potje_over"))
         meldEenmalig(`${r.pot.id}:${m}:over`, `${r.pot.emoji} ${r.pot.name} is over de limiet`, "Kijk in KordaBudget wat er nog kan.", url);
-      else if (r.status === "bijna")
+      else if (r.status === "bijna" && !uit.includes("potje_bijna"))
         meldEenmalig(`${r.pot.id}:${m}:bijna`, `${r.pot.emoji} ${r.pot.name} is bijna op`, "Je zit boven de 80% van de limiet.", url);
     }
     const w = weekoverzicht(recenteTx, potjes);
-    if (w.deze > 0 && new Date().getDay() === 0) {
+    if (w.deze > 0 && new Date().getDay() === 0 && !uit.includes("week")) {
       const vergelijk = w.vorige > 0 ? `, ${w.verschil > 0 ? "meer" : "minder"} dan vorige week` : "";
       meldEenmalig(
         `week:${huishouden.household.id}:${weekSleutel()}`,
@@ -94,7 +95,7 @@ export default function BudgetOverzicht() {
         `€ ${Math.round(w.deze)} uitgegeven${vergelijk}.`,
       );
     }
-  }, [ditIsNu, aandacht, recenteTx, potjes, maand, huishouden.household.id]);
+  }, [ditIsNu, aandacht, recenteTx, potjes, maand, huishouden.household.id, uit]);
 
   const gesorteerd = [...potjes].sort((a, b) =>
     a.scope === b.scope ? a.sort_order - b.sort_order : a.scope === "shared" ? -1 : 1,

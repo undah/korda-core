@@ -130,6 +130,7 @@ function useLaadPaginasVooruit() {
       import("../../../pages/budget/BudgetHuishoudens"),
       import("../../../pages/budget/BudgetJuridisch"),
       import("../../../pages/budget/BudgetKordaAI"),
+      import("../../../pages/budget/BudgetMeldingen"),
       import("../../../pages/budget/BudgetMeer"),
       import("../../../pages/budget/BudgetOverzicht"),
       import("../../../pages/budget/BudgetPotDetail"),

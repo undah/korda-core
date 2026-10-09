@@ -1,6 +1,6 @@
 // src/pages/budget/BudgetKordaAI.tsx — Korda AI: insights for the household, and questions.
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { AlertTriangle, ArrowUp, Check, CheckCircle2, ChevronRight, Copy, Lightbulb, Loader2, RefreshCw, Wand2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
@@ -263,6 +263,18 @@ export default function BudgetKordaAI() {
       toast.error(foutTekst(e));
     }
   };
+
+  // From a notification ("Zal ik € 50 opzij zetten?"): ask it straight away, once.
+  const [params, setParams] = useSearchParams();
+  const gevraagd = useRef(false);
+  useEffect(() => {
+    const v = params.get("vraag");
+    if (!v || gevraagd.current) return;
+    gevraagd.current = true;
+    setParams({}, { replace: true });
+    void stel(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   const verstuur = (e: FormEvent) => {
     e.preventDefault();

@@ -76,6 +76,7 @@ const BudgetRekeningen = lazy(() => import("./pages/budget/BudgetRekeningen"));
 const BudgetWeek = lazy(() => import("./pages/budget/BudgetWeek"));
 const BudgetSnelIndelen = lazy(() => import("./pages/budget/BudgetSnelIndelen"));
 const BudgetKordaAI = lazy(() => import("./pages/budget/BudgetKordaAI"));
+const BudgetMeldingen = lazy(() => import("./pages/budget/BudgetMeldingen"));
 const BudgetBankTerug = lazy(() => import("./pages/budget/BudgetBankTerug"));
 const BudgetPrivacy = lazy(() => import("./pages/budget/BudgetJuridisch").then((m) => ({ default: m.BudgetPrivacy })));
 const BudgetVoorwaarden = lazy(() => import("./pages/budget/BudgetJuridisch").then((m) => ({ default: m.BudgetVoorwaarden })));
@@ -176,6 +177,7 @@ function AnimatedRoutes() {
               <Route path="/budget/week"        element={<BudgetWeek />} />
               <Route path="/budget/indelen"     element={<BudgetSnelIndelen />} />
               <Route path="/budget/ai"          element={<BudgetKordaAI />} />
+              <Route path="/budget/meldingen"   element={<BudgetMeldingen />} />
               <Route path="/budget/bank/terug"  element={<BudgetBankTerug />} />
             </Route>
           </Route>
