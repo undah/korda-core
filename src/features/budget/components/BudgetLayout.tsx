@@ -100,8 +100,41 @@ function OogKnop() {
   );
 }
 
+/**
+ * Each page is its own download (App.tsx loads them lazily). Fetch all of
+ * KordaBudget's pages once the app is idle, so switching tabs never waits on a
+ * download and never shows the blank loading frame.
+ */
+function useLaadPaginasVooruit() {
+  useEffect(() => {
+    const laad = () =>
+      void Promise.all([
+      import("../../../pages/budget/BudgetBankTerug"),
+      import("../../../pages/budget/BudgetDoelen"),
+      import("../../../pages/budget/BudgetHuishoudens"),
+      import("../../../pages/budget/BudgetJuridisch"),
+      import("../../../pages/budget/BudgetMeer"),
+      import("../../../pages/budget/BudgetOverzicht"),
+      import("../../../pages/budget/BudgetPotDetail"),
+      import("../../../pages/budget/BudgetPotjes"),
+      import("../../../pages/budget/BudgetRekeningen"),
+      import("../../../pages/budget/BudgetSnelIndelen"),
+      import("../../../pages/budget/BudgetTransacties"),
+      import("../../../pages/budget/BudgetVasteLasten"),
+      import("../../../pages/budget/BudgetVerrekenen"),
+      import("../../../pages/budget/BudgetWeek"),
+      ]).catch(() => {
+        // Offline or a stale deploy: the page loads on demand instead.
+      });
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(laad);
+    else window.setTimeout(laad, 800);
+  }, []);
+}
+
 export default function BudgetLayout() {
   useEigenDocument();
+  useLaadPaginasVooruit();
   const { data: huishoudens, isLoading, error } = useMijnHuishoudens();
   const { actief, kies } = useActiefHuishouden(huishoudens);
 
