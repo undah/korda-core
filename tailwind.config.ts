@@ -129,6 +129,23 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(173 80% 40% / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(173 80% 40% / 0.5)" },
         },
+        // Korda AI: a gentle float, its shadow breathing with it, and a blink now and then.
+        zweef: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-7px)" },
+        },
+        schaduw: {
+          "0%, 100%": { transform: "scaleX(1)", opacity: "0.35" },
+          "50%": { transform: "scaleX(0.72)", opacity: "0.18" },
+        },
+        knipper: {
+          "0%, 92%, 100%": { transform: "scaleY(1)" },
+          "95%": { transform: "scaleY(0.1)" },
+        },
+        "antenne-gloei": {
+          "0%, 100%": { opacity: "0.55" },
+          "50%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -136,6 +153,10 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        zweef: "zweef 3.2s ease-in-out infinite",
+        schaduw: "schaduw 3.2s ease-in-out infinite",
+        knipper: "knipper 4.6s ease-in-out infinite",
+        "antenne-gloei": "antenne-gloei 2.4s ease-in-out infinite",
       },
     },
   },

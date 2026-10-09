@@ -4,7 +4,8 @@ import { NavLink, Outlet } from "react-router-dom";
 import { ArrowLeftRight, Eye, EyeOff, Home, Loader2, Menu, PiggyBank, Target } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
 import { useMijnHuishoudens, type Huishouden } from "../hooks/useBudget";
-import { useBankBijwerken, useClaudeVoorstellen, useRekeningen } from "../hooks/useBudgetData";
+import { useBankBijwerken, useClaudeVoorstellen, useInzichten, useRekeningen } from "../hooks/useBudgetData";
+import { KordaAIKnop, gezienSleutel } from "./KordaAI";
 import { useHoudPushBij } from "../lib/meldingen";
 import { useEigenDocument } from "../lib/eigenDocument";
 import { BedragProvider, useBedragen } from "./Bedrag";
@@ -88,6 +89,19 @@ function AutoBijwerken({ householdId }: { householdId: string }) {
   return null;
 }
 
+/** Korda AI's floating button; a dot while the newest insights are unseen. */
+function KordaAIIngang({ householdId }: { householdId: string }) {
+  const { data: inzichten } = useInzichten(householdId);
+  let gezien: string | null = null;
+  try {
+    gezien = localStorage.getItem(gezienSleutel(householdId));
+  } catch {
+    // No storage: no dot.
+  }
+  const nieuw = !!inzichten && (!gezien || gezien < inzichten.created_at);
+  return <KordaAIKnop nieuw={nieuw} />;
+}
+
 function OogKnop() {
   const { verborgen, wissel } = useBedragen();
   return (
@@ -115,6 +129,7 @@ function useLaadPaginasVooruit() {
       import("../../../pages/budget/BudgetDoelen"),
       import("../../../pages/budget/BudgetHuishoudens"),
       import("../../../pages/budget/BudgetJuridisch"),
+      import("../../../pages/budget/BudgetKordaAI"),
       import("../../../pages/budget/BudgetMeer"),
       import("../../../pages/budget/BudgetOverzicht"),
       import("../../../pages/budget/BudgetPotDetail"),
@@ -200,6 +215,7 @@ export default function BudgetLayout() {
   return (
     <BedragProvider>
       <AutoBijwerken householdId={actief.household.id} />
+      <KordaAIIngang householdId={actief.household.id} />
       <div className="kb-root min-h-screen bg-kb-bg text-kb-ink antialiased md:flex">
         {/* Desktop: left rail with the household switcher on top. */}
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-kb-line bg-kb-surface px-3 py-5 md:flex">

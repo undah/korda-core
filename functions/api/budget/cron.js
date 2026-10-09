@@ -15,11 +15,14 @@
  *                 households' new unsorted payments (a few per call).
  * stap=meldingen  Push notifications, each sent once per person: a pot
  *                 crossing 80% or its limit, a possible double charge, and
- *                 on Sunday evening the week's shared spending.
+ *                 on Sunday evening the week's shared spending. On Sunday
+ *                 evening and the 1st, Korda AI first writes new insights
+ *                 (a couple of households per call) and announces them.
  */
 import { db, foutAntwoord, isActief, json, syncRekening, werkSamenvattingBij } from '../../_shared/budgetBank.js';
 import { stuurPush } from '../../_shared/webpush.js';
 import { maakVoorstellen } from '../../_shared/budgetAI.js';
+import { maakInzichten } from '../../_shared/kordaAI.js';
 import { potStatus } from '../../../src/features/budget/lib/budget.ts';
 import { dubbeleAfschrijvingen } from '../../../src/features/budget/lib/inzicht.ts';
 
@@ -160,9 +163,30 @@ async function meldingen(env) {
 
   // Candidate notifications: { aan: [userIds], sleutel, titel, tekst, url }
   const kandidaten = [];
+  // Korda AI's weekly look (Sunday evening) and monthly one (the 1st).
+  const inzichtDag = (nl.zondag && nl.uur >= 17) || nl.datum.endsWith('-01');
+  let inzichtenGemaakt = 0;
   for (const hh of huishoudens) {
     const ledenHier = (await db(env, `budget_members?household_id=eq.${q(hh)}&select=user_id`)) ?? [];
     const iedereen = ledenHier.map((m) => m.user_id);
+
+    if (inzichtDag && inzichtenGemaakt < 2) {
+      const [laatste] =
+        (await db(env, `budget_inzichten?household_id=eq.${q(hh)}&user_id=is.null&order=created_at.desc&limit=1`).catch(() => [])) ?? [];
+      if (!laatste || Date.now() - new Date(laatste.created_at).getTime() > 20 * 3600_000) {
+        inzichtenGemaakt += 1;
+        const rij = await maakInzichten(env, hh).catch(() => null);
+        if (rij?.id && rij.items?.length) {
+          kandidaten.push({
+            aan: iedereen,
+            sleutel: `inzicht:${rij.id}`,
+            titel: 'Korda AI heeft nieuwe inzichten',
+            tekst: rij.items[0].titel,
+            url: '/budget/ai',
+          });
+        }
+      }
+    }
     const [potjes, regels, recent, rekeningen] = await Promise.all([
       db(env, `budget_pots?household_id=eq.${q(hh)}&archived_at=is.null&select=id,name,emoji,monthly_limit,scope,owner_id,kind`),
       // budget_tx_lines: a split payment counts per part, like in the app.

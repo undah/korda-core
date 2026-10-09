@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -75,6 +75,7 @@ const BudgetVerrekenen = lazy(() => import("./pages/budget/BudgetVerrekenen"));
 const BudgetRekeningen = lazy(() => import("./pages/budget/BudgetRekeningen"));
 const BudgetWeek = lazy(() => import("./pages/budget/BudgetWeek"));
 const BudgetSnelIndelen = lazy(() => import("./pages/budget/BudgetSnelIndelen"));
+const BudgetKordaAI = lazy(() => import("./pages/budget/BudgetKordaAI"));
 const BudgetBankTerug = lazy(() => import("./pages/budget/BudgetBankTerug"));
 const BudgetPrivacy = lazy(() => import("./pages/budget/BudgetJuridisch").then((m) => ({ default: m.BudgetPrivacy })));
 const BudgetVoorwaarden = lazy(() => import("./pages/budget/BudgetJuridisch").then((m) => ({ default: m.BudgetVoorwaarden })));
@@ -108,20 +109,27 @@ const pageTransition = {
   ease: [0.4, 0, 0.2, 1] as const,
 };
 
+/**
+ * Phones get instant page switches: no fade, and the app's frame (header, bottom
+ * nav) stays mounted between pages. On a computer the short fade stays.
+ */
+function useTelefoon() {
+  const vraag = "(max-width: 767px)";
+  const [telefoon, setTelefoon] = useState(() => typeof window !== "undefined" && window.matchMedia(vraag).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(vraag);
+    const zet = () => setTelefoon(mq.matches);
+    mq.addEventListener("change", zet);
+    return () => mq.removeEventListener("change", zet);
+  }, []);
+  return telefoon;
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
+  const telefoon = useTelefoon();
 
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={pageTransition}
-        style={{ minHeight: "100vh" }}
-      >
+  const routes = (
         <Suspense fallback={<div style={{ minHeight: "100vh" }} />}>
         <Routes location={location}>
           {/* Public */}
@@ -167,6 +175,7 @@ function AnimatedRoutes() {
               <Route path="/budget/rekeningen"  element={<BudgetRekeningen />} />
               <Route path="/budget/week"        element={<BudgetWeek />} />
               <Route path="/budget/indelen"     element={<BudgetSnelIndelen />} />
+              <Route path="/budget/ai"          element={<BudgetKordaAI />} />
               <Route path="/budget/bank/terug"  element={<BudgetBankTerug />} />
             </Route>
           </Route>
@@ -237,6 +246,22 @@ function AnimatedRoutes() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+  );
+
+  if (telefoon) return routes;
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={pageTransition}
+        style={{ minHeight: "100vh" }}
+      >
+        {routes}
       </motion.div>
     </AnimatePresence>
   );

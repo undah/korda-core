@@ -16,6 +16,7 @@ import type {
   BudgetScope,
   BudgetSettlement,
   BudgetWish,
+  KordaInzichten,
   TxMetDelen,
   TxSoort,
 } from "../types";
@@ -606,6 +607,46 @@ export function useClaudeVoorstellen() {
   return useSchrijf((householdId: string) =>
     bankFetch<{ bekeken?: number; voorgesteld?: number; overgeslagen?: string }>("/api/budget/ai/voorstellen", { householdId }),
   );
+}
+
+// ─── Korda AI ────────────────────────────────────────────────────────────────
+
+/** The household's latest insights from Korda AI (null before the first). */
+export function useInzichten(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ["budget_inzichten", householdId],
+    enabled: !!householdId,
+    queryFn: async (): Promise<KordaInzichten | null> => {
+      const { data, error } = await supabase
+        .from("budget_inzichten")
+        .select("*")
+        .eq("household_id", householdId!)
+        .is("user_id", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      // Before budget_inzichten.sql has run there's simply nothing yet.
+      if (error) return null;
+      return (data?.[0] as KordaInzichten) ?? null;
+    },
+  });
+}
+
+/** Ask Korda AI for fresh insights (at most hourly; otherwise returns the latest). */
+export function useVerversInzichten() {
+  return useSchrijf((householdId: string) => bankFetch<KordaInzichten & { overgeslagen?: string }>("/api/budget/ai/inzichten", { householdId }));
+}
+
+export type KordaBericht = { rol: "jij" | "ai"; tekst: string };
+
+/** One question to Korda AI. Nothing is stored; the conversation lives on screen. */
+export function useVraagKordaAI() {
+  return useMutation({
+    mutationFn: async (p: { householdId: string; vraag: string; geschiedenis: KordaBericht[] }) => {
+      const uit = await bankFetch<{ antwoord?: string; fout?: string }>("/api/budget/ai/vraag", p);
+      if (uit.fout) throw new Error(uit.fout);
+      return uit.antwoord ?? "";
+    },
+  });
 }
 
 /**

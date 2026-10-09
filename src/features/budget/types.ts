@@ -198,6 +198,23 @@ export interface BudgetWish {
 }
 
 /** A calendar month, e.g. { year: 2026, month: 10 } for October 2026 (1-based). */
+/** One of Korda AI's insights (budget_inzichten.items). */
+export interface KordaInzicht {
+  soort: "let_op" | "goed" | "tip";
+  titel: string;
+  tekst: string;
+  pot_id: string | null;
+}
+
+export interface KordaInzichten {
+  id: string;
+  household_id: string;
+  items: KordaInzicht[];
+  created_at: string;
+  /** Set when a refresh was asked but Korda AI couldn't write new ones. */
+  overgeslagen?: string;
+}
+
 export interface BudgetMonth {
   year: number;
   month: number;
