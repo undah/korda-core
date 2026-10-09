@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
-import { maandGrenzen, verschuifMaand } from "../lib/budget";
+import { maakUitnodigingscode, maandGrenzen, verschuifMaand } from "../lib/budget";
 import { bankFetch, streamFetch, type SyncUitkomst } from "../lib/bankApi";
 import type {
   BudgetAccount,
@@ -17,6 +17,7 @@ import type {
   BudgetSettlement,
   BudgetWish,
   KordaInzichten,
+  PotGroep,
   TxMetDelen,
   TxSoort,
 } from "../types";
@@ -174,61 +175,170 @@ export function useRegels(householdId: string | undefined) {
 }
 
 /** Remember "this counterparty goes in that pot" — upsert on (household, counterparty). */
+type RegelInvoer = { householdId: string; tegenpartij: string } & (
+  | { potId: string; soort?: never }
+  | { soort: TxSoort; potId?: never }
+);
+
+/**
+ * Save a rule (a pot, or a kind: income / own transfer), then sort earlier
+ * unsorted payments to the same party. Returns how many. Used by the
+ * "voortaan altijd hier" checkbox and by Korda AI's proposals.
+ */
+async function onthoudRegel(p: RegelInvoer, userId: string): Promise<number> {
+  const counterparty = normaliseerTegenpartij(p.tegenpartij);
+  if (!counterparty) return 0;
+  await ok(
+    supabase.from("budget_rules").upsert(
+      {
+        household_id: p.householdId,
+        counterparty,
+        pot_id: p.potId ?? null,
+        ...(p.soort ? { soort: p.soort } : { soort: null }),
+        created_by: userId,
+      },
+      { onConflict: "household_id,counterparty" },
+    ),
+  );
+
+  // Kind rules are applied by the database, the same way the bank sync does.
+  if (p.soort) return (await ok(supabase.rpc("budget_pas_soortregels", { p_household: p.householdId }))) ?? 0;
+
+  // Same party, still unsorted, not split, not marked income/transfer. ilike narrows it
+  // down server-side; the exact match uses the same normalising as the rule.
+  const patroon = p.tegenpartij.trim().replace(/[%_\\]/g, (c) => `\\${c}`).replace(/\s+/g, "%");
+  const kandidaten =
+    (await ok(
+      supabase
+        .from("budget_transactions")
+        .select("*, splits:budget_tx_splits(id)")
+        .eq("household_id", p.householdId)
+        .is("pot_id", null)
+        .ilike("counterparty", patroon)
+        .limit(1000),
+    )) ?? [];
+  const ids = kandidaten
+    .filter(
+      (t: { counterparty: string | null; soort?: string | null; splits: unknown[] }) =>
+        normaliseerTegenpartij(t.counterparty) === counterparty && !t.soort && t.splits.length === 0,
+    )
+    .map((t: { id: string }) => t.id);
+  if (ids.length) {
+    await ok(supabase.from("budget_transactions").update({ pot_id: p.potId, pot_status: "confirmed" }).in("id", ids));
+  }
+  return ids.length;
+}
+
 export function useOnthoudRegel() {
   const { user } = useAuth();
-  /**
-   * Saves the rule (a pot, or a kind: income / own transfer), then sorts earlier
-   * unsorted payments to the same party. Returns how many.
-   */
-  return useSchrijf(
-    async (
-      p: { householdId: string; tegenpartij: string } & ({ potId: string; soort?: never } | { soort: TxSoort; potId?: never }),
-    ): Promise<number> => {
-    const counterparty = normaliseerTegenpartij(p.tegenpartij);
-    if (!counterparty) return 0;
-    await ok(
-      supabase.from("budget_rules").upsert(
-        {
-          household_id: p.householdId,
-          counterparty,
-          pot_id: p.potId ?? null,
-          ...(p.soort ? { soort: p.soort } : { soort: null }),
-          created_by: user!.id,
-        },
-        { onConflict: "household_id,counterparty" },
-      ),
-    );
+  return useSchrijf((p: RegelInvoer): Promise<number> => onthoudRegel(p, user!.id));
+}
 
-    // Kind rules are applied by the database, the same way the bank sync does.
-    if (p.soort) return (await ok(supabase.rpc("budget_pas_soortregels", { p_household: p.householdId }))) ?? 0;
+// ─── Korda AI's proposals ────────────────────────────────────────────────────
 
-    // Same party, still unsorted, not split, not marked income/transfer. ilike narrows it
-    // down server-side; the exact match uses the same normalising as the rule.
-    const patroon = p.tegenpartij.trim().replace(/[%_\\]/g, (c) => `\\${c}`).replace(/\s+/g, "%");
-    const kandidaten =
-      (await ok(
-        supabase
-          .from("budget_transactions")
-          .select("*, splits:budget_tx_splits(id)")
-          .eq("household_id", p.householdId)
-          .is("pot_id", null)
-          .ilike("counterparty", patroon)
-          .limit(1000),
-      )) ?? [];
-    const ids = kandidaten
-      .filter(
-        (t: { counterparty: string | null; soort?: string | null; splits: unknown[] }) =>
-          normaliseerTegenpartij(t.counterparty) === counterparty && !t.soort && t.splits.length === 0,
-      )
-      .map((t: { id: string }) => t.id);
-    if (ids.length) {
-      await ok(
-        supabase.from("budget_transactions").update({ pot_id: p.potId, pot_status: "confirmed" }).in("id", ids),
-      );
+/** One checked action from Korda AI (built by functions/_shared/kordaActies.js). */
+export type KordaActie =
+  | { type: "maak_potje"; code: string; naam: string; emoji: string; limiet: number; soort: "flexibel" | "vast"; groep: PotGroep | null; gedeeld: boolean; omschrijving: string }
+  | { type: "wijzig_potje"; potId: string; velden: Record<string, unknown>; omschrijving: string }
+  | { type: "archiveer_potje"; potId: string; omschrijving: string }
+  | { type: "deel_in"; txIds: string[]; potId: string | null; nieuwPot?: string | null; soort: TxSoort | null; regels: string[]; omschrijving: string }
+  | { type: "notitie"; txId: string; tekst: string; omschrijving: string }
+  | { type: "maak_uitnodiging"; omschrijving: string }
+  | { type: "wijzig_mijn_naam"; naam: string; omschrijving: string };
+
+export type KordaVoorstel = { acties: KordaActie[]; notities: string[] };
+
+/**
+ * Carry out a confirmed proposal, one action after the other, as the signed-in
+ * person: these are the same writes the screens make, so the database's
+ * permissions decide exactly as they do there. Returns what to tell them (an
+ * invite code, how many earlier payments followed a rule).
+ */
+export function useVoerKordaVoorstelUit() {
+  const { user } = useAuth();
+  return useSchrijf(async (p: { householdId: string; acties: KordaActie[] }): Promise<string[]> => {
+    const melden: string[] = [];
+    // Pots made in this proposal, by Korda AI's code, for the steps after.
+    const nieuwePotten = new Map<string, string>();
+    for (const a of p.acties) {
+      switch (a.type) {
+        case "maak_potje": {
+          const [laatste] =
+            (await ok(
+              supabase.from("budget_pots").select("sort_order").eq("household_id", p.householdId).order("sort_order", { ascending: false }).limit(1),
+            )) ?? [];
+          const gemaakt = await ok(
+            supabase.from("budget_pots").insert({
+              household_id: p.householdId,
+              name: a.naam,
+              emoji: a.emoji,
+              monthly_limit: a.limiet,
+              kind: a.soort,
+              scope: a.gedeeld ? "shared" : "personal",
+              owner_id: a.gedeeld ? null : user!.id,
+              sort_order: (laatste?.sort_order ?? 0) + 1,
+              ...(a.groep ? { groep: a.groep } : {}),
+            }).select("id").single(),
+          );
+          if (gemaakt?.id) nieuwePotten.set(a.code, gemaakt.id);
+          break;
+        }
+        case "wijzig_potje":
+          await ok(supabase.from("budget_pots").update(a.velden).eq("id", a.potId));
+          break;
+        case "archiveer_potje":
+          await ok(supabase.from("budget_pots").update({ archived_at: new Date().toISOString() }).eq("id", a.potId));
+          break;
+        case "deel_in": {
+          const potId = a.nieuwPot ? (nieuwePotten.get(a.nieuwPot) ?? null) : a.potId;
+          if (a.nieuwPot && !potId) throw new Error("Het nieuwe potje is niet gemaakt");
+          for (let i = 0; i < a.txIds.length; i += 100) {
+            const deel = a.txIds.slice(i, i + 100);
+            await ok(supabase.from("budget_tx_splits").delete().in("transaction_id", deel));
+            await ok(
+              supabase
+                .from("budget_transactions")
+                .update({ pot_id: potId, soort: a.soort, pot_status: "confirmed" })
+                .in("id", deel),
+            );
+          }
+          let eerder = 0;
+          for (const tegenpartij of a.regels) {
+            eerder += await onthoudRegel(
+              potId ? { householdId: p.householdId, tegenpartij, potId } : { householdId: p.householdId, tegenpartij, soort: a.soort! },
+              user!.id,
+            );
+          }
+          if (eerder) melden.push(`Er volgden ${eerder} eerdere betalingen mee.`);
+          break;
+        }
+        case "notitie":
+          await ok(supabase.from("budget_transactions").update({ note: a.tekst }).eq("id", a.txId));
+          break;
+        case "maak_uitnodiging": {
+          let code: string | null = null;
+          for (let poging = 0; poging < 2 && !code; poging++) {
+            const { data, error } = await supabase
+              .from("budget_invites")
+              .insert({ household_id: p.householdId, code: maakUitnodigingscode(), created_by: user!.id })
+              .select()
+              .single();
+            if (!error) code = data.code;
+            else if (error.code !== "23505") throw error;
+          }
+          if (!code) throw new Error("Kon geen unieke code maken, probeer opnieuw");
+          melden.push(`Uitnodigingscode: ${code}`);
+          break;
+        }
+        case "wijzig_mijn_naam":
+          await ok(
+            supabase.from("budget_members").update({ display_name: a.naam }).eq("household_id", p.householdId).eq("user_id", user!.id),
+          );
+          break;
+      }
     }
-    return ids.length;
-    },
-  );
+    return melden;
+  });
 }
 
 export function useVerwijderRegel() {
@@ -643,12 +753,14 @@ export type KordaBericht = { rol: "jij" | "ai"; tekst: string };
  * as it's written. Nothing is stored; the conversation lives on screen.
  */
 export async function vraagKordaAI(
-  p: { householdId: string; vraag: string; geschiedenis: KordaBericht[] },
+  p: { householdId: string; vraag: string; geschiedenis: Array<{ rol: "jij" | "ai"; tekst: string }> },
   opTekst: (stukje: string) => void,
+  opVoorstel: (v: KordaVoorstel) => void = () => {},
 ): Promise<void> {
   let fout: string | null = null;
   await streamFetch("/api/budget/ai/vraag", p, (r) => {
     if (typeof r.t === "string") opTekst(r.t);
+    if (r.voorstel && typeof r.voorstel === "object") opVoorstel(r.voorstel as KordaVoorstel);
     if (typeof r.fout === "string") fout = r.fout;
   });
   if (fout) throw new Error(fout);

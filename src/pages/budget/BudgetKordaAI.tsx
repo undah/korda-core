@@ -1,16 +1,18 @@
 // src/pages/budget/BudgetKordaAI.tsx — Korda AI: insights for the household, and questions.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useOutletContext } from "react-router-dom";
-import { AlertTriangle, ArrowUp, CheckCircle2, ChevronRight, Lightbulb, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowUp, Check, CheckCircle2, ChevronRight, Copy, Lightbulb, Loader2, RefreshCw, Wand2, X } from "lucide-react";
+import { toast } from "sonner";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { KordaAIFiguur, gezienSleutel } from "@/features/budget/components/KordaAI";
-import { Kaart, Pagina, Sectie, foutTekst } from "@/features/budget/components/ui";
+import { Kaart, Knop, Pagina, Sectie, foutTekst } from "@/features/budget/components/ui";
 import { usePotjes } from "@/features/budget/hooks/useBudget";
 import {
   useInzichten,
   useVerversInzichten,
+  useVoerKordaVoorstelUit,
   vraagKordaAI,
-  type KordaBericht,
+  type KordaVoorstel,
 } from "@/features/budget/hooks/useBudgetData";
 import type { KordaInzicht } from "@/features/budget/types";
 
@@ -25,6 +27,7 @@ const VOORBEELDEN = [
   "Kunnen we deze maand nog uit eten?",
   "Hoe doen we het vergeleken met vorige maand?",
   "Welke abonnementen hebben we?",
+  "Maak een potje voor pizza en zet Domino's erin",
 ];
 
 const wanneer = (iso: string) =>
@@ -66,6 +69,100 @@ function Antwoord({ tekst }: { tekst: string }) {
   );
 }
 
+type Bericht = {
+  id: string;
+  rol: "jij" | "ai";
+  tekst: string;
+  voorstel?: KordaVoorstel;
+  status?: "open" | "bezig" | "gedaan" | "geannuleerd";
+  uitkomst?: string[];
+};
+
+let teller = 0;
+const nieuwId = () => `b${Date.now()}-${teller++}`;
+
+/** What Korda AI hears back about its proposal, so the next answer knows. */
+function geschiedenisVan(b: Bericht) {
+  if (b.rol !== "ai" || !b.voorstel?.acties.length) return { rol: b.rol, tekst: b.tekst };
+  const wat = b.voorstel.acties.map((a) => a.omschrijving).join("; ");
+  const hoe = b.status === "gedaan" ? "uitgevoerd" : b.status === "geannuleerd" ? "niet gedaan, geannuleerd" : "nog niet bevestigd";
+  return { rol: b.rol, tekst: `${b.tekst}\n[Voorstel: ${wat}. Status: ${hoe}.]` };
+}
+
+/** The card for a proposal: what will happen, and the person decides. */
+function VoorstelKaart({
+  bericht,
+  onBevestig,
+  onAnnuleer,
+}: {
+  bericht: Bericht;
+  onBevestig: () => void;
+  onAnnuleer: () => void;
+}) {
+  const v = bericht.voorstel!;
+  const status = bericht.status ?? "open";
+  return (
+    <div className="ml-9 rounded-2xl border border-kb-accent/30 bg-kb-surface p-3.5">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-kb-accent-ink">
+        <Wand2 className="h-3.5 w-3.5" /> {status === "gedaan" ? "Gedaan" : status === "geannuleerd" ? "Niet gedaan" : "Voorstel"}
+      </p>
+      {v.acties.length > 0 && (
+        <ul className="mt-2 space-y-1.5 text-sm">
+          {v.acties.map((a, i) => (
+            <li key={i} className="flex gap-2">
+              {status === "gedaan" ? (
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-kb-good-ink" />
+              ) : (
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-kb-accent" />
+              )}
+              <span className={status === "geannuleerd" ? "text-kb-ink3 line-through" : ""}>{a.omschrijving}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {v.notities.length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-xs text-kb-ink2">
+          {v.notities.map((n, i) => (
+            <li key={i}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {bericht.uitkomst?.map((u, i) => {
+        const code = u.startsWith("Uitnodigingscode: ") ? u.slice(18) : null;
+        return code ? (
+          <div key={i} className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-kb-bg px-3 py-2">
+            <span className="font-mono text-xl font-semibold tracking-[0.25em]">{code}</span>
+            <button
+              type="button"
+              onClick={async () => {
+                await navigator.clipboard.writeText(code);
+                toast.success("Code gekopieerd");
+              }}
+              className="flex items-center gap-1 text-sm font-medium text-kb-accent-ink"
+            >
+              <Copy className="h-4 w-4" /> Kopiëren
+            </button>
+          </div>
+        ) : (
+          <p key={i} className="mt-2 text-xs text-kb-ink2">
+            {u}
+          </p>
+        );
+      })}
+      {(status === "open" || status === "bezig") && v.acties.length > 0 && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Knop variant="rustig" onClick={onAnnuleer} disabled={status === "bezig"}>
+            <X className="h-4 w-4" /> Niet doen
+          </Knop>
+          <Knop onClick={onBevestig} disabled={status === "bezig"}>
+            {status === "bezig" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Bevestigen
+          </Knop>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BudgetKordaAI() {
   const { huishouden } = useOutletContext<BudgetOutletContext>();
   const hhId = huishouden.household.id;
@@ -73,10 +170,13 @@ export default function BudgetKordaAI() {
   const { data: potjes = [] } = usePotjes(hhId);
   const ververs = useVerversInzichten();
   const [denkt, setDenkt] = useState(false);
-  const [gesprek, setGesprek] = useState<KordaBericht[]>([]);
+  const [gesprek, setGesprek] = useState<Bericht[]>([]);
+  const voerUit = useVoerKordaVoorstelUit();
   const [invoer, setInvoer] = useState("");
   const [melding, setMelding] = useState<string | null>(null);
-  const einde = useRef<HTMLDivElement>(null);
+  const formulier = useRef<HTMLFormElement>(null);
+  // Follow the answer as it's written, unless you scroll yourself.
+  const volg = useRef(true);
 
   // Seen: the floating button's dot goes away.
   useEffect(() => {
@@ -98,33 +198,68 @@ export default function BudgetKordaAI() {
   }, [isLoading, inzichten, hhId]);
 
   useEffect(() => {
-    einde.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const stop = () => {
+      volg.current = false;
+    };
+    window.addEventListener("touchmove", stop, { passive: true });
+    window.addEventListener("wheel", stop, { passive: true });
+    return () => {
+      window.removeEventListener("touchmove", stop);
+      window.removeEventListener("wheel", stop);
+    };
+  }, []);
+
+  // Keep the newest line just above the input and the bottom nav: instantly
+  // (smooth scrolls on every word fought each other on iOS) and only ever down.
+  useEffect(() => {
+    if (!volg.current || !formulier.current || gesprek.length === 0) return;
+    const nav = document.querySelector<HTMLElement>('nav[aria-label="Hoofdmenu"].fixed');
+    const navHoogte = nav && getComputedStyle(nav).display !== "none" ? nav.getBoundingClientRect().height : 0;
+    const zichtbaarTot = window.innerHeight - navHoogte - 12;
+    const onder = formulier.current.getBoundingClientRect().bottom;
+    if (onder > zichtbaarTot) window.scrollBy({ top: onder - zichtbaarTot, behavior: "auto" });
   }, [gesprek, denkt]);
+
+  /** Update Korda AI's message `id`, adding it at the first piece of text. */
+  const werkBij = (id: string, wijzig: (b: Bericht) => Bericht) =>
+    setGesprek((g) => {
+      const bestaand = g.find((b) => b.id === id);
+      if (bestaand) return g.map((b) => (b.id === id ? wijzig(b) : b));
+      return [...g, wijzig({ id, rol: "ai", tekst: "" })];
+    });
 
   const stel = async (tekst: string) => {
     const v = tekst.trim();
     if (!v || denkt) return;
     const eerder = gesprek;
-    // The answer's bubble is added at the first word and grows as text arrives.
-    setGesprek([...eerder, { rol: "jij", tekst: v }]);
+    const antwoordId = nieuwId();
+    setGesprek([...eerder, { id: nieuwId(), rol: "jij", tekst: v }]);
     setInvoer("");
     setDenkt(true);
-    let begonnen = false;
-    const voegToe = (stukje: string) =>
-      setGesprek((g) => {
-        if (!begonnen) {
-          begonnen = true;
-          return [...g, { rol: "ai", tekst: stukje }];
-        }
-        const laatste = g[g.length - 1];
-        return [...g.slice(0, -1), { ...laatste, tekst: laatste.tekst + stukje }];
-      });
+    volg.current = true;
     try {
-      await vraagKordaAI({ householdId: hhId, vraag: v, geschiedenis: eerder }, voegToe);
+      await vraagKordaAI(
+        { householdId: hhId, vraag: v, geschiedenis: eerder.map(geschiedenisVan) },
+        (stukje) => werkBij(antwoordId, (b) => ({ ...b, tekst: b.tekst + stukje })),
+        (voorstel) => werkBij(antwoordId, (b) => ({ ...b, voorstel, status: voorstel.acties.length ? "open" : undefined })),
+      );
     } catch (e) {
-      voegToe(`${begonnen ? "\n\n" : ""}Dat lukte even niet: ${foutTekst(e)}`);
+      werkBij(antwoordId, (b) => ({ ...b, tekst: `${b.tekst ? `${b.tekst}\n\n` : ""}Dat lukte even niet: ${foutTekst(e)}` }));
     } finally {
       setDenkt(false);
+    }
+  };
+
+  const bevestig = async (b: Bericht) => {
+    if (!b.voorstel) return;
+    werkBij(b.id, (x) => ({ ...x, status: "bezig" }));
+    try {
+      const uitkomst = await voerUit.mutateAsync({ householdId: hhId, acties: b.voorstel.acties });
+      // The card itself turns into "Gedaan"; no extra toast over the nav.
+      werkBij(b.id, (x) => ({ ...x, status: "gedaan", uitkomst }));
+    } catch (e) {
+      werkBij(b.id, (x) => ({ ...x, status: "open" }));
+      toast.error(foutTekst(e));
     }
   };
 
@@ -225,19 +360,30 @@ export default function BudgetKordaAI() {
               </div>
             ) : (
               <div className="space-y-3" aria-live="polite">
-                {gesprek.map((b, n) =>
+                {gesprek.map((b) =>
                   b.rol === "jij" ? (
-                    <div key={n} className="flex justify-end">
+                    <div key={b.id} className="flex justify-end">
                       <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-kb-accent px-3.5 py-2 text-sm text-white">
                         {b.tekst}
                       </p>
                     </div>
                   ) : (
-                    <div key={n} className="flex items-end gap-2">
-                      <KordaAIFiguur grootte={28} zweeft={false} />
-                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-kb-sunk px-3.5 py-2 text-sm">
-                        <Antwoord tekst={b.tekst} />
-                      </div>
+                    <div key={b.id} className="space-y-2">
+                      {b.tekst.trim() && (
+                        <div className="flex items-end gap-2">
+                          <KordaAIFiguur grootte={28} zweeft={false} />
+                          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-kb-sunk px-3.5 py-2 text-sm">
+                            <Antwoord tekst={b.tekst} />
+                          </div>
+                        </div>
+                      )}
+                      {b.voorstel && (
+                        <VoorstelKaart
+                          bericht={b}
+                          onBevestig={() => bevestig(b)}
+                          onAnnuleer={() => werkBij(b.id, (x) => ({ ...x, status: "geannuleerd" }))}
+                        />
+                      )}
                     </div>
                   ),
                 )}
@@ -256,11 +402,10 @@ export default function BudgetKordaAI() {
                     </p>
                   </div>
                 )}
-                <div ref={einde} />
               </div>
             )}
 
-            <form onSubmit={verstuur} className="mt-4 flex items-end gap-2">
+            <form ref={formulier} onSubmit={verstuur} className="mt-4 flex items-end gap-2">
               <textarea
                 value={invoer}
                 onChange={(e) => setInvoer(e.target.value)}
@@ -286,7 +431,8 @@ export default function BudgetKordaAI() {
               </button>
             </form>
             <p className="mt-2 text-xs text-kb-ink3">
-              Korda AI ziet de gedeelde potjes en jouw eigen kant. Het geeft geen beleggings- of belastingadvies.
+              Korda AI ziet de gedeelde potjes en jouw eigen kant, en kan dingen voor je regelen: jij bevestigt elke
+              wijziging. Geen beleggings- of belastingadvies.
             </p>
           </Kaart>
         </Sectie>
