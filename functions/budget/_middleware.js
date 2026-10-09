@@ -22,5 +22,8 @@ export async function onRequest({ next }) {
     .on('meta[name="theme-color"]', zet('content', PAPIER))
     // A light app: dark status-bar text instead of the tracker's translucent black.
     .on('meta[name="apple-mobile-web-app-status-bar-style"]', zet('content', 'default'))
+    // Use the whole screen, so env(safe-area-inset-*) reports the home-indicator
+    // strip: the bottom nav pads itself above it instead of sitting under it.
+    .on('meta[name="viewport"]', zet('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover'))
     .transform(res);
 }

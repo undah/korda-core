@@ -232,7 +232,8 @@ function HeldKaart({
   const tekort = totaal.over < 0;
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-kb-ink px-5 pb-5 pt-6 text-white sm:px-7 sm:pt-7">
+    // isolate + translateZ: iOS Safari otherwise lets the blurred glow leak past the rounded corners.
+    <section className="relative isolate overflow-hidden rounded-3xl bg-kb-ink px-5 pb-5 pt-6 text-white [transform:translateZ(0)] sm:px-7 sm:pt-7">
       {/* Quiet depth, no decoration that competes with the number. */}
       <div
         aria-hidden="true"
