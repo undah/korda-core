@@ -242,6 +242,16 @@ export type KordaActie =
   | { type: "wijzig_potje"; potId: string; velden: Record<string, unknown>; omschrijving: string }
   | { type: "archiveer_potje"; potId: string; omschrijving: string }
   | { type: "deel_in"; txIds: string[]; potId: string | null; nieuwPot?: string | null; soort: TxSoort | null; regels: string[]; omschrijving: string }
+  | {
+      type: "splits";
+      txId: string;
+      /** -1 for money out (parts are stored negative, like the payment), 1 for money in. */
+      teken: number;
+      delen: Array<{ potId: string | null; nieuwPot: string | null; bedrag: number }>;
+      omschrijving: string;
+    }
+  | { type: "maak_doel"; code: string; naam: string; emoji: string; doelbedrag: number; deadline: string | null; gedeeld: boolean; omschrijving: string }
+  | { type: "stort_in_doel"; doelId: string | null; nieuwDoel: string | null; bedrag: number; omschrijving: string }
   | { type: "notitie"; txId: string; tekst: string; omschrijving: string }
   | { type: "maak_uitnodiging"; omschrijving: string }
   | { type: "wijzig_mijn_naam"; naam: string; omschrijving: string };
@@ -258,8 +268,9 @@ export function useVoerKordaVoorstelUit() {
   const { user } = useAuth();
   return useSchrijf(async (p: { householdId: string; acties: KordaActie[] }): Promise<string[]> => {
     const melden: string[] = [];
-    // Pots made in this proposal, by Korda AI's code, for the steps after.
+    // Pots and goals made in this proposal, by Korda AI's code, for the steps after.
     const nieuwePotten = new Map<string, string>();
+    const nieuweDoelen = new Map<string, string>();
     for (const a of p.acties) {
       switch (a.type) {
         case "maak_potje": {
@@ -310,6 +321,55 @@ export function useVoerKordaVoorstelUit() {
             );
           }
           if (eerder) melden.push(`Er volgden ${eerder} eerdere betalingen mee.`);
+          break;
+        }
+        case "splits": {
+          const delen = a.delen.map((d) => {
+            const potId = d.nieuwPot ? nieuwePotten.get(d.nieuwPot) : d.potId;
+            if (!potId) throw new Error("Een nieuw potje voor de verdeling is niet gemaakt");
+            return { potId, bedrag: d.bedrag };
+          });
+          // Same writes as splitting by hand in the transaction sheet.
+          await ok(supabase.from("budget_tx_splits").delete().eq("transaction_id", a.txId));
+          await ok(
+            supabase.from("budget_tx_splits").insert(
+              delen.map((d) => ({ transaction_id: a.txId, household_id: p.householdId, pot_id: d.potId, amount: a.teken * d.bedrag })),
+            ),
+          );
+          await ok(supabase.from("budget_transactions").update({ pot_id: null, soort: null, pot_status: "confirmed" }).eq("id", a.txId));
+          break;
+        }
+        case "maak_doel": {
+          const gemaakt = await ok(
+            supabase
+              .from("budget_goals")
+              .insert({
+                household_id: p.householdId,
+                name: a.naam,
+                emoji: a.emoji,
+                target: a.doelbedrag,
+                deadline: a.deadline,
+                scope: a.gedeeld ? "shared" : "personal",
+                owner_id: a.gedeeld ? null : user!.id,
+              })
+              .select("id")
+              .single(),
+          );
+          if (gemaakt?.id) nieuweDoelen.set(a.code, gemaakt.id);
+          break;
+        }
+        case "stort_in_doel": {
+          const doelId = a.nieuwDoel ? nieuweDoelen.get(a.nieuwDoel) : a.doelId;
+          if (!doelId) throw new Error("Het nieuwe doel is niet gemaakt");
+          await ok(
+            supabase.from("budget_goal_entries").insert({
+              goal_id: doelId,
+              household_id: p.householdId,
+              amount: a.bedrag,
+              kind: a.bedrag < 0 ? "opname" : "storting",
+              created_by: user!.id,
+            }),
+          );
           break;
         }
         case "notitie":

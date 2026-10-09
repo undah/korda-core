@@ -28,6 +28,7 @@ const VOORBEELDEN = [
   "Hoe doen we het vergeleken met vorige maand?",
   "Welke abonnementen hebben we?",
   "Maak een potje voor pizza en zet Domino's erin",
+  "Maak een spaardoel voor vakantie van € 1.500",
 ];
 
 const wanneer = (iso: string) =>

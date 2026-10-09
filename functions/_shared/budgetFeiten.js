@@ -42,7 +42,7 @@ export async function verzamelFeiten(env, householdId, userId = null) {
   const dezeMaand = maandSleutel(vandaag);
   const vanaf = `${maandTerug(vandaag, 3)}-01`;
 
-  const [potjes, regels, tx, rekeningen, lasten, doelen] = await Promise.all([
+  const [potjes, regels, tx, rekeningen, lasten, doelen, stortingen] = await Promise.all([
     db(env, `budget_pots?household_id=eq.${q(householdId)}&archived_at=is.null&select=id,name,emoji,monthly_limit,kind,scope,owner_id,groep&order=sort_order`),
     db(env, `budget_tx_lines?household_id=eq.${q(householdId)}&booked_on=gte.${vanaf}&select=pot_id,amount,booked_on`),
     db(
@@ -53,6 +53,7 @@ export async function verzamelFeiten(env, householdId, userId = null) {
     db(env, `budget_accounts?household_id=eq.${q(householdId)}&select=id,owner_id,visibility`),
     db(env, `budget_recurring?household_id=eq.${q(householdId)}&select=name,amount,previous_amount,price_changed_at,cadence,scope,owner_id,is_subscription`),
     db(env, `budget_goals?household_id=eq.${q(householdId)}&archived_at=is.null&select=id,name,emoji,target,deadline,scope,owner_id`),
+    db(env, `budget_goal_entries?household_id=eq.${q(householdId)}&select=goal_id,amount`),
   ]);
 
   const zichtbaarPot = (p) => p.scope === 'shared' || (userId && p.owner_id === userId);
@@ -65,6 +66,15 @@ export async function verzamelFeiten(env, householdId, userId = null) {
     return (r && (r.visibility === 'shared' || (userId && r.owner_id === userId))) || potIds.has(t.pot_id) || (t.splits ?? []).some((s) => potIds.has(s.pot_id));
   };
   const txs = (tx ?? []).filter(zichtbaarTx).map((t) => ({ ...t, amount: Number(t.amount), splits: [] }));
+  // Splitting needs the whole payment in view: its account must be shared or yours.
+  const splitsbaar = new Set(
+    (tx ?? [])
+      .filter((t) => {
+        const r = rek.get(t.account_id);
+        return r && (r.visibility === 'shared' || (userId && r.owner_id === userId));
+      })
+      .map((t) => t.id),
+  );
 
   // Spending per pot per month, from the per-part lines (splits count per part).
   const perPotMaand = new Map();
@@ -134,9 +144,14 @@ export async function verzamelFeiten(env, householdId, userId = null) {
     .map((l) => `${l.name}: van ${euro(Number(l.previous_amount))} naar ${euro(Number(l.amount))} per ${l.cadence}`);
   const abonnementen = (lasten ?? []).filter((l) => l.is_subscription && (l.scope === 'shared' || (userId && l.owner_id === userId)));
 
-  const doelRegels = (doelen ?? [])
-    .filter((d) => d.scope === 'shared' || (userId && d.owner_id === userId))
-    .map((d) => `${d.emoji} ${d.name}: doel ${euro(Number(d.target))}${d.deadline ? `, uiterlijk ${d.deadline}` : ''}`);
+  const gespaard = new Map();
+  for (const e of stortingen ?? []) gespaard.set(e.goal_id, (gespaard.get(e.goal_id) ?? 0) + Number(e.amount));
+  const doelenInZicht = (doelen ?? []).filter((d) => d.scope === 'shared' || (userId && d.owner_id === userId));
+  const doelAlias = new Map(doelenInZicht.map((d, i) => [`g${i + 1}`, d.id]));
+  const doelRegels = doelenInZicht.map(
+    (d, i) =>
+      `g${i + 1} ${d.emoji} ${d.name}: ${euro(gespaard.get(d.id) ?? 0)} gespaard van ${euro(Number(d.target))}${d.deadline ? `, uiterlijk ${d.deadline}` : ''}${d.scope === 'shared' ? '' : ' (persoonlijk)'}`,
+  );
 
   const tekst = [
     `Vandaag: ${vandaag} (dag ${dag} van ${dagenInMaand}, ${Math.round(voortgang * 100)}% van de maand).`,
@@ -175,5 +190,5 @@ export async function verzamelFeiten(env, householdId, userId = null) {
     })
     .join('\n');
 
-  return { tekst, alias, transacties, txAlias, potten: pots, splitIds };
+  return { tekst, alias, transacties, txAlias, potten: pots, splitIds, splitsbaar, doelAlias, doelen: doelenInZicht, gespaard };
 }

@@ -86,6 +86,61 @@ export const TOOLS = [
     },
   },
   {
+    name: 'splits',
+    description: 'Stel voor één betaling te verdelen over meerdere potjes. De delen moeten samen precies het bedrag van de betaling zijn.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        transactie: { type: 'string', description: 'Code van de betaling, zoals t7.' },
+        delen: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              potje: { type: 'string', description: 'Code van het potje (p1, ...) of van een nieuw potje uit dit voorstel (nieuw1).' },
+              bedrag: { type: 'number', description: 'Deel in euro, positief.' },
+            },
+            required: ['potje', 'bedrag'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['transactie', 'delen'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'maak_doel',
+    description: 'Stel voor een nieuw spaardoel aan te maken.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Een eigen code voor dit nieuwe doel, zoals nieuwdoel1, om er in hetzelfde voorstel geld in te storten.' },
+        naam: { type: 'string', description: 'Naam van het doel (max 60 tekens).' },
+        emoji: { type: 'string' },
+        doelbedrag: { type: 'number', description: 'Het bedrag dat ze willen sparen, in euro.' },
+        deadline: { type: 'string', description: 'Uiterlijk op deze datum (JJJJ-MM-DD), of een lege string.' },
+        voor: { type: 'string', enum: ['gedeeld', 'persoonlijk'] },
+      },
+      required: ['code', 'naam', 'emoji', 'doelbedrag', 'deadline', 'voor'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'stort_in_doel',
+    description: 'Stel voor geld in een spaardoel te storten, of eruit te halen.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        doel: { type: 'string', description: 'Code van het doel (g1, ...) of van een nieuw doel uit dit voorstel.' },
+        bedrag: { type: 'number', description: 'Bedrag in euro, positief.' },
+        richting: { type: 'string', enum: ['storten', 'opnemen'] },
+      },
+      required: ['doel', 'bedrag', 'richting'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'notitie',
     description: 'Stel voor een notitie bij een betaling te zetten.',
     input_schema: {
@@ -141,8 +196,13 @@ export function maakVoorstel(toolCalls, ctx) {
     return ctx.potten.find((p) => p.id === id) ?? null;
   };
   const magWijzigen = (p) => p.scope === 'shared' || p.owner_id === ctx.userId;
-  // Pots this proposal creates, by the code Korda AI gave them, so a later step can use them.
+  // Pots and goals this proposal creates, by the code Korda AI gave them, so a later step can use them.
   const nieuw = new Map();
+  const nieuweDoelen = new Map();
+  const doelVan = (code) => {
+    const id = ctx.doelAlias?.get(String(code ?? '').trim());
+    return ctx.doelen?.find((d) => d.id === id) ?? null;
+  };
   const acties = [];
   const notities = [];
 
@@ -275,6 +335,95 @@ export function maakVoorstel(toolCalls, ctx) {
           omschrijving: `${betalingen.length} ${betalingen.length === 1 ? 'betaling' : 'betalingen'} ${doel} (${wie}${namen.size > 3 ? ', …' : ''})${
             regels.length ? `, en voortaan automatisch voor ${regels.slice(0, 2).join(', ')}${regels.length > 2 ? ', …' : ''}` : ''
           }`,
+        });
+        break;
+      }
+      case 'splits': {
+        const t = ctx.txAlias.get(String(i.transactie ?? '').trim());
+        if (!t) {
+          notities.push(`Betaling ${i.transactie ?? '?'} ken ik niet.`);
+          break;
+        }
+        if (!ctx.splitsbaar?.has(t.id)) {
+          notities.push(`${t.counterparty ?? 'Die betaling'} komt van een rekening die je niet helemaal ziet; verdelen kan alleen wie hem betaalde.`);
+          break;
+        }
+        const delen = [];
+        let fout = null;
+        for (const d of Array.isArray(i.delen) ? i.delen.slice(0, 8) : []) {
+          const code = String(d.potje ?? '').trim();
+          const bedrag = limiet(d.bedrag);
+          const pNieuw = nieuw.has(code) ? nieuw.get(code) : null;
+          const pBestaand = pNieuw ? null : potVan(code);
+          if (!(pNieuw || pBestaand) || !bedrag) {
+            fout = `Een deel had geen geldig potje of bedrag.`;
+            break;
+          }
+          delen.push({ potId: pBestaand?.id ?? null, nieuwPot: pNieuw ? code : null, bedrag, label: potLabel(pNieuw ?? pBestaand) });
+        }
+        const totaal = Math.round(delen.reduce((s, d) => s + d.bedrag, 0) * 100);
+        if (!fout && delen.length < 2) fout = 'Verdelen kan pas met minstens twee delen.';
+        if (!fout && totaal !== Math.round(Math.abs(t.amount) * 100)) {
+          fout = `De delen (${euro(totaal / 100)}) zijn niet samen ${euro(Math.abs(t.amount))}.`;
+        }
+        if (fout) {
+          notities.push(fout);
+          break;
+        }
+        acties.push({
+          type: 'splits',
+          txId: t.id,
+          teken: t.amount < 0 ? -1 : 1,
+          delen: delen.map(({ label, ...d }) => d),
+          omschrijving: `${t.counterparty ?? 'Betaling'} (${euro(Math.abs(t.amount))}) verdelen: ${delen.map((d) => `${euro(d.bedrag)} ${d.label}`).join(', ')}`,
+        });
+        break;
+      }
+      case 'maak_doel': {
+        const naam = tekst(i.naam, 60);
+        const doelbedrag = limiet(i.doelbedrag);
+        if (!naam || !doelbedrag) {
+          notities.push('Een nieuw doel had geen geldige naam of bedrag.');
+          break;
+        }
+        const deadline = /^\d{4}-\d{2}-\d{2}$/.test(String(i.deadline ?? '')) ? i.deadline : null;
+        const emoji = eenEmoji(i.emoji);
+        const gedeeld = i.voor !== 'persoonlijk';
+        const code = tekst(i.code, 20) || `nieuwdoel${nieuweDoelen.size + 1}`;
+        nieuweDoelen.set(code, { name: naam, emoji });
+        acties.push({
+          type: 'maak_doel',
+          code,
+          naam,
+          emoji,
+          doelbedrag,
+          deadline,
+          gedeeld,
+          omschrijving: `Nieuw spaardoel ${emoji} ${naam}: ${euro(doelbedrag)}${deadline ? `, uiterlijk ${deadline}` : ''}, ${gedeeld ? 'gedeeld' : 'alleen voor jou'}`,
+        });
+        break;
+      }
+      case 'stort_in_doel': {
+        const code = String(i.doel ?? '').trim();
+        const dNieuw = nieuweDoelen.get(code) ?? null;
+        const dBestaand = dNieuw ? null : doelVan(code);
+        const bedrag = limiet(i.bedrag);
+        if (!(dNieuw || dBestaand) || !bedrag) {
+          notities.push(`Doel ${code || '?'} ken ik niet, of het bedrag klopt niet.`);
+          break;
+        }
+        const opnemen = i.richting === 'opnemen';
+        if (opnemen && dBestaand && bedrag > (ctx.gespaard?.get(dBestaand.id) ?? 0) + 0.005) {
+          notities.push(`Uit ${dBestaand.emoji} ${dBestaand.name} kan niet meer dan ${euro(ctx.gespaard?.get(dBestaand.id) ?? 0)} worden opgenomen.`);
+          break;
+        }
+        const d = dNieuw ?? dBestaand;
+        acties.push({
+          type: 'stort_in_doel',
+          doelId: dBestaand?.id ?? null,
+          nieuwDoel: dNieuw ? code : null,
+          bedrag: opnemen ? -bedrag : bedrag,
+          omschrijving: `${euro(bedrag)} ${opnemen ? 'opnemen uit' : 'storten in'} ${d.emoji} ${d.name}`,
         });
         break;
       }
