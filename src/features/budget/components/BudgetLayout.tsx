@@ -104,21 +104,30 @@ export default function BudgetLayout() {
   const { actief, kies } = useActiefHuishouden(huishoudens);
 
   // The rest of Korda is dark; this app is light, so paint the page behind it too.
-  // Swap in the budget manifest and theme colour so "Add to Home Screen" installs
-  // KordaBudget (scope /budget/) rather than the tracker.
+  // The server already sends KordaBudget's name, icon and manifest for /budget
+  // pages (functions/budget/_middleware.js); this covers arriving from another
+  // Korda app without a page load, and puts the tracker's back on the way out.
   useEffect(() => {
     const vorige = document.body.style.background;
     document.body.style.background = PAPIER;
-    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-    const thema = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    const oudManifest = manifest?.getAttribute("href");
-    const oudThema = thema?.getAttribute("content");
-    manifest?.setAttribute("href", "/budget-manifest.json");
-    thema?.setAttribute("content", PAPIER);
+    const wissels: Array<[string, string, string]> = [
+      ['link[rel="manifest"]', "href", "/budget-manifest.json"],
+      ['link[rel="apple-touch-icon"]', "href", "/budget-icon-180.png"],
+      ['meta[name="apple-mobile-web-app-title"]', "content", "KordaBudget"],
+      ['meta[name="theme-color"]', "content", PAPIER],
+    ];
+    const oud = wissels.map(([sel, attr, nieuw]) => {
+      const el = document.querySelector(sel);
+      const waarde = el?.getAttribute(attr) ?? null;
+      el?.setAttribute(attr, nieuw);
+      return { el, attr, waarde };
+    });
+    const oudeTitel = document.title;
+    document.title = "KordaBudget";
     return () => {
       document.body.style.background = vorige;
-      if (oudManifest) manifest?.setAttribute("href", oudManifest);
-      if (oudThema) thema?.setAttribute("content", oudThema);
+      for (const { el, attr, waarde } of oud) if (el && waarde) el.setAttribute(attr, waarde);
+      document.title = oudeTitel;
     };
   }, []);
 

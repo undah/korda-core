@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- KordaBudget: three pots, filled to different levels. Full-bleed: phones round the corners. -->
+  <rect width="512" height="512" fill="#3d3bd4"/>
+  <g transform="translate(116 150)">
+    <rect y="0" width="280" height="44" rx="22" fill="#ffffff" opacity="0.22"/>
+    <rect y="0" width="224" height="44" rx="22" fill="#ffffff"/>
+    <rect y="84" width="280" height="44" rx="22" fill="#ffffff" opacity="0.22"/>
+    <rect y="84" width="150" height="44" rx="22" fill="#ffffff"/>
+    <rect y="168" width="280" height="44" rx="22" fill="#ffffff" opacity="0.22"/>
+    <rect y="168" width="84" height="44" rx="22" fill="#ffffff"/>
+  </g>
+</svg>
