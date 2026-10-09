@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,87 +6,88 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-import SuiteAbout from "./pages/SuiteAbout";
-import SuitePricing from "./pages/SuitePricing";
+const SuiteAbout = lazy(() => import("./pages/SuiteAbout"));
+const SuitePricing = lazy(() => import("./pages/SuitePricing"));
 import SuiteHome from "./pages/SuiteHome";
 
-import KordaCRM from "./pages/KordaCRM";
-import CRMLayout from "./features/crm/components/CRMLayout";
-import CRMDashboard from "./pages/crm/CRMDashboard";
-import CRMLog from "./pages/crm/CRMLog";
-import CRMLeads from "./pages/crm/CRMLeads";
-import CRMWeek from "./pages/crm/CRMWeek";
-import CRMScripts from "./pages/crm/CRMScripts";
+const KordaCRM = lazy(() => import("./pages/KordaCRM"));
+const CRMLayout = lazy(() => import("./features/crm/components/CRMLayout"));
+const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
+const CRMLog = lazy(() => import("./pages/crm/CRMLog"));
+const CRMLeads = lazy(() => import("./pages/crm/CRMLeads"));
+const CRMWeek = lazy(() => import("./pages/crm/CRMWeek"));
+const CRMScripts = lazy(() => import("./pages/crm/CRMScripts"));
 
-import TrainingLayout from "./features/training/components/TrainingLayout";
-import TrainingNew from "./pages/training/TrainingNew";
-import TrainingHistory from "./pages/training/TrainingHistory";
-import TrainingScheduler from "./pages/training/TrainingScheduler";
-import TrainingMistakes from "./pages/training/TrainingMistakes";
-import TrainingConcepts from "./pages/training/TrainingConcepts";
-import TrainingPerformance from "./pages/training/TrainingPerformance";
-import TrainingRules from "./pages/training/TrainingRules";
-import TrainingFinetune from "./pages/training/TrainingFinetune";
-import TrainingChat from "./pages/training/TrainingChat";
+const TrainingLayout = lazy(() => import("./features/training/components/TrainingLayout"));
+const TrainingNew = lazy(() => import("./pages/training/TrainingNew"));
+const TrainingHistory = lazy(() => import("./pages/training/TrainingHistory"));
+const TrainingScheduler = lazy(() => import("./pages/training/TrainingScheduler"));
+const TrainingMistakes = lazy(() => import("./pages/training/TrainingMistakes"));
+const TrainingConcepts = lazy(() => import("./pages/training/TrainingConcepts"));
+const TrainingPerformance = lazy(() => import("./pages/training/TrainingPerformance"));
+const TrainingRules = lazy(() => import("./pages/training/TrainingRules"));
+const TrainingFinetune = lazy(() => import("./pages/training/TrainingFinetune"));
+const TrainingChat = lazy(() => import("./pages/training/TrainingChat"));
 
-import KordaOutreach from "./pages/KordaOutreach";
-import OutreachLayout from "./features/outreach/components/OutreachLayout";
-import OutreachLeads from "./pages/outreach/OutreachLeads";
-import OutreachNiches from "./pages/outreach/OutreachNiches";
-import OutreachNicheForm from "./pages/outreach/OutreachNicheForm";
-import OutreachBusiness from "./pages/outreach/OutreachBusiness";
-import OutreachRuns from "./pages/outreach/OutreachRuns";
-import OutreachSuppression from "./pages/outreach/OutreachSuppression";
-import OutreachSenders from "./pages/outreach/OutreachSenders";
-import OutreachSettings from "./pages/outreach/OutreachSettings";
-import OutreachAnalytics from "./pages/outreach/OutreachAnalytics";
-import OutreachMessages from "./pages/outreach/OutreachMessages";
-import OutreachUsage from "./pages/outreach/OutreachUsage";
-import OutreachCampaigns from "./pages/outreach/OutreachCampaigns";
-import OutreachCampaign from "./pages/outreach/OutreachCampaign";
-import OutreachCampaignNew from "./pages/outreach/OutreachCampaignNew";
-import OutreachTemplates from "./pages/outreach/OutreachTemplates";
+const KordaOutreach = lazy(() => import("./pages/KordaOutreach"));
+const OutreachLayout = lazy(() => import("./features/outreach/components/OutreachLayout"));
+const OutreachLeads = lazy(() => import("./pages/outreach/OutreachLeads"));
+const OutreachNiches = lazy(() => import("./pages/outreach/OutreachNiches"));
+const OutreachNicheForm = lazy(() => import("./pages/outreach/OutreachNicheForm"));
+const OutreachBusiness = lazy(() => import("./pages/outreach/OutreachBusiness"));
+const OutreachRuns = lazy(() => import("./pages/outreach/OutreachRuns"));
+const OutreachSuppression = lazy(() => import("./pages/outreach/OutreachSuppression"));
+const OutreachSenders = lazy(() => import("./pages/outreach/OutreachSenders"));
+const OutreachSettings = lazy(() => import("./pages/outreach/OutreachSettings"));
+const OutreachAnalytics = lazy(() => import("./pages/outreach/OutreachAnalytics"));
+const OutreachMessages = lazy(() => import("./pages/outreach/OutreachMessages"));
+const OutreachUsage = lazy(() => import("./pages/outreach/OutreachUsage"));
+const OutreachCampaigns = lazy(() => import("./pages/outreach/OutreachCampaigns"));
+const OutreachCampaign = lazy(() => import("./pages/outreach/OutreachCampaign"));
+const OutreachCampaignNew = lazy(() => import("./pages/outreach/OutreachCampaignNew"));
+const OutreachTemplates = lazy(() => import("./pages/outreach/OutreachTemplates"));
 
-import Demo from "./pages/Demo";
-import KordaTrading from "./pages/KordaTrading";
-import Index from "./pages/Index";
-import Journal from "./pages/Journal";
-import Analytics from "./pages/Analytics";
-import Settings from "./pages/Settings";
+const Demo = lazy(() => import("./pages/Demo"));
+const KordaTrading = lazy(() => import("./pages/KordaTrading"));
+const Index = lazy(() => import("./pages/Index"));
+const Journal = lazy(() => import("./pages/Journal"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Settings = lazy(() => import("./pages/Settings"));
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import ComingSoon from "./pages/ComingSoon";
+const Login = lazy(() => import("./pages/Login"));
+const ComingSoon = lazy(() => import("./pages/ComingSoon"));
 
-import TrackerLogin from "./pages/TrackerLogin";
-import KordaTracker from "./pages/KordaTracker";
-import TrackerLayout from "./features/tracker/components/TrackerLayout";
-import KordaBudget from "./pages/KordaBudget";
-import BudgetLogin from "./pages/BudgetLogin";
-import BudgetLayout from "./features/budget/components/BudgetLayout";
-import BudgetOverzicht from "./pages/budget/BudgetOverzicht";
-import BudgetPotjes from "./pages/budget/BudgetPotjes";
-import BudgetMeer from "./pages/budget/BudgetMeer";
-import BudgetPotDetail from "./pages/budget/BudgetPotDetail";
-import BudgetHuishoudens from "./pages/budget/BudgetHuishoudens";
-import BudgetTransacties from "./pages/budget/BudgetTransacties";
-import BudgetDoelen from "./pages/budget/BudgetDoelen";
-import BudgetVasteLasten from "./pages/budget/BudgetVasteLasten";
-import BudgetVerrekenen from "./pages/budget/BudgetVerrekenen";
-import BudgetRekeningen from "./pages/budget/BudgetRekeningen";
-import BudgetWeek from "./pages/budget/BudgetWeek";
-import BudgetSnelIndelen from "./pages/budget/BudgetSnelIndelen";
-import BudgetBankTerug from "./pages/budget/BudgetBankTerug";
-import { BudgetPrivacy, BudgetVoorwaarden } from "./pages/budget/BudgetJuridisch";
-import TrackerDashboard from "./pages/tracker/TrackerDashboard";
-import TrackerGraph from "./pages/tracker/TrackerGraph";
-import TrackerProgress from "./pages/tracker/TrackerProgress";
-import TrackerJournal from "./pages/tracker/TrackerJournal";
-import TrackerPhotos from "./pages/tracker/TrackerPhotos";
-import TrackerAnalysis from "./pages/tracker/TrackerAnalysis";
-import TrackerSettings from "./pages/tracker/TrackerSettings";
-import TrackerStrava from "./pages/tracker/TrackerStrava";
-import SessionLog from "./pages/SessionLog";
-import Charting from "./pages/Charting";
+const TrackerLogin = lazy(() => import("./pages/TrackerLogin"));
+const KordaTracker = lazy(() => import("./pages/KordaTracker"));
+const TrackerLayout = lazy(() => import("./features/tracker/components/TrackerLayout"));
+const KordaBudget = lazy(() => import("./pages/KordaBudget"));
+const BudgetLogin = lazy(() => import("./pages/BudgetLogin"));
+const BudgetLayout = lazy(() => import("./features/budget/components/BudgetLayout"));
+const BudgetOverzicht = lazy(() => import("./pages/budget/BudgetOverzicht"));
+const BudgetPotjes = lazy(() => import("./pages/budget/BudgetPotjes"));
+const BudgetMeer = lazy(() => import("./pages/budget/BudgetMeer"));
+const BudgetPotDetail = lazy(() => import("./pages/budget/BudgetPotDetail"));
+const BudgetHuishoudens = lazy(() => import("./pages/budget/BudgetHuishoudens"));
+const BudgetTransacties = lazy(() => import("./pages/budget/BudgetTransacties"));
+const BudgetDoelen = lazy(() => import("./pages/budget/BudgetDoelen"));
+const BudgetVasteLasten = lazy(() => import("./pages/budget/BudgetVasteLasten"));
+const BudgetVerrekenen = lazy(() => import("./pages/budget/BudgetVerrekenen"));
+const BudgetRekeningen = lazy(() => import("./pages/budget/BudgetRekeningen"));
+const BudgetWeek = lazy(() => import("./pages/budget/BudgetWeek"));
+const BudgetSnelIndelen = lazy(() => import("./pages/budget/BudgetSnelIndelen"));
+const BudgetBankTerug = lazy(() => import("./pages/budget/BudgetBankTerug"));
+const BudgetPrivacy = lazy(() => import("./pages/budget/BudgetJuridisch").then((m) => ({ default: m.BudgetPrivacy })));
+const BudgetVoorwaarden = lazy(() => import("./pages/budget/BudgetJuridisch").then((m) => ({ default: m.BudgetVoorwaarden })));
+const TrackerDashboard = lazy(() => import("./pages/tracker/TrackerDashboard"));
+const TrackerGraph = lazy(() => import("./pages/tracker/TrackerGraph"));
+const TrackerProgress = lazy(() => import("./pages/tracker/TrackerProgress"));
+const TrackerJournal = lazy(() => import("./pages/tracker/TrackerJournal"));
+const TrackerPhotos = lazy(() => import("./pages/tracker/TrackerPhotos"));
+const TrackerAnalysis = lazy(() => import("./pages/tracker/TrackerAnalysis"));
+const TrackerSettings = lazy(() => import("./pages/tracker/TrackerSettings"));
+const TrackerStrava = lazy(() => import("./pages/tracker/TrackerStrava"));
+const SessionLog = lazy(() => import("./pages/SessionLog"));
+const Charting = lazy(() => import("./pages/Charting"));
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 
 
@@ -120,6 +122,7 @@ function AnimatedRoutes() {
         transition={pageTransition}
         style={{ minHeight: "100vh" }}
       >
+        <Suspense fallback={<div style={{ minHeight: "100vh" }} />}>
         <Routes location={location}>
           {/* Public */}
           <Route path="/" element={<SuiteHome />} />
@@ -233,6 +236,7 @@ function AnimatedRoutes() {
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );

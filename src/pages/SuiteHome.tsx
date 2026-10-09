@@ -21,6 +21,8 @@ type App = {
   features: string[];
   icon: (size: number) => React.ReactNode;
   deco: React.ReactNode;
+  /** Fetch the app's code ahead of the tap (same modules App.tsx loads lazily). */
+  laad: () => Promise<unknown>;
 };
 
 /** Which app was opened last, so the page can offer the way back. */
@@ -29,6 +31,7 @@ const LAATSTE = "korda-laatste-app";
 const APPS: App[] = [
   {
     id: "budget",
+    laad: () => Promise.all([import("./KordaBudget"), import("../features/budget/components/BudgetLayout"), import("./budget/BudgetOverzicht")]),
     to: "/budget",
     name: "KordaBudget",
     tag: "Household Budget",
@@ -65,6 +68,7 @@ const APPS: App[] = [
   },
   {
     id: "trading",
+    laad: () => import("./KordaTrading"),
     to: "/trading",
     name: "KordaTrading",
     tag: "Trading Journal",
@@ -99,6 +103,7 @@ const APPS: App[] = [
   },
   {
     id: "tracker",
+    laad: () => Promise.all([import("./KordaTracker"), import("../features/tracker/components/TrackerLayout")]),
     to: "/tracker",
     name: "KordaTracker",
     tag: "Health Tracker",
@@ -132,6 +137,7 @@ const APPS: App[] = [
   },
   {
     id: "crm",
+    laad: () => Promise.all([import("./KordaCRM"), import("../features/crm/components/CRMLayout")]),
     to: "/crm",
     name: "KordaCRM",
     tag: "Sales CRM",
@@ -170,6 +176,7 @@ const APPS: App[] = [
   },
   {
     id: "outreach",
+    laad: () => Promise.all([import("./KordaOutreach"), import("../features/outreach/components/OutreachLayout")]),
     to: "/outreach",
     name: "KordaOutreach",
     tag: "Lead Engine",
@@ -207,6 +214,22 @@ const APPS: App[] = [
     ),
   },
 ];
+
+/** Start loading an app once; a second hover or tap reuses the same request. */
+const geladen = new Set<AppId>();
+function laadVooruit(app: App) {
+  if (geladen.has(app.id)) return;
+  geladen.add(app.id);
+  void app.laad().catch(() => geladen.delete(app.id));
+}
+
+/** Props that start the download the moment a finger or pointer reaches a link. */
+const vooruit = (app: App) => ({
+  onPointerEnter: () => laadVooruit(app),
+  onPointerDown: () => laadVooruit(app),
+  onTouchStart: () => laadVooruit(app),
+  onFocus: () => laadVooruit(app),
+});
 
 function leesLaatste(): App | null {
   try {
@@ -391,6 +414,14 @@ const CSS = `
 export default function SuiteHome() {
   const [laatste] = useState(leesLaatste);
 
+  // The app you'll most likely open next: fetch it once the page is idle.
+  useEffect(() => {
+    if (!laatste) return;
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(() => laadVooruit(laatste));
+    else window.setTimeout(() => laadVooruit(laatste), 1200);
+  }, [laatste]);
+
   useEffect(() => {
     const link = document.createElement("link");
     link.href =
@@ -442,7 +473,7 @@ export default function SuiteHome() {
             opens all of them.
           </p>
           {laatste && (
-            <Link to={laatste.to} className="suite-verder suite-anim-3" onClick={() => onthoud(laatste.id)}>
+            <Link to={laatste.to} className="suite-verder suite-anim-3" onClick={() => onthoud(laatste.id)} {...vooruit(laatste)}>
               <small>Continue in</small> {laatste.name} <span aria-hidden>→</span>
             </Link>
           )}
@@ -451,7 +482,7 @@ export default function SuiteHome() {
         <section className="suite-launch suite-anim-4" id="apps" aria-label="Open an app">
           <div className="suite-launch-grid">
             {APPS.map((a) => (
-              <Link key={a.id} to={a.to} className={`suite-tile suite-tile-${a.id}`} onClick={() => onthoud(a.id)}>
+              <Link key={a.id} to={a.to} className={`suite-tile suite-tile-${a.id}`} onClick={() => onthoud(a.id)} {...vooruit(a)}>
                 {a.icon(36)}
                 <span className="suite-tile-tekst">
                   <span className="suite-tile-naam">{a.name}</span>
@@ -476,7 +507,7 @@ export default function SuiteHome() {
         <section className="suite-cards-section">
           <div className="suite-cards-grid">
             {APPS.map((a) => (
-              <Link key={a.id} to={a.to} className={`suite-card suite-card-${a.id}`} onClick={() => onthoud(a.id)}>
+              <Link key={a.id} to={a.to} className={`suite-card suite-card-${a.id}`} onClick={() => onthoud(a.id)} {...vooruit(a)}>
                 <div className="suite-card-top-line" />
                 <div>
                   <div className="suite-card-icon">{a.icon(48)}</div>

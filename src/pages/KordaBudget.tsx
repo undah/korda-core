@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Landmark, PiggyBank, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
+import { useEigenDocument } from "@/features/budget/lib/eigenDocument";
 
 const PUNTEN = [
   {
@@ -29,6 +30,7 @@ const PUNTEN = [
 
 export default function KordaBudget() {
   const { user } = useAuth();
+  useEigenDocument();
 
   useEffect(() => {
     const vorige = document.body.style.background;

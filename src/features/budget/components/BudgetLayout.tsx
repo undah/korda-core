@@ -6,6 +6,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { useMijnHuishoudens, type Huishouden } from "../hooks/useBudget";
 import { useBankBijwerken, useRekeningen } from "../hooks/useBudgetData";
 import { useHoudPushBij } from "../lib/meldingen";
+import { useEigenDocument } from "../lib/eigenDocument";
 import { BedragProvider, useBedragen } from "./Bedrag";
 import { BudgetOnboarding } from "./BudgetOnboarding";
 import { HuishoudenKiezer } from "./HuishoudenKiezer";
@@ -100,6 +101,7 @@ function OogKnop() {
 }
 
 export default function BudgetLayout() {
+  useEigenDocument();
   const { data: huishoudens, isLoading, error } = useMijnHuishoudens();
   const { actief, kies } = useActiefHuishouden(huishoudens);
 

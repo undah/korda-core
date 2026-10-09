@@ -1,4 +1,5 @@
 // src/pages/BudgetLogin.tsx — KordaBudget sign-in / sign-up (light, mobile-first)
+import { useEigenDocument } from "@/features/budget/lib/eigenDocument";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { Kaart, Knop, Veld } from "@/features/budget/components/ui";
 type LocationState = { from?: string };
 
 export default function BudgetLogin() {
+  useEigenDocument();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
