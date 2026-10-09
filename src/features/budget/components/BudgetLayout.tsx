@@ -4,7 +4,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { ArrowLeftRight, Eye, EyeOff, Home, Loader2, Menu, PiggyBank, Target } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
 import { useMijnHuishoudens, type Huishouden } from "../hooks/useBudget";
-import { useBankBijwerken, useRekeningen } from "../hooks/useBudgetData";
+import { useBankBijwerken, useClaudeVoorstellen, useRekeningen } from "../hooks/useBudgetData";
 import { useHoudPushBij } from "../lib/meldingen";
 import { useEigenDocument } from "../lib/eigenDocument";
 import { BedragProvider, useBedragen } from "./Bedrag";
@@ -66,6 +66,7 @@ function AutoBijwerken({ householdId }: { householdId: string }) {
   useHoudPushBij();
   const { data: rekeningen } = useRekeningen(householdId);
   const { mutate } = useBankBijwerken();
+  const { mutate: vraagClaude } = useClaudeVoorstellen();
   const gekoppeld = !!rekeningen?.some((r) => r.provider === "enable_banking" && r.link_id);
   useEffect(() => {
     if (!gekoppeld) return;
@@ -73,7 +74,8 @@ function AutoBijwerken({ householdId }: { householdId: string }) {
     const werkBij = () => {
       if (document.visibilityState !== "visible" || Date.now() - laatste < 60_000) return;
       laatste = Date.now();
-      mutate({ householdId, alleenOud: true });
+      // After the sync, Claude looks at what came in (it skips what it has seen).
+      mutate({ householdId, alleenOud: true }, { onSettled: () => vraagClaude(householdId) });
     };
     werkBij();
     document.addEventListener("visibilitychange", werkBij);
@@ -82,7 +84,7 @@ function AutoBijwerken({ householdId }: { householdId: string }) {
       document.removeEventListener("visibilitychange", werkBij);
       window.removeEventListener("focus", werkBij);
     };
-  }, [gekoppeld, householdId, mutate]);
+  }, [gekoppeld, householdId, mutate, vraagClaude]);
   return null;
 }
 

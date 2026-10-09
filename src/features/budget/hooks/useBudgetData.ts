@@ -598,6 +598,17 @@ export function useBankBijwerken() {
 }
 
 /**
+ * Ask Claude for pot suggestions on unsorted payments (server side, see
+ * functions/_shared/budgetAI.js). Quick when there's nothing new: the server
+ * only sends payments Claude hasn't looked at.
+ */
+export function useClaudeVoorstellen() {
+  return useSchrijf((householdId: string) =>
+    bankFetch<{ bekeken?: number; voorgesteld?: number; overgeslagen?: string }>("/api/budget/ai/voorstellen", { householdId }),
+  );
+}
+
+/**
  * Withdraw your own consent for an account (history stays; a co-holder's
  * consent keeps it updating). With `verwijderen`, the owner deletes the
  * account and its history, and every consent on it is closed.

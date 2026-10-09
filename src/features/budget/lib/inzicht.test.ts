@@ -9,6 +9,7 @@ import {
   verrekenSaldi,
   dubbeleAfschrijvingen,
   inkomenPerMaand,
+  voorstelVoor,
   verdeling,
   weekDetail,
   weekoverzicht,
@@ -294,5 +295,21 @@ describe("inkomenPerMaand", () => {
     expect(inkomenPerMaand(kort, nu).perMaand).toBeGreaterThan(2150);
     expect(inkomenPerMaand(kort, nu).perMaand).toBeLessThan(2185);
     expect(inkomenPerMaand(kort.slice(0, 1), new Date(2026, 8, 12)).perMaand).toBe(0);
+  });
+});
+
+describe("voorstelVoor", () => {
+  const zichtbaar = new Set(["p1", "p2"]);
+  const regels = [{ counterparty: "albert heijn", pot_id: "p1" }];
+  it("prefers the household's own rule over Claude", () => {
+    const v = voorstelVoor(tx({ counterparty: "Albert Heijn", ai_pot_id: "p2", ai_zeker: 0.99 }), regels, zichtbaar);
+    expect(v).toEqual({ bron: "regel", potId: "p1", soort: null, zeker: null });
+  });
+  it("uses Claude only when sure enough, visible, and income only for money in", () => {
+    expect(voorstelVoor(tx({ counterparty: "Kapper", ai_pot_id: "p2", ai_zeker: 0.8 }), regels, zichtbaar)?.potId).toBe("p2");
+    expect(voorstelVoor(tx({ counterparty: "Kapper", ai_pot_id: "p2", ai_zeker: 0.3 }), regels, zichtbaar)).toBeNull();
+    expect(voorstelVoor(tx({ counterparty: "Kapper", ai_pot_id: "privé", ai_zeker: 0.9 }), regels, zichtbaar)).toBeNull();
+    expect(voorstelVoor(tx({ counterparty: "Werk", amount: 500, ai_soort: "inkomen", ai_zeker: 0.9 }), regels, zichtbaar)?.soort).toBe("inkomen");
+    expect(voorstelVoor(tx({ counterparty: "Werk", amount: -5, ai_soort: "inkomen", ai_zeker: 0.9 }), regels, zichtbaar)).toBeNull();
   });
 });

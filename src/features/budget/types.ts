@@ -68,6 +68,11 @@ export interface BudgetTransaction {
   in_behandeling?: boolean;
   /** Income or a transfer between own accounts: not spending, no pot. */
   soort?: TxSoort | null;
+  /** Claude's suggestion (phase 3B): a pot, or a kind, with how sure it is (0..1). */
+  ai_pot_id?: string | null;
+  ai_soort?: TxSoort | null;
+  ai_zeker?: number | null;
+  ai_at?: string | null;
 }
 
 export type TxSoort = "inkomen" | "overboeking";

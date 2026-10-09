@@ -2,6 +2,7 @@
 // No React, no Supabase: everything here is testable with plain data.
 import { dagenInMaand, huidigeMaand, isZelfdeMaand, resterendeDagen } from "./budget";
 import type {
+  TxSoort,
   PotGroep,
   BudgetMember,
   BudgetMonth,
@@ -349,6 +350,31 @@ export function regelVoor(
     (r) => (tp.includes(r.counterparty) || r.counterparty.includes(tp)) && zichtbarePotjes.has(r.pot_id),
   );
   return deels?.pot_id ?? null;
+}
+
+/** Below this Claude's suggestion isn't shown: a wrong nudge costs more than none. */
+export const AI_DREMPEL = 0.5;
+
+export type Voorstel = { bron: "regel" | "claude"; potId: string | null; soort: TxSoort | null; zeker: number | null };
+
+/**
+ * The suggestion for an unsorted payment: a rule the household made wins;
+ * otherwise Claude's, when it was sure enough and points at a pot this person
+ * can see (or at income/transfer).
+ */
+export function voorstelVoor(
+  tx: Pick<TxMetDelen, "counterparty" | "amount" | "ai_pot_id" | "ai_soort" | "ai_zeker">,
+  regelsLijst: Array<{ counterparty: string; pot_id: string | null }>,
+  zichtbarePotjes: Set<string>,
+): Voorstel | null {
+  const regel = regelVoor(tx, regelsLijst as Array<{ counterparty: string; pot_id: string }>, zichtbarePotjes);
+  if (regel) return { bron: "regel", potId: regel, soort: null, zeker: null };
+  const zeker = tx.ai_zeker ?? 0;
+  if (zeker < AI_DREMPEL) return null;
+  if (tx.ai_pot_id && zichtbarePotjes.has(tx.ai_pot_id)) return { bron: "claude", potId: tx.ai_pot_id, soort: null, zeker };
+  if (tx.ai_soort === "overboeking" || (tx.ai_soort === "inkomen" && tx.amount > 0))
+    return { bron: "claude", potId: null, soort: tx.ai_soort, zeker };
+  return null;
 }
 
 // ─── dubbele afschrijvingen ──────────────────────────────────────────────────

@@ -11,12 +11,15 @@
  *                 { meer: true } while work remains; the Worker calls again.
  *                 For ING these reads are unattended (capped at 4 a day per
  *                 account), hence 4 runs and skipping what the app synced.
+ *                 After the last sync round, Claude suggests pots for the
+ *                 households' new unsorted payments (a few per call).
  * stap=meldingen  Push notifications, each sent once per person: a pot
  *                 crossing 80% or its limit, a possible double charge, and
  *                 on Sunday evening the week's shared spending.
  */
 import { db, foutAntwoord, isActief, json, syncRekening, werkSamenvattingBij } from '../../_shared/budgetBank.js';
 import { stuurPush } from '../../_shared/webpush.js';
+import { maakVoorstellen } from '../../_shared/budgetAI.js';
 import { potStatus } from '../../../src/features/budget/lib/budget.ts';
 import { dubbeleAfschrijvingen } from '../../../src/features/budget/lib/inzicht.ts';
 
@@ -75,7 +78,30 @@ async function sync(env) {
     // A failed account is marked (sync_error) so the next call moves on to others.
     else await werkSamenvattingBij(env, r.id).catch(() => {});
   }
-  return { bijgewerkt, nieuw, fouten, meer: teDoen.length > PER_AANROEP };
+  const meer = teDoen.length > PER_AANROEP;
+  // Once everything is synced: suggestions for what came in. One Claude call
+  // per household, a couple of households per call to stay quick.
+  const ai = meer ? [] : await aiVoorstellen(env);
+  return { bijgewerkt, nieuw, fouten, ai, meer };
+}
+
+const AI_PER_AANROEP = 2;
+
+async function aiVoorstellen(env) {
+  const vanaf = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+  let open;
+  try {
+    open = await db(
+      env,
+      `budget_transactions?pot_id=is.null&soort=is.null&ai_at=is.null&booked_on=gte.${vanaf}&select=household_id&limit=1000`,
+    );
+  } catch {
+    return []; // budget_ai.sql hasn't run yet
+  }
+  const huishoudens = [...new Set((open ?? []).map((t) => t.household_id))].slice(0, AI_PER_AANROEP);
+  const uit = [];
+  for (const hh of huishoudens) uit.push({ hh, ...(await maakVoorstellen(env, hh).catch((e) => ({ overgeslagen: e?.message }))) });
+  return uit;
 }
 
 // ─── meldingen ───────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, Inbox, Layers, Plus, Split, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, Inbox, Layers, Plus, Sparkles, Split, Wallet } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { TxSheet } from "@/features/budget/components/TxSheet";
@@ -11,7 +11,7 @@ import { Kaart, MaandKiezer, Pagina, foutTekst } from "@/features/budget/compone
 import { usePotjes } from "@/features/budget/hooks/useBudget";
 import { useOnthoudRegel, useRegels, useTransacties, useZetPotje, useZetSoort } from "@/features/budget/hooks/useBudgetData";
 import { huidigeMaand, maandNaam, verschuifMaand } from "@/features/budget/lib/budget";
-import { regelVoor } from "@/features/budget/lib/inzicht";
+import { voorstelVoor } from "@/features/budget/lib/inzicht";
 import type { TxMetDelen } from "@/features/budget/types";
 
 const dagKop = (iso: string) =>
@@ -62,6 +62,15 @@ export default function BudgetTransacties() {
         ? await onthoud.mutateAsync({ householdId: hhId, tegenpartij: t.counterparty, potId })
         : 0;
       toast.success(`${potVan(potId)?.name ?? "Potje"} ✓${eerdere ? `, plus ${eerdere} eerdere` : ""}`);
+    } catch (err) {
+      toast.error(foutTekst(err));
+    }
+  };
+
+  const alsSoort = async (t: TxMetDelen, soort: "overboeking") => {
+    try {
+      await zetSoort.mutateAsync({ txId: t.id, soort });
+      toast.success("Overboeking ✓");
     } catch (err) {
       toast.error(foutTekst(err));
     }
@@ -159,7 +168,9 @@ export default function BudgetTransacties() {
                 <Kaart className="divide-y divide-kb-line overflow-hidden">
                   {g.items.map((t) => {
                     const open_ = !t.pot_id && !t.splits.length && !t.soort;
-                    const voorstel = open_ ? regelVoor(t, regels, zichtbaar) : null;
+                    const vs = open_ ? voorstelVoor(t, regels, zichtbaar) : null;
+                    const voorstel = vs?.potId ?? null;
+                    const vanClaude = vs?.bron === "claude";
                     const pot = potVan(t.pot_id);
                     return (
                       <div key={t.id} className="flex items-center gap-3 px-4 py-3">
@@ -196,9 +207,20 @@ export default function BudgetTransacties() {
                             type="button"
                             onClick={() => bevestig(t, voorstel)}
                             className="flex shrink-0 items-center gap-1 rounded-full bg-kb-accent-soft px-2.5 py-1.5 text-xs font-medium text-kb-accent-ink hover:bg-kb-accent-soft/70"
-                            aria-label={`In ${potVan(voorstel)?.name} zetten`}
+                            aria-label={`In ${potVan(voorstel)?.name} zetten${vanClaude ? " (voorstel van Claude)" : ""}`}
+                            title={vanClaude ? "Voorstel van Claude" : "Volgens je regel"}
                           >
+                            {vanClaude && <Sparkles className="h-3 w-3" />}
                             {potVan(voorstel)?.emoji} <Check className="h-3.5 w-3.5" />
+                          </button>
+                        ) : vs?.soort === "overboeking" ? (
+                          <button
+                            type="button"
+                            onClick={() => alsSoort(t, "overboeking")}
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-kb-accent-soft px-2.5 py-1.5 text-xs font-medium text-kb-accent-ink hover:bg-kb-accent-soft/70"
+                            aria-label="Als overboeking markeren (voorstel van Claude)"
+                          >
+                            <Sparkles className="h-3 w-3" /> Overboeking <Check className="h-3.5 w-3.5" />
                           </button>
                         ) : open_ && t.amount > 0 ? (
                           <button
@@ -253,7 +275,8 @@ export default function BudgetTransacties() {
       <TxSheet
         tx={open}
         potjes={potjes}
-        voorstel={open ? regelVoor(open, regels, zichtbaar) : null}
+        voorstel={open ? (voorstelVoor(open, regels, zichtbaar)?.potId ?? null) : null}
+        doorClaude={open ? voorstelVoor(open, regels, zichtbaar)?.bron === "claude" : false}
         householdId={hhId}
         onSluit={() => setOpen(null)}
       />

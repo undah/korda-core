@@ -1,7 +1,7 @@
 // src/features/budget/components/TxSheet.tsx — one transaction: pot, split, note, remember
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Split, Trash2, X } from "lucide-react";
+import { Plus, Sparkles, Split, Trash2, X } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
 import {
   useOnthoudRegel,
@@ -27,13 +27,16 @@ export function TxSheet({
   tx,
   potjes,
   voorstel,
+  doorClaude = false,
   householdId,
   onSluit,
 }: {
   tx: TxMetDelen | null;
   potjes: BudgetPot[];
-  /** Pot suggested by a learned rule. */
+  /** Pot suggested by a learned rule, or by Claude. */
   voorstel: string | null;
+  /** The suggestion is Claude's, not a rule the household made. */
+  doorClaude?: boolean;
   householdId: string;
   onSluit: () => void;
 }) {
@@ -70,7 +73,13 @@ export function TxSheet({
     setOnthoud(true);
     setZeker(false);
     // Money in with no pot is most likely income; suggest it, the user still saves.
-    setKeuze(tx.soort ?? (tx.amount > 0 && !tx.pot_id && !gesplitst ? "inkomen" : "potje"));
+    const claudeSoort =
+      !tx.pot_id && !gesplitst && !voorstel && (tx.ai_zeker ?? 0) >= 0.5 && tx.ai_soort
+        ? tx.ai_soort === "inkomen" && tx.amount <= 0
+          ? null
+          : tx.ai_soort
+        : null;
+    setKeuze(tx.soort ?? claudeSoort ?? (tx.amount > 0 && !tx.pot_id && !gesplitst ? "inkomen" : "potje"));
   }, [tx, voorstel]);
 
   const totaal = tx ? Math.abs(tx.amount) : 0;
@@ -189,7 +198,14 @@ export function TxSheet({
             </div>
           ) : !splitsen ? (
             <div>
-              <p className="mb-2 text-sm font-medium">In welk potje?</p>
+              <p className="mb-2 flex items-center justify-between gap-2 text-sm font-medium">
+                In welk potje?
+                {doorClaude && !tx.pot_id && potId === voorstel && (
+                  <span className="flex items-center gap-1 text-xs font-normal text-kb-ink2">
+                    <Sparkles className="h-3 w-3 text-kb-accent-ink" /> Voorstel van Claude
+                  </span>
+                )}
+              </p>
               <PotKiezer potjes={potjes} waarde={potId} onKies={setPotId} metGeen />
               {potId && tx.counterparty && (
                 <label className="mt-3 flex items-center gap-2.5 text-sm text-kb-ink2">

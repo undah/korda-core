@@ -6,14 +6,14 @@
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, CheckCircle2, ChevronLeft, ChevronRight, Undo2, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, CheckCircle2, ChevronLeft, ChevronRight, Sparkles, Undo2, Wallet } from "lucide-react";
 import { useBedragen } from "@/features/budget/components/Bedrag";
 import type { BudgetOutletContext } from "@/features/budget/components/BudgetLayout";
 import { Kaart, Knop, Pagina, foutTekst } from "@/features/budget/components/ui";
 import { usePotjes } from "@/features/budget/hooks/useBudget";
 import { useOnthoudRegel, useRegels, useTransacties, useZetPotje, useZetSoort } from "@/features/budget/hooks/useBudgetData";
 import { huidigeMaand } from "@/features/budget/lib/budget";
-import { regelVoor } from "@/features/budget/lib/inzicht";
+import { voorstelVoor } from "@/features/budget/lib/inzicht";
 import type { TxMetDelen, TxSoort } from "@/features/budget/types";
 
 const DREMPEL = 96; // px of drag before a swipe counts
@@ -53,7 +53,10 @@ export default function BudgetSnelIndelen() {
   }, [transacties, klaar, overgeslagen]);
   const totaal = stapel.length + klaar.size;
   const tx = stapel[0] ?? null;
-  const voorstel = tx ? regelVoor(tx, regels, zichtbaar) : null;
+  const vs = tx ? voorstelVoor(tx, regels, zichtbaar) : null;
+  const voorstel = vs?.potId ?? null;
+  const voorstelSoort = vs?.soort ?? null;
+  const vanClaude = vs?.bron === "claude";
   const voorstelPot = potjes.find((p) => p.id === voorstel);
   const bezig = zetPotje.isPending || zetSoort.isPending || onthoud.isPending;
 
@@ -137,9 +140,10 @@ export default function BudgetSnelIndelen() {
     if (!start.current) return;
     start.current = null;
     setSlepen(false);
-    if (dx > DREMPEL && voorstel) {
+    if (dx > DREMPEL && (voorstel || voorstelSoort)) {
       setWeg("rechts");
-      void kies(voorstel);
+      if (voorstel) void kies(voorstel);
+      else if (voorstelSoort) void markeer(voorstelSoort);
     } else if (dx < -DREMPEL) {
       setWeg("links");
       window.setTimeout(sla, 160);
@@ -147,7 +151,7 @@ export default function BudgetSnelIndelen() {
   };
 
   const verschuiving = weg === "rechts" ? 480 : weg === "links" ? -480 : dx;
-  const rechtsZonderVoorstel = dx > 24 && !voorstel;
+  const rechtsZonderVoorstel = dx > 24 && !voorstel && !voorstelSoort;
 
   return (
     <Pagina
@@ -193,9 +197,9 @@ export default function BudgetSnelIndelen() {
             >
               <Kaart className="relative overflow-hidden p-6 shadow-[0_18px_40px_-24px_rgba(23,24,28,0.35)]">
                 {/* What the swipe will do, shown as you drag. */}
-                {dx > 24 && voorstelPot && (
+                {dx > 24 && (voorstelPot || voorstelSoort) && (
                   <span className="absolute right-4 top-4 rounded-full bg-kb-accent px-3 py-1 text-xs font-semibold text-white">
-                    {voorstelPot.emoji} {voorstelPot.name}
+                    {voorstelPot ? `${voorstelPot.emoji} ${voorstelPot.name}` : voorstelSoort === "inkomen" ? "Inkomen" : "Overboeking"}
                   </span>
                 )}
                 {rechtsZonderVoorstel && (
@@ -220,15 +224,27 @@ export default function BudgetSnelIndelen() {
                 )}
                 {tx.account && <p className="mt-1 text-xs text-kb-ink3">{tx.account.name}</p>}
 
-                {voorstelPot && (
+                {(voorstelPot || voorstelSoort) && (
                   <button
                     type="button"
-                    onClick={() => kies(voorstelPot.id)}
+                    onClick={() => (voorstelPot ? kies(voorstelPot.id) : voorstelSoort && markeer(voorstelSoort))}
                     disabled={bezig}
-                    className="mt-5 flex w-full items-center justify-between rounded-xl bg-kb-accent-soft px-4 py-3 text-sm font-medium text-kb-accent-ink hover:bg-kb-accent-soft/70"
+                    className="mt-5 flex w-full items-center justify-between gap-3 rounded-xl bg-kb-accent-soft px-4 py-3 text-left text-sm font-medium text-kb-accent-ink hover:bg-kb-accent-soft/70"
                   >
-                    <span>
-                      {voorstelPot.emoji} {voorstelPot.name}
+                    <span className="min-w-0">
+                      <span className="block truncate">
+                        {voorstelPot ? `${voorstelPot.emoji} ${voorstelPot.name}` : voorstelSoort === "inkomen" ? "Inkomen" : "Overboeking"}
+                      </span>
+                      {/* Where the suggestion comes from: a rule you made, or Claude (and how sure). */}
+                      <span className="flex items-center gap-1 text-xs font-normal text-kb-ink2">
+                        {vanClaude ? (
+                          <>
+                            <Sparkles className="h-3 w-3" /> Claude, {Math.round((vs?.zeker ?? 0) * 100)}% zeker
+                          </>
+                        ) : (
+                          "Volgens je regel"
+                        )}
+                      </span>
                     </span>
                     <span className="flex items-center gap-1 text-xs">
                       Veeg rechts <ChevronRight className="h-3.5 w-3.5" />
@@ -238,7 +254,7 @@ export default function BudgetSnelIndelen() {
               </Kaart>
             </div>
 
-            <p className="mt-5 mb-2 text-sm font-medium">{voorstelPot ? "Of kies een ander potje" : "In welk potje?"}</p>
+            <p className="mt-5 mb-2 text-sm font-medium">{voorstelPot || voorstelSoort ? "Of kies zelf" : "In welk potje?"}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {potjes.map((p) => (
                 <button
