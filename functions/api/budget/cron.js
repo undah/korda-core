@@ -15,7 +15,8 @@
  *                 households' new unsorted payments (a few per call).
  * stap=meldingen  Push notifications, each sent once per person: a pot
  *                 crossing 80% or its limit, a possible double charge, and
- *                 on Sunday evening the week's shared spending. On Sunday
+ *                 on Sunday evening the week's shared spending, and in the
+ *                 evening a weekly nudge when 10+ payments wait to be sorted. On Sunday
  *                 evening and the 1st, Korda AI first writes new insights
  *                 (a couple of households per call) and announces them.
  */
@@ -28,6 +29,8 @@ import { dubbeleAfschrijvingen } from '../../../src/features/budget/lib/inzicht.
 
 const q = encodeURIComponent;
 const OUD_NA_UREN = 5;
+/** From how many unsorted payments (last 30 days) the weekly nudge goes out. */
+const INDELEN_VANAF = 10;
 const PER_AANROEP = 3;
 
 export async function onRequestPost({ request, env }) {
@@ -248,6 +251,32 @@ async function meldingen(env) {
           titel: 'Je week in KordaBudget',
           tekst: `${euro(deze)} uit de gedeelde potjes${vergelijk}.`,
           url: '/budget/week',
+        });
+      }
+    }
+
+    // Evening, at most weekly: a nudge when a pile of payments waits to be sorted.
+    // Counted per person, over the payments that person can see (an unsorted
+    // payment sits in no pot, so its account decides).
+    if (nl.uur >= 17) {
+      const open = await db(
+        env,
+        `budget_transactions?household_id=eq.${q(hh)}&pot_id=is.null&soort=is.null&booked_on=gte.${isoMin(nl.datum, 30)}` +
+          `&select=id,account_id,splits:budget_tx_splits(id)&limit=2000`,
+      ).catch(() => []);
+      const onverdeeld = (open ?? []).filter((t) => !t.splits?.length);
+      for (const lid of iedereen) {
+        const aantal = onverdeeld.filter((t) => {
+          const r = rek.get(t.account_id);
+          return r && (r.visibility === 'shared' || r.owner_id === lid);
+        }).length;
+        if (aantal < INDELEN_VANAF) continue;
+        kandidaten.push({
+          aan: [lid],
+          sleutel: `indelen:${hh}:${weekSleutel()}`,
+          titel: `${aantal} betalingen wachten op een potje`,
+          tekst: 'Met Snel indelen ben je er in een paar minuten doorheen.',
+          url: '/budget/indelen',
         });
       }
     }
