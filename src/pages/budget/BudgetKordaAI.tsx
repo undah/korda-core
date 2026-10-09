@@ -9,7 +9,7 @@ import { usePotjes } from "@/features/budget/hooks/useBudget";
 import {
   useInzichten,
   useVerversInzichten,
-  useVraagKordaAI,
+  vraagKordaAI,
   type KordaBericht,
 } from "@/features/budget/hooks/useBudgetData";
 import type { KordaInzicht } from "@/features/budget/types";
@@ -30,13 +30,49 @@ const VOORBEELDEN = [
 const wanneer = (iso: string) =>
   new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
+/**
+ * Korda AI may use **bold** and "- " lists; show them as such instead of the
+ * raw stars and dashes. Nothing else is interpreted, so text can't inject markup.
+ */
+function Antwoord({ tekst }: { tekst: string }) {
+  const vet = (regel: string) =>
+    regel.split(/(\*\*[^*]+\*\*)/g).map((deel, i) =>
+      deel.startsWith("**") && deel.endsWith("**") && deel.length > 4 ? <strong key={i}>{deel.slice(2, -2)}</strong> : deel,
+    );
+  const blokken: Array<{ lijst: boolean; regels: string[] }> = [];
+  for (const regel of tekst.split("\n")) {
+    const lijst = /^\s*[-•*]\s+/.test(regel);
+    const schoon = lijst ? regel.replace(/^\s*[-•*]\s+/, "") : regel;
+    const vorige = blokken[blokken.length - 1];
+    if (vorige && vorige.lijst === lijst && (lijst || schoon.trim())) vorige.regels.push(schoon);
+    else blokken.push({ lijst, regels: [schoon] });
+  }
+  return (
+    <div className="space-y-2">
+      {blokken.map((b, i) =>
+        b.lijst ? (
+          <ul key={i} className="list-disc space-y-0.5 pl-5">
+            {b.regels.map((r, j) => (
+              <li key={j}>{vet(r)}</li>
+            ))}
+          </ul>
+        ) : b.regels.join("").trim() ? (
+          <p key={i} className="whitespace-pre-wrap">
+            {vet(b.regels.join("\n").trim())}
+          </p>
+        ) : null,
+      )}
+    </div>
+  );
+}
+
 export default function BudgetKordaAI() {
   const { huishouden } = useOutletContext<BudgetOutletContext>();
   const hhId = huishouden.household.id;
   const { data: inzichten, isLoading } = useInzichten(hhId);
   const { data: potjes = [] } = usePotjes(hhId);
   const ververs = useVerversInzichten();
-  const vraag = useVraagKordaAI();
+  const [denkt, setDenkt] = useState(false);
   const [gesprek, setGesprek] = useState<KordaBericht[]>([]);
   const [invoer, setInvoer] = useState("");
   const [melding, setMelding] = useState<string | null>(null);
@@ -63,19 +99,32 @@ export default function BudgetKordaAI() {
 
   useEffect(() => {
     einde.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [gesprek.length, vraag.isPending]);
+  }, [gesprek, denkt]);
 
   const stel = async (tekst: string) => {
     const v = tekst.trim();
-    if (!v || vraag.isPending) return;
+    if (!v || denkt) return;
     const eerder = gesprek;
+    // The answer's bubble is added at the first word and grows as text arrives.
     setGesprek([...eerder, { rol: "jij", tekst: v }]);
     setInvoer("");
+    setDenkt(true);
+    let begonnen = false;
+    const voegToe = (stukje: string) =>
+      setGesprek((g) => {
+        if (!begonnen) {
+          begonnen = true;
+          return [...g, { rol: "ai", tekst: stukje }];
+        }
+        const laatste = g[g.length - 1];
+        return [...g.slice(0, -1), { ...laatste, tekst: laatste.tekst + stukje }];
+      });
     try {
-      const antwoord = await vraag.mutateAsync({ householdId: hhId, vraag: v, geschiedenis: eerder });
-      setGesprek((g) => [...g, { rol: "ai", tekst: antwoord }]);
+      await vraagKordaAI({ householdId: hhId, vraag: v, geschiedenis: eerder }, voegToe);
     } catch (e) {
-      setGesprek((g) => [...g, { rol: "ai", tekst: `Dat lukte even niet: ${foutTekst(e)}` }]);
+      voegToe(`${begonnen ? "\n\n" : ""}Dat lukte even niet: ${foutTekst(e)}`);
+    } finally {
+      setDenkt(false);
     }
   };
 
@@ -186,13 +235,14 @@ export default function BudgetKordaAI() {
                   ) : (
                     <div key={n} className="flex items-end gap-2">
                       <KordaAIFiguur grootte={28} zweeft={false} />
-                      <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md bg-kb-sunk px-3.5 py-2 text-sm">
-                        {b.tekst}
-                      </p>
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-kb-sunk px-3.5 py-2 text-sm">
+                        <Antwoord tekst={b.tekst} />
+                      </div>
                     </div>
                   ),
                 )}
-                {vraag.isPending && (
+                {/* Thinking dots until the first word arrives. */}
+                {denkt && gesprek[gesprek.length - 1]?.rol === "jij" && (
                   <div className="flex items-end gap-2">
                     <KordaAIFiguur grootte={28} zweeft={false} />
                     <p className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-kb-sunk px-3.5 py-3" aria-label="Korda AI denkt na">
@@ -228,7 +278,7 @@ export default function BudgetKordaAI() {
               />
               <button
                 type="submit"
-                disabled={!invoer.trim() || vraag.isPending}
+                disabled={!invoer.trim() || denkt}
                 aria-label="Versturen"
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-kb-accent text-white disabled:bg-kb-accent/40"
               >

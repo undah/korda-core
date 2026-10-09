@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthProvider";
 import { maandGrenzen, verschuifMaand } from "../lib/budget";
-import { bankFetch, type SyncUitkomst } from "../lib/bankApi";
+import { bankFetch, streamFetch, type SyncUitkomst } from "../lib/bankApi";
 import type {
   BudgetAccount,
   BudgetGoal,
@@ -638,15 +638,20 @@ export function useVerversInzichten() {
 
 export type KordaBericht = { rol: "jij" | "ai"; tekst: string };
 
-/** One question to Korda AI. Nothing is stored; the conversation lives on screen. */
-export function useVraagKordaAI() {
-  return useMutation({
-    mutationFn: async (p: { householdId: string; vraag: string; geschiedenis: KordaBericht[] }) => {
-      const uit = await bankFetch<{ antwoord?: string; fout?: string }>("/api/budget/ai/vraag", p);
-      if (uit.fout) throw new Error(uit.fout);
-      return uit.antwoord ?? "";
-    },
+/**
+ * One question to Korda AI, streamed: `opTekst` gets each piece of the answer
+ * as it's written. Nothing is stored; the conversation lives on screen.
+ */
+export async function vraagKordaAI(
+  p: { householdId: string; vraag: string; geschiedenis: KordaBericht[] },
+  opTekst: (stukje: string) => void,
+): Promise<void> {
+  let fout: string | null = null;
+  await streamFetch("/api/budget/ai/vraag", p, (r) => {
+    if (typeof r.t === "string") opTekst(r.t);
+    if (typeof r.fout === "string") fout = r.fout;
   });
+  if (fout) throw new Error(fout);
 }
 
 /**
