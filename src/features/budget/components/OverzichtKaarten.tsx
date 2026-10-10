@@ -10,6 +10,7 @@ import {
   ChevronRight,
   CopyX,
   Handshake,
+  Lightbulb,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -341,6 +342,7 @@ export function VerdelingKaart({
   // Three months back from today, for the typical monthly income.
   const { data: recent = [] } = useTransacties(householdId, huidigeMaand(), 4);
   const [indelen, setIndelen] = useState(false);
+  const [detail, setDetail] = useState(false);
   const zetGroep = useZetGroep(householdId);
 
   const { inkomen, bron } = useMemo(() => {
@@ -380,9 +382,16 @@ export function VerdelingKaart({
         {lopend ? "Gepland: wat je potjes deze maand mogen opmaken (of al meer opmaakten)" : "Wat er die maand echt uitging"}
       </p>
 
+      {/* Bar and list: one tap target, opens what's behind the numbers. */}
+      <button
+        type="button"
+        onClick={() => setDetail(true)}
+        className="-mx-2 mt-2 block w-[calc(100%+1rem)] rounded-xl px-2 pb-2 pt-2 text-left transition-colors hover:bg-kb-sunk/50 active:bg-kb-sunk/70"
+        aria-label="Bekijk wat onder nodig, wil en sparen valt"
+      >
       {/* One bar: each group's share of income (or of spending); the track is what's left. */}
       <div
-        className="mt-4 flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-kb-sunk"
+        className="mt-2 flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-kb-sunk"
         role="img"
         aria-label={segmenten.map((x) => `${x.titel} ${euro(x.bedrag)}`).join(", ")}
       >
@@ -418,6 +427,10 @@ export function VerdelingKaart({
           );
         })}
       </ul>
+      <span className="mt-3 flex items-center gap-1 text-xs font-medium text-kb-accent-ink">
+        Wat valt waaronder <ChevronRight className="h-3.5 w-3.5" />
+      </span>
+      </button>
 
       {passend !== null ? (
         <p className={`mt-4 flex items-start gap-2 text-sm ${passend < 0 ? "text-kb-crit-ink" : "text-kb-good-ink"}`}>
@@ -443,6 +456,21 @@ export function VerdelingKaart({
           {v.zonderGroep.length === 1 ? "1 potje heeft nog geen groep" : `${v.zonderGroep.length} potjes hebben nog geen groep`} →
         </button>
       )}
+
+      <VerdelingDetail
+        open={detail}
+        onOpenChange={setDetail}
+        potjes={potjes}
+        uitgaven={uitgaven}
+        inkomen={inkomen}
+        lopend={lopend}
+        over={v.over}
+        maand={maand}
+        anders={() => {
+          setDetail(false);
+          setIndelen(true);
+        }}
+      />
 
       <Blad open={indelen} onOpenChange={setIndelen} titel="Potjes indelen" beschrijving="Nodig, wil of sparen? Tik per potje.">
         <ul className="space-y-3">
@@ -471,5 +499,197 @@ export function VerdelingKaart({
         </ul>
       </Blad>
     </Kaart>
+  );
+}
+
+/**
+ * Behind the needs/wants/saving card: per group, which pots count and for how
+ * much, how far it is from 50/30/20 in euros, and what stands out.
+ */
+function VerdelingDetail({
+  open,
+  onOpenChange,
+  potjes,
+  uitgaven,
+  inkomen,
+  lopend,
+  over,
+  maand,
+  anders,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  potjes: BudgetPot[];
+  uitgaven: Record<string, number>;
+  inkomen: number;
+  lopend: boolean;
+  over: number;
+  maand: BudgetMonth;
+  anders: () => void;
+}) {
+  const { euro } = useBedragen();
+  // What each pot counts for: this month its plan (or more, if it's over), a past month what it took.
+  const telt = (p: BudgetPot) => (lopend ? Math.max(p.monthly_limit, uitgaven[p.id] ?? 0) : uitgaven[p.id] ?? 0);
+  const nietVerdeeld = inkomen > 0 ? Math.max(0, over) : 0;
+
+  const groepen = GROEPEN.map((g) => {
+    const lijst = potjes.filter((p) => p.groep === g.id).sort((a, b) => telt(b) - telt(a));
+    const bedrag = lijst.reduce((s, p) => s + telt(p), 0) + (g.id === "sparen" ? nietVerdeeld : 0);
+    const richtBedrag = inkomen * g.richtlijn;
+    return { ...g, lijst, bedrag, richtBedrag, verschil: bedrag - richtBedrag };
+  });
+  const zonder = potjes.filter((p) => !p.groep).sort((a, b) => telt(b) - telt(a));
+
+  // A few plain observations, from the numbers above only.
+  const inzichten: string[] = [];
+  if (inkomen > 0) {
+    const nodig = groepen[0];
+    const wil = groepen[1];
+    const sparen = groepen[2];
+    if (nodig.verschil > 1) {
+      const vast = nodig.lijst.filter((p) => p.kind === "vast");
+      const vastTotaal = vast.reduce((s, p) => s + telt(p), 0);
+      inzichten.push(
+        vast.length
+          ? `Nodig is ${euro(nodig.verschil)} meer dan de richtlijn. ${euro(vastTotaal)} daarvan zijn vaste lasten${
+              vast[0] ? `, vooral ${vast[0].emoji} ${vast[0].name}` : ""
+            }; die zijn lastig snel te verlagen, de flexibele potjes wel.`
+          : `Nodig is ${euro(nodig.verschil)} meer dan de richtlijn; ${nodig.lijst[0] ? `${nodig.lijst[0].emoji} ${nodig.lijst[0].name} is het grootst.` : ""}`,
+      );
+    }
+    if (wil.verschil > 1 && wil.lijst[0]) {
+      inzichten.push(`Wil zit ${euro(wil.verschil)} boven de richtlijn. Het grootste is ${wil.lijst[0].emoji} ${wil.lijst[0].name} (${euro(telt(wil.lijst[0]))}).`);
+    } else if (wil.verschil < -1) {
+      inzichten.push(`Wil blijft ${euro(-wil.verschil)} onder de richtlijn; daar is ruimte.`);
+    }
+    if (sparen.verschil < -1) {
+      inzichten.push(
+        sparen.bedrag > 0
+          ? `Je spaart ${euro(sparen.bedrag)}, ${euro(-sparen.verschil)} minder dan 20% van je inkomen.`
+          : `Er gaat nu niets naar sparen. 20% van je inkomen is ${euro(sparen.richtBedrag)}.`,
+      );
+    } else if (sparen.bedrag > 0) {
+      inzichten.push(`Je spaart ${euro(sparen.bedrag)}, dat is ${pct(sparen.bedrag, inkomen)}% van je inkomen. Mooi.`);
+    }
+  }
+  if (zonder.length) inzichten.push(
+      zonder.length === 1
+        ? `${zonder[0].emoji} ${zonder[0].name} telt nog nergens mee, omdat het geen groep heeft.`
+        : `${zonder.length} potjes tellen nog nergens mee, omdat ze geen groep hebben.`,
+    );
+
+  const vraag = encodeURIComponent("Hoe krijg ik mijn verdeling nodig, wil en sparen dichter bij 50/30/20?");
+
+  return (
+    <Blad
+      open={open}
+      onOpenChange={onOpenChange}
+      titel="Nodig, wil, sparen"
+      beschrijving={
+        lopend
+          ? "Deze maand telt elk potje voor zijn limiet, of voor wat er al uitging als dat meer is."
+          : `${maandNaam(maand)}: wat er echt uitging.`
+      }
+    >
+      <div className="space-y-5">
+        <p className="rounded-xl bg-kb-sunk/60 px-3.5 py-3 text-xs leading-relaxed text-kb-ink2">
+          De 50/30/20-richtlijn: ongeveer de helft van je inkomen naar wat nodig is (wonen, boodschappen, vervoer),
+          30% naar wat je wilt (uit eten, kleding, leuke dingen) en 20% naar sparen of aflossen. Een richtlijn, geen regel.
+        </p>
+
+        {inzichten.length > 0 && (
+          <ul className="space-y-2">
+            {inzichten.map((t) => (
+              <li key={t} className="flex gap-2 text-sm">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-kb-accent-ink" />
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {groepen.map((g) => (
+          <section key={g.id}>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <span className={`h-2.5 w-2.5 rounded-full ${KLEUR[g.id]}`} aria-hidden /> {g.titel}
+              </p>
+              <p className="text-sm font-semibold tabular-nums">{euro(g.bedrag)}</p>
+            </div>
+            {inkomen > 0 && (
+              <p className="mt-0.5 text-xs text-kb-ink2">
+                {pct(g.bedrag, inkomen)}% van je inkomen · richtlijn {Math.round(g.richtlijn * 100)}% ({euro(g.richtBedrag)})
+                {Math.abs(g.verschil) >= 1 && (
+                  <span className={g.id === "sparen" ? (g.verschil < 0 ? "text-kb-warn-ink" : "text-kb-good-ink") : g.verschil > 0 ? "text-kb-warn-ink" : "text-kb-good-ink"}>
+                    {" "}
+                    · {euro(Math.abs(g.verschil))} {g.verschil > 0 ? "erboven" : "eronder"}
+                  </span>
+                )}
+              </p>
+            )}
+            <ul className="mt-2 divide-y divide-kb-line rounded-xl border border-kb-line">
+              {g.lijst.map((p) => (
+                <PotRegel key={p.id} p={p} telt={telt(p)} uit={uitgaven[p.id] ?? 0} lopend={lopend} />
+              ))}
+              {g.id === "sparen" && nietVerdeeld > 0 && (
+                <li className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <span className="text-kb-ink2">Niet in een potje verdeeld</span>
+                  <span className="tabular-nums">{euro(nietVerdeeld)}</span>
+                </li>
+              )}
+              {g.lijst.length === 0 && !(g.id === "sparen" && nietVerdeeld > 0) && (
+                <li className="px-3 py-2.5 text-sm text-kb-ink3">Nog geen potjes in deze groep</li>
+              )}
+            </ul>
+          </section>
+        ))}
+
+        {zonder.length > 0 && (
+          <section>
+            <p className="text-sm font-semibold">Geen groep</p>
+            <ul className="mt-2 divide-y divide-kb-line rounded-xl border border-kb-line">
+              {zonder.map((p) => (
+                <PotRegel key={p.id} p={p} telt={telt(p)} uit={uitgaven[p.id] ?? 0} lopend={lopend} />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <Knop variant="rustig" onClick={anders}>
+            Anders indelen
+          </Knop>
+          <Link
+            to={`/budget/ai?vraag=${vraag}`}
+            className="flex min-h-[2.75rem] items-center justify-center rounded-xl bg-kb-accent px-3 text-sm font-medium text-white"
+          >
+            Vraag Korda AI
+          </Link>
+        </div>
+      </div>
+    </Blad>
+  );
+}
+
+function PotRegel({ p, telt, uit, lopend }: { p: BudgetPot; telt: number; uit: number; lopend: boolean }) {
+  const { euro } = useBedragen();
+  return (
+    <li>
+      <Link to={`/budget/potjes/${p.id}`} className="flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-kb-sunk/50">
+        <span className="text-base" aria-hidden>
+          {p.emoji}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate">{p.name}</span>
+          <span className="block text-xs text-kb-ink2">
+            {lopend
+              ? `${euro(uit)} van ${euro(p.monthly_limit)} uitgegeven${p.kind === "vast" ? " · vast" : ""}`
+              : `limiet ${euro(p.monthly_limit)}${p.kind === "vast" ? " · vast" : ""}`}
+          </span>
+        </span>
+        <span className="tabular-nums">{euro(telt)}</span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-kb-ink3" />
+      </Link>
+    </li>
   );
 }
