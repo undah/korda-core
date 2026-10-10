@@ -242,6 +242,7 @@ export type KordaActie =
   | { type: "wijzig_potje"; potId: string; velden: Record<string, unknown>; omschrijving: string }
   | { type: "archiveer_potje"; potId: string; omschrijving: string }
   | { type: "deel_in"; txIds: string[]; potId: string | null; nieuwPot?: string | null; soort: TxSoort | null; regels: string[]; omschrijving: string }
+  | { type: "haal_uit"; txIds: string[]; regels: string[]; omschrijving: string }
   | {
       type: "splits";
       txId: string;
@@ -321,6 +322,19 @@ export function useVoerKordaVoorstelUit() {
             );
           }
           if (eerder) melden.push(`Er volgden ${eerder} eerdere betalingen mee.`);
+          break;
+        }
+        case "haal_uit": {
+          // Same as choosing "Nog niet ingedeeld" in the transaction sheet: no pot, no split, no kind.
+          for (let i = 0; i < a.txIds.length; i += 100) {
+            const deel = a.txIds.slice(i, i + 100);
+            await ok(supabase.from("budget_tx_splits").delete().in("transaction_id", deel));
+            await ok(
+              supabase.from("budget_transactions").update({ pot_id: null, soort: null, pot_status: "unassigned" }).in("id", deel),
+            );
+          }
+          const weg = [...new Set(a.regels.map(normaliseerTegenpartij).filter(Boolean))];
+          if (weg.length) await ok(supabase.from("budget_rules").delete().eq("household_id", p.householdId).in("counterparty", weg));
           break;
         }
         case "splits": {
