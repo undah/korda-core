@@ -454,12 +454,20 @@ export function inkomenPerMaand(transacties: TxMetDelen[], nu = new Date()) {
  * income after needs and wants counts towards saving: money not spent is money
  * kept, wherever it ends up.
  */
-export function verdeling(potjes: BudgetPot[], uitgaven: Record<string, number>, inkomen: number) {
+/**
+ * Needs / wants / saving per group. With `plan` (the month that's still
+ * running) each pot counts for what it's meant to take: its limit, or what
+ * it already took if that's more. Otherwise a mortgage due on the 28th counts
+ * as nothing on the 10th, and everything not paid yet looks like saving.
+ * Without `plan` (a month that's over) it's what was actually spent.
+ */
+export function verdeling(potjes: BudgetPot[], uitgaven: Record<string, number>, inkomen: number, opties: { plan?: boolean } = {}) {
   const per: Record<PotGroep | "zonder", number> = { nodig: 0, wil: 0, sparen: 0, zonder: 0 };
   const budget: Record<PotGroep | "zonder", number> = { nodig: 0, wil: 0, sparen: 0, zonder: 0 };
   for (const p of potjes) {
     const g = p.groep ?? "zonder";
-    per[g] += uitgaven[p.id] ?? 0;
+    const uit = uitgaven[p.id] ?? 0;
+    per[g] += opties.plan ? Math.max(p.monthly_limit, uit) : uit;
     budget[g] += p.monthly_limit;
   }
   const uitgegeven = per.nodig + per.wil + per.sparen + per.zonder;

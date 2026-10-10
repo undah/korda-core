@@ -320,9 +320,10 @@ const KLEUR: Record<PotGroep, string> = { nodig: "bg-kb-nodig", wil: "bg-kb-wil"
 const pct = (deel: number, geheel: number) => (geheel > 0 ? Math.round((deel / geheel) * 100) : 0);
 
 /**
- * How this month's spending splits into needs, wants and saving, measured
- * against income (this month's, or last month's when salary hasn't come in
- * yet). Without income it shows the split of spending, and asks to mark it.
+ * How income splits into needs, wants and saving. This month: what the pots
+ * are set to take (or more, where they're already over). A month that's
+ * over: what was actually spent. Without income it shows the split alone,
+ * and asks to mark it.
  */
 export function VerdelingKaart({
   householdId,
@@ -354,7 +355,8 @@ export function VerdelingKaart({
     const vorige = inkomenVan(tx.filter((t) => t.booked_on < start));
     return { inkomen: vorige, bron: vorige > 0 ? `van ${maandNaam(verschuifMaand(maand, -1)).split(" ")[0]}` : "" };
   }, [tx, recent, maand]);
-  const v = useMemo(() => verdeling(potjes, uitgaven, inkomen), [potjes, uitgaven, inkomen]);
+  const lopend = isZelfdeMaand(maand, huidigeMaand());
+  const v = useMemo(() => verdeling(potjes, uitgaven, inkomen, { plan: lopend }), [potjes, uitgaven, inkomen, lopend]);
   if (potjes.length === 0) return null;
 
   const geheel = inkomen > 0 ? Math.max(inkomen, v.uitgegeven) : v.uitgegeven;
@@ -374,6 +376,9 @@ export function VerdelingKaart({
           </p>
         )}
       </div>
+      <p className="mt-1 text-xs text-kb-ink3">
+        {lopend ? "Gepland: wat je potjes deze maand mogen opmaken (of al meer opmaakten)" : "Wat er die maand echt uitging"}
+      </p>
 
       {/* One bar: each group's share of income (or of spending); the track is what's left. */}
       <div
@@ -400,7 +405,7 @@ export function VerdelingKaart({
               <span className="min-w-0 flex-1">
                 <span className="font-medium">{g.titel}</span>
                 <span className="block text-xs text-kb-ink2">
-                  {g.id === "sparen" && inkomen > 0 ? "Gespaard plus nog niet uitgegeven" : g.uitleg}
+                  {g.id === "sparen" && inkomen > 0 ? (lopend ? "Spaarpotjes plus wat niet verdeeld is" : "Gespaard plus niet uitgegeven") : g.uitleg}
                 </span>
               </span>
               <span className="text-right tabular-nums">

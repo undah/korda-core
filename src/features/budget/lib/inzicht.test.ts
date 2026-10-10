@@ -258,6 +258,18 @@ describe("verdeling", () => {
     expect(v.totaalBudget).toBe(1550);
     expect(v.zonderGroep.map((p) => p.id)).toEqual(["los"]);
   });
+
+  it("counts a running month at what the pots are set to take", () => {
+    const potjes = [
+      pot({ id: "hypotheek", monthly_limit: 1275, kind: "vast", groep: "nodig" }),
+      pot({ id: "boodschappen", monthly_limit: 400, groep: "nodig" }),
+      pot({ id: "uit", monthly_limit: 150, groep: "wil" }),
+    ];
+    // The 10th: mortgage not paid yet, groceries partly, eating out already over.
+    const v = verdeling(potjes, { boodschappen: 98, uit: 180 }, 4000, { plan: true });
+    expect(v.per).toEqual({ nodig: 1675, wil: 180, sparen: 0, zonder: 0 });
+    expect(v.over).toBe(4000 - 1855);
+  });
 });
 
 describe("inkomenPerMaand", () => {
