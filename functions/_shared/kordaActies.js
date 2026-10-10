@@ -88,11 +88,16 @@ export const TOOLS = [
   {
     name: 'haal_uit_potje',
     description:
-      'Stel voor betalingen weer uit hun potje te halen, zodat ze terug bij "nog in te delen" staan. Werkt ook voor betalingen die als inkomen of overboeking gemarkeerd zijn, of die over potjes verdeeld zijn.',
+      'Stel voor betalingen weer uit hun potje te halen, zodat ze terug bij "nog in te delen" staan. Werkt ook voor betalingen die als inkomen of overboeking gemarkeerd zijn, of die over potjes verdeeld zijn. ' +
+      'Kies één manier: losse betalingen met transacties, of in één keer met alles of potjes (dan ook betalingen ouder dan drie maanden), eventueel begrensd met vanaf en tot.',
     input_schema: {
       type: 'object',
       properties: {
-        transacties: { type: 'array', items: { type: 'string' }, description: 'Codes van de betalingen, zoals t4 en t12.' },
+        transacties: { type: 'array', items: { type: 'string' }, description: 'Codes van losse betalingen, zoals t4 en t12.' },
+        alles: { type: 'boolean', description: 'Alle ingedeelde betalingen die deze persoon kan zien, bijvoorbeeld om opnieuw te beginnen.' },
+        potjes: { type: 'array', items: { type: 'string' }, description: 'Alles uit deze potjes (codes zoals p3).' },
+        vanaf: { type: 'string', description: 'Alleen betalingen vanaf deze datum (JJJJ-MM-DD), bij alles of potjes.' },
+        tot: { type: 'string', description: 'Alleen betalingen tot en met deze datum (JJJJ-MM-DD), bij alles of potjes.' },
         vergeet_regel: {
           type: 'boolean',
           description: 'Ook de automatische regel voor deze tegenpartij(en) weghalen, zodat nieuwe betalingen er niet meer vanzelf in komen.',
@@ -207,7 +212,7 @@ const potLabel = (p) => `${p.emoji} ${p.name}`;
  * ctx: { alias (p-code → pot id), potten, txAlias (t-code → payment), splitIds, userId }
  * Returns { acties: [...], notities: [...] } — notities say what was left out and why.
  */
-export function maakVoorstel(toolCalls, ctx) {
+export async function maakVoorstel(toolCalls, ctx) {
   const potVan = (code) => {
     const id = ctx.alias.get(String(code ?? '').trim());
     return ctx.potten.find((p) => p.id === id) ?? null;
@@ -356,32 +361,60 @@ export function maakVoorstel(toolCalls, ctx) {
         break;
       }
       case 'haal_uit_potje': {
-        const codes = Array.isArray(i.transacties) ? i.transacties.slice(0, 300) : [];
-        const gevonden = codes.map((c) => ctx.txAlias.get(String(c).trim())).filter(Boolean);
-        const uniek = [...new Map(gevonden.map((t) => [t.id, t])).values()];
-        if (codes.length > uniek.length) notities.push(`${codes.length - uniek.length} betaling(en) kon ik niet vinden.`);
-        const inZicht = new Set(ctx.potten.map((p) => p.id));
-        const betalingen = [];
-        let al = 0;
-        let nietVanJou = 0;
-        for (const t of uniek) {
-          const gesplitst = ctx.splitIds.has(t.id);
-          if (!t.pot_id && !t.soort && !gesplitst) al++;
-          // A split from an account you don't fully see, or a pot you can't see: not yours to undo.
-          else if ((gesplitst && !ctx.splitsbaar?.has(t.id)) || (t.pot_id && !inZicht.has(t.pot_id))) nietVanJou++;
-          else betalingen.push(t);
+        const datum = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v ?? '')) ? v : null);
+        const potCodes = Array.isArray(i.potjes) ? i.potjes.map((c) => String(c).trim()) : [];
+        let betalingen = [];
+        let bereik = '';
+        if (i.alles || potCodes.length) {
+          // In one go, over all history: the server finds them, not the model.
+          const potjes = potCodes.map(potVan);
+          if (potjes.some((p) => !p)) {
+            notities.push(`Potje ${potCodes[potjes.indexOf(null)]} ken ik niet.`);
+            break;
+          }
+          const vanaf = datum(i.vanaf);
+          const tot = datum(i.tot);
+          if (!ctx.zoekIngedeeld) break;
+          betalingen = (await ctx.zoekIngedeeld({ potten: i.alles ? null : new Set(potjes.map((p) => p.id)), vanaf, tot })).slice(0, 5000);
+          bereik = vanaf && tot ? ` van ${vanaf} tot en met ${tot}` : vanaf ? ` vanaf ${vanaf}` : tot ? ` tot en met ${tot}` : '';
+          if (!betalingen.length) {
+            notities.push(`Er staat${bereik} niets ingedeeld${i.alles ? '' : ' in die potjes'}.`);
+            break;
+          }
+        } else {
+          const codes = Array.isArray(i.transacties) ? i.transacties.slice(0, 300) : [];
+          const gevonden = codes.map((c) => ctx.txAlias.get(String(c).trim())).filter(Boolean);
+          const uniek = [...new Map(gevonden.map((t) => [t.id, t])).values()];
+          if (codes.length > uniek.length) notities.push(`${codes.length - uniek.length} betaling(en) kon ik niet vinden.`);
+          const inZicht = new Set(ctx.potten.map((p) => p.id));
+          let al = 0;
+          let nietVanJou = 0;
+          for (const t of uniek) {
+            const gesplitst = ctx.splitIds.has(t.id);
+            if (!t.pot_id && !t.soort && !gesplitst) al++;
+            // A split from an account you don't fully see, or a pot you can't see: not yours to undo.
+            else if ((gesplitst && !ctx.splitsbaar?.has(t.id)) || (t.pot_id && !inZicht.has(t.pot_id))) nietVanJou++;
+            else betalingen.push({ ...t, gesplitst });
+          }
+          if (al) notities.push(`${al} betaling(en) stonden al bij nog in te delen.`);
+          if (nietVanJou) notities.push(`${nietVanJou} betaling(en) zitten in iets wat je niet helemaal ziet; die laat ik staan.`);
+          if (!betalingen.length) break;
         }
-        if (al) notities.push(`${al} betaling(en) stonden al bij nog in te delen.`);
-        if (nietVanJou) notities.push(`${nietVanJou} betaling(en) zitten in iets wat je niet helemaal ziet; die laat ik staan.`);
-        if (!betalingen.length) break;
 
         const potNaam = new Map(ctx.potten.map((p) => [p.id, potLabel(p)]));
         const waar = new Map();
         for (const t of betalingen) {
-          const w = t.soort === 'inkomen' ? 'inkomen' : t.soort === 'overboeking' ? 'overboeking' : ctx.splitIds.has(t.id) ? 'verdeeld' : potNaam.get(t.pot_id);
+          const w = t.soort === 'inkomen' ? 'inkomen' : t.soort === 'overboeking' ? 'overboeking' : t.gesplitst ? 'verdeeld' : potNaam.get(t.pot_id);
           waar.set(w, (waar.get(w) ?? 0) + 1);
         }
         const namen = [...new Set(betalingen.map((t) => t.counterparty ?? t.description ?? 'onbekend'))];
+        // Where they come from, biggest first, with counts once it's more than a handful.
+        const uit = [...waar.entries()].sort((a, b) => b[1] - a[1]);
+        const uitTekst =
+          uit
+            .slice(0, 4)
+            .map(([w, n]) => (betalingen.length > 5 ? `${w} ${n}` : w))
+            .join(', ') + (uit.length > 4 ? `, en ${uit.length - 4} meer` : '');
         const regels = i.vergeet_regel
           ? [...new Map(betalingen.filter((t) => t.counterparty).map((t) => [norm(t.counterparty), t.counterparty])).values()]
           : [];
@@ -389,9 +422,9 @@ export function maakVoorstel(toolCalls, ctx) {
           type: 'haal_uit',
           txIds: betalingen.map((t) => t.id),
           regels,
-          omschrijving: `${betalingen.length} ${betalingen.length === 1 ? 'betaling' : 'betalingen'} terug naar nog in te delen (${namen.slice(0, 3).join(', ')}${
-            namen.length > 3 ? ', …' : ''
-          }; uit ${[...waar.keys()].join(', ')})${regels.length ? `, en ${regels.slice(0, 2).join(', ')}${regels.length > 2 ? ', …' : ''} voortaan niet meer automatisch` : ''}`,
+          omschrijving: `${i.alles ? 'Alles: ' : ''}${betalingen.length} ${betalingen.length === 1 ? 'betaling' : 'betalingen'}${bereik} terug naar nog in te delen (${
+            betalingen.length > 5 ? `uit ${uitTekst}` : `${namen.slice(0, 3).join(', ')}${namen.length > 3 ? ', …' : ''}; uit ${uitTekst}`
+          })${regels.length ? `, en ${regels.slice(0, 2).join(', ')}${regels.length > 2 ? ', …' : ''} voortaan niet meer automatisch` : ''}`,
         });
         break;
       }

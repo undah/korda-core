@@ -334,7 +334,9 @@ export function useVoerKordaVoorstelUit() {
             );
           }
           const weg = [...new Set(a.regels.map(normaliseerTegenpartij).filter(Boolean))];
-          if (weg.length) await ok(supabase.from("budget_rules").delete().eq("household_id", p.householdId).in("counterparty", weg));
+          for (let i = 0; i < weg.length; i += 100) {
+            await ok(supabase.from("budget_rules").delete().eq("household_id", p.householdId).in("counterparty", weg.slice(i, i + 100)));
+          }
           break;
         }
         case "splits": {

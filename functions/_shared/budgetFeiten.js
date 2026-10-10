@@ -190,5 +190,38 @@ export async function verzamelFeiten(env, householdId, userId = null) {
     })
     .join('\n');
 
-  return { tekst, alias, transacties, txAlias, potten: pots, splitIds, splitsbaar, doelAlias, doelen: doelenInZicht, gespaard };
+  /**
+   * Every sorted payment (in a pot, split, or marked income/transfer) this
+   * person may take back out, over all history, not just the last three
+   * months. Optional: only these pots, only between these dates.
+   */
+  async function zoekIngedeeld({ potten: alleen = null, vanaf: van = null, tot = null } = {}) {
+    const rijen = [];
+    for (let vanaf = 0; vanaf < 20000; vanaf += 1000) {
+      const pagina =
+        (await db(
+          env,
+          `budget_transactions?household_id=eq.${q(householdId)}` +
+            (van ? `&booked_on=gte.${van}` : '') +
+            (tot ? `&booked_on=lte.${tot}` : '') +
+            `&select=id,account_id,amount,counterparty,description,booked_on,soort,pot_id,splits:budget_tx_splits(pot_id)` +
+            `&order=booked_on.desc,id&limit=1000&offset=${vanaf}`,
+        )) ?? [];
+      rijen.push(...pagina);
+      if (pagina.length < 1000) break;
+    }
+    const eigenRekening = (t) => {
+      const r = rek.get(t.account_id);
+      return !!r && (r.visibility === 'shared' || (!!userId && r.owner_id === userId));
+    };
+    return rijen
+      .map((t) => ({ ...t, amount: Number(t.amount), gesplitst: (t.splits ?? []).length > 0 }))
+      .filter((t) => t.pot_id || t.soort || t.gesplitst)
+      .filter(zichtbaarTx)
+      // Same as one by one: a pot you can't see, or a split on an account you don't fully see, stays.
+      .filter((t) => (t.pot_id ? potIds.has(t.pot_id) : true) && (t.gesplitst ? eigenRekening(t) : true))
+      .filter((t) => !alleen || alleen.has(t.pot_id) || (t.splits ?? []).some((s) => alleen.has(s.pot_id)));
+  }
+
+  return { tekst, alias, transacties, txAlias, potten: pots, splitIds, splitsbaar, doelAlias, doelen: doelenInZicht, gespaard, zoekIngedeeld };
 }
