@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { Link } from "react-router-dom";
 import { Sparkles, RotateCw } from "lucide-react";
 import { toast } from "sonner";
@@ -69,9 +70,10 @@ export default function TrackerDashboard() {
     try {
       const cutoff7 = formatISODate(subDays(new Date(), 7));
       const recentCheckins = checkins.filter(c => c.log_date >= cutoff7);
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/tracker/weekly-summary", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
         body: JSON.stringify({ checkins: recentCheckins, journal: journalEntries, goal }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -6,6 +6,7 @@
 // anyone who wants to read what each app does.
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useIsAdmin, useMijnApps } from "@/auth/beheerder";
 
 type AppId = "trading" | "tracker" | "crm" | "outreach" | "budget";
 
@@ -287,7 +288,7 @@ const CSS = `
 
   /* Quick launch: one tile per app. */
   .suite-launch { position: relative; z-index: 1; max-width: 1300px; margin: 0 auto; padding: 1.5rem 4rem 3rem; }
-  .suite-launch-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+  .suite-launch-grid { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 3px; }
   .suite-tile { --c: 232,230,225; position: relative; display: flex; flex-direction: column; gap: 0.9rem; padding: 1.5rem 1.4rem 1.3rem; background: #0e0e10; color: inherit; text-decoration: none; overflow: hidden; transition: background 0.25s, transform 0.3s cubic-bezier(0.16,1,0.3,1); }
   .suite-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(var(--c),0.55); opacity: 0.6; transition: opacity 0.25s; }
   .suite-tile:hover, .suite-tile:focus-visible { background: rgba(var(--c),0.07); transform: translateY(-3px); outline: none; }
@@ -418,8 +419,17 @@ const CSS = `
   }
 `;
 
+/** Outreach and CRM are given per account (supabase/suite_toegang.sql); without them you see three apps. */
+const BEPERKT: AppId[] = ["crm", "outreach"];
+const TELWOORD = ["Zero", "One", "Two", "Three", "Four", "Five", "Six"];
+
 export default function SuiteHome() {
-  const [laatste] = useState(leesLaatste);
+  const mijnApps = useMijnApps();
+  const admin = useIsAdmin() === true;
+  const apps = APPS.filter((a) => !BEPERKT.includes(a.id) || mijnApps?.has(a.id as "crm" | "outreach"));
+  const alles = apps.length === APPS.length;
+  const [opgeslagen] = useState(leesLaatste);
+  const laatste = opgeslagen && apps.some((a) => a.id === opgeslagen.id) ? opgeslagen : null;
 
   // The app you'll most likely open next: fetch it once the page is idle.
   useEffect(() => {
@@ -465,6 +475,7 @@ export default function SuiteHome() {
             <a href="#apps">Apps</a>
             <Link to="/about">About</Link>
             <Link to="/pricing">Pricing</Link>
+            {admin && <Link to="/admin">Accounts</Link>}
           </div>
         </nav>
 
@@ -473,10 +484,10 @@ export default function SuiteHome() {
           <h1 className="suite-h1 suite-anim-2">
             One account.
             <br />
-            Five <em>apps.</em>
+            {TELWOORD[apps.length]} <em>apps.</em>
           </h1>
           <p className="suite-sub suite-anim-3">
-            Built for people who measure what matters: trades, body, sales, leads and the household budget. One login
+            Built for people who measure what matters: {alles ? "trades, body, sales, leads and the household budget" : "trades, body and the household budget"}. One login
             opens all of them.
           </p>
           {laatste && (
@@ -487,8 +498,8 @@ export default function SuiteHome() {
         </section>
 
         <section className="suite-launch suite-anim-4" id="apps" aria-label="Open an app">
-          <div className="suite-launch-grid">
-            {APPS.map((a) => (
+          <div className="suite-launch-grid" style={{ ["--n" as string]: apps.length }}>
+            {apps.map((a) => (
               <Link reloadDocument={a.eigenPagina} key={a.id} to={a.to} className={`suite-tile suite-tile-${a.id}`} onClick={() => onthoud(a.id)} {...vooruit(a)}>
                 {a.icon(36)}
                 <span className="suite-tile-tekst">
@@ -513,7 +524,7 @@ export default function SuiteHome() {
 
         <section className="suite-cards-section">
           <div className="suite-cards-grid">
-            {APPS.map((a) => (
+            {apps.map((a) => (
               <Link reloadDocument={a.eigenPagina} key={a.id} to={a.to} className={`suite-card suite-card-${a.id}`} onClick={() => onthoud(a.id)} {...vooruit(a)}>
                 <div className="suite-card-top-line" />
                 <div>

@@ -10,6 +10,7 @@ const SuiteAbout = lazy(() => import("./pages/SuiteAbout"));
 const SuitePricing = lazy(() => import("./pages/SuitePricing"));
 import SuiteHome from "./pages/SuiteHome";
 
+const SuiteAdmin = lazy(() => import("./pages/SuiteAdmin"));
 const KordaCRM = lazy(() => import("./pages/KordaCRM"));
 const CRMLayout = lazy(() => import("./features/crm/components/CRMLayout"));
 const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
@@ -91,6 +92,7 @@ const TrackerStrava = lazy(() => import("./pages/tracker/TrackerStrava"));
 const SessionLog = lazy(() => import("./pages/SessionLog"));
 const Charting = lazy(() => import("./pages/Charting"));
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { AdminRoute, AppToegangRoute } from "./auth/beheerder";
 
 
 const queryClient = new QueryClient({
@@ -143,6 +145,11 @@ function AnimatedRoutes() {
           <Route path="/tracker/login" element={<TrackerLogin />} />
           <Route path="/demo" element={<Demo />} />
 
+          {/* Suite admin: accounts and app access — admins only (and checked again by /api/admin) */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<SuiteAdmin />} />
+          </Route>
+
           {/* Tracker app — protected, own layout */}
           <Route element={<ProtectedRoute />}>
             <Route element={<TrackerLayout />}>
@@ -194,7 +201,8 @@ function AnimatedRoutes() {
             <Route path="/settings"    element={<Settings />} />
           </Route>
 
-          {/* KordaAI Training */}
+          {/* KordaAI Training — the suite's own people only */}
+          <Route element={<AppToegangRoute app="training" />}>
           <Route element={<TrainingLayout />}>
             <Route path="/training/new"                  element={<TrainingNew />} />
             <Route path="/training/history"              element={<TrainingHistory />} />
@@ -207,11 +215,14 @@ function AnimatedRoutes() {
             <Route path="/training/chat"               element={<TrainingChat />} />
           </Route>
 
+          </Route>
+
           {/* Korda Outreach — public landing + sign-in */}
           <Route path="/outreach" element={<KordaOutreach />} />
 
-          {/* Korda Outreach — protected console */}
+          {/* Korda Outreach — protected console, the suite's own people only */}
           <Route element={<ProtectedRoute />}>
+          <Route element={<AppToegangRoute app="outreach" />}>
             <Route element={<OutreachLayout />}>
               <Route path="/outreach/leads" element={<OutreachLeads />} />
               <Route path="/outreach/niches" element={<OutreachNiches />} />
@@ -232,16 +243,20 @@ function AnimatedRoutes() {
             </Route>
           </Route>
 
+          </Route>
+
           {/* KordaCRM — public landing */}
           <Route path="/crm" element={<KordaCRM />} />
 
-          {/* KordaCRM — protected app */}
+          {/* KordaCRM — protected app, the suite's own people only */}
+          <Route element={<AppToegangRoute app="crm" />}>
           <Route element={<CRMLayout />}>
             <Route path="/crm/dashboard" element={<CRMDashboard />} />
             <Route path="/crm/log"       element={<CRMLog />} />
             <Route path="/crm/leads"     element={<CRMLeads />} />
             <Route path="/crm/week"      element={<CRMWeek />} />
             <Route path="/crm/scripts"   element={<CRMScripts />} />
+          </Route>
           </Route>
 
           {/* Fallback */}

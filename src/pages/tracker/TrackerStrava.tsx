@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { createPortal } from "react-dom";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
@@ -415,9 +416,10 @@ export default function TrackerStrava() {
     try {
       const cutoff = formatISODate(subDays(new Date(), aiRange));
       const recentRuns = activities.filter(a => isRun(a) && a.start_date_local?.slice(0, 10) >= cutoff);
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/tracker/ai-summary", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
         body: JSON.stringify({ runs: recentRuns, range: `${aiRange} days` }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

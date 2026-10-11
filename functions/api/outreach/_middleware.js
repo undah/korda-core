@@ -89,6 +89,24 @@ export async function onRequest(context) {
   const user = await res.json().catch(() => null);
   if (!user?.id) return unauthorized('invalid or expired session');
 
+  // A session is not enough: anyone can make a Korda account now (KordaBudget's
+  // sign-up). Outreach acts on the crawler and the sending domain, so only the
+  // accounts given Outreach (korda_app_toegang, supabase/suite_toegang.sql) get in.
+  // Fails closed: if that table can't be read, nobody does.
+  let toegang = false;
+  try {
+    const r = await fetch(
+      `${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/korda_app_toegang?user_id=eq.${encodeURIComponent(user.id)}&app=eq.outreach&select=user_id`,
+      { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } },
+    );
+    toegang = r.ok && ((await r.json().catch(() => [])) ?? []).length > 0;
+  } catch {
+    toegang = false;
+  }
+  if (!toegang) {
+    return Response.json({ error: 'Forbidden: Outreach is not available to this account' }, { status: 403 });
+  }
+
   // Downstream functions can read who is acting without re-verifying.
   context.data = { ...(context.data ?? {}), userId: user.id, userEmail: user.email ?? null };
   return next();
