@@ -44,6 +44,20 @@ export default function BudgetLogin() {
     document.body.style.background = "#f3f3ef";
   }, []);
 
+  // Back from a link that didn't work (#error=…&error_code=otp_expired): say so, then tidy the address.
+  const [linkFout, setLinkFout] = useState<string | null>(null);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.hash.slice(1));
+    const code = p.get("error_code") ?? p.get("error");
+    if (!code) return;
+    setLinkFout(
+      code === "otp_expired"
+        ? "Die link is al gebruikt of verlopen. Vraag hieronder een nieuwe aan; de code uit de mail werkt ook."
+        : "Inloggen met die link lukte niet. Vraag hieronder een nieuwe aan.",
+    );
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
+
   // Signed in (from the link, the code, or another Korda app): straight in.
   useEffect(() => {
     if (user) navigate(naar, { replace: true });
@@ -117,6 +131,12 @@ export default function BudgetLogin() {
             "Vul je e-mailadres in. Je krijgt een mail met een link en een code, geen wachtwoord nodig. Nieuw? Dan maken we meteen je account."
           )}
         </p>
+
+        {linkFout && stap === "email" && (
+          <p role="alert" className="mt-5 rounded-xl border border-kb-warn/40 bg-kb-warn-soft px-4 py-3 text-sm text-kb-warn-ink">
+            {linkFout}
+          </p>
+        )}
 
         <Kaart className="mt-6 p-5">
           <form onSubmit={verstuur} className="space-y-4">

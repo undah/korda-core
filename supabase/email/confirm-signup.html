@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<title>Welkom bij KordaBudget</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f3ee;-webkit-text-size-adjust:100%;">
+<!-- Preview line in the inbox list. -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f4f3ee;">Je code is {{ .Token }}. Nog één tik en je account staat klaar.&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3ee;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:460px;">
+        <!-- Brand -->
+        <tr>
+          <td style="padding:0 4px 20px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align:middle;"><img src="https://kordacore.com/budget-icon-192.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;"></td>
+                <td style="vertical-align:middle;padding-left:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:17px;font-weight:600;color:#17181c;letter-spacing:-0.2px;">KordaBudget</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Card -->
+        <tr>
+          <td style="background:#fdfdfb;border:1px solid #e3e2dc;border-radius:20px;padding:32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <h1 style="margin:0 0 10px;font-size:24px;line-height:1.25;font-weight:600;color:#17181c;letter-spacing:-0.3px;">Welkom bij KordaBudget</h1>
+            <p style="margin:0 0 26px;font-size:15px;line-height:1.6;color:#55575e;">Nog één stap: bevestig dat dit jouw e-mailadres is. Daarna maak je je eerste potjes, alleen of samen met je partner.</p>
+
+            <!-- Button -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#3d3bd4" style="border-radius:12px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:block;padding:15px 20px;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">Account bevestigen</a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Code -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;">
+              <tr>
+                <td align="center" style="background:#ecebe5;border-radius:14px;padding:18px 12px;">
+                  <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#7c7e85;margin-bottom:8px;">Of gebruik deze code</div>
+                  <div style="font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:32px;font-weight:600;letter-spacing:8px;color:#17181c;">{{ .Token }}</div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- What's next -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:26px;border-top:1px solid #e3e2dc;">
+              <tr><td style="padding:18px 0 4px;font-size:13px;font-weight:600;color:#17181c;">Wat je straks doet</td></tr>
+              <tr><td style="padding:4px 0;font-size:14px;line-height:1.55;color:#55575e;">🪴&nbsp; Potjes maken voor boodschappen, wonen en leuke dingen</td></tr>
+              <tr><td style="padding:4px 0;font-size:14px;line-height:1.55;color:#55575e;">🤝&nbsp; Je partner uitnodigen met een code</td></tr>
+              <tr><td style="padding:4px 0;font-size:14px;line-height:1.55;color:#55575e;">✨&nbsp; Korda AI laten meedenken over je uitgaven</td></tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#7c7e85;text-align:center;">
+            De knop en de code werken één keer en verlopen na een uur.<br>
+            Geen account aangemaakt? Dan kun je deze mail negeren.<br><br>
+            KordaBudget · onderdeel van <a href="https://kordacore.com" style="color:#7c7e85;">Korda</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
