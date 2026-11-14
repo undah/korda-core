@@ -1,10 +1,10 @@
 // src/features/tracker/components/ProgressExport.tsx
 import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from "react";
-import { toBlob } from "html-to-image";
 import { useTrackerCheckins } from "@/features/tracker/hooks/useTrackerCheckins";
 import { ProgressExportCard } from "./ProgressExportCard";
 import { ProgressExportCardB } from "./ProgressExportCardB";
 import { shareOrDownloadBlob } from "@/features/tracker/lib/shareImage";
+import { renderCardToBlob } from "@/features/tracker/lib/renderExportCard";
 import type { WeighIn } from "@/features/tracker/lib/progress";
 import type { TrackerCheckin } from "@/features/tracker/types";
 
@@ -18,22 +18,20 @@ import type { TrackerCheckin } from "@/features/tracker/types";
 // Photos:  passed in as props — tracker_photos rows are per date AND per
 //          angle, so the caller picks the pair (TrackerPhotos already does).
 // CORS:    the `tracker-photos` bucket is public, which sends
-//          Access-Control-Allow-Origin: * — required for canvas export.
+//          Access-Control-Allow-Origin: * — required for canvas export:
+//          the photos are drawn straight onto the export canvas
+//          (lib/renderExportCard.ts explains why).
 // ───────────────────────────────────────────────────────────────────────
 
 const PREVIEW_MAX = 460; // px
 
 /** Both cards are 1080x1350, so the toggle only swaps which one renders into
- *  the shared capture pipeline. Backgrounds differ, hence the lookup. */
+ *  the shared capture pipeline. */
 export type ExportFormat = "clinical" | "ledger";
 const FORMATS: [ExportFormat, string][] = [
   ["clinical", "Clinical"],
   ["ledger", "Ledger"],
 ];
-const BACKDROP: Record<ExportFormat, string> = {
-  clinical: "#0a0e12",
-  ledger: "#07090c",
-};
 
 /** A check-in only qualifies as an endpoint if it has a body-fat reading. */
 function toWeighIn(c: TrackerCheckin): WeighIn | null {
@@ -111,18 +109,7 @@ export default function ProgressExport({
     setBusy(true);
     setError(null);
     try {
-      // Fonts must be resolved or the capture falls back to a system face.
-      await document.fonts.ready;
-      const blob = await toBlob(cardRef.current, {
-        width: 1080,
-        height: 1350,
-        pixelRatio: 1, // node is already 1080×1350
-        cacheBust: true,
-        backgroundColor: BACKDROP[format],
-        // The preview wrapper is transformed; the clone must not inherit it.
-        style: { transform: "none", transformOrigin: "top left" },
-      });
-      if (!blob) throw new Error("Could not render the image.");
+      const blob = await renderCardToBlob(cardRef.current, { width: 1080, height: 1350 });
       await shareOrDownloadBlob(blob, `kordatracker-progress-${format}-${pair.after.log_date}.png`);
     } catch (e) {
       setError((e as Error)?.message ?? "Export failed.");
