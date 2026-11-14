@@ -96,7 +96,9 @@ function PhotoB({ url, fallback }: { url?: string; fallback: string }) {
 
 /* Approved "Subtraction Ledger" styles, scoped under .ktexportB.
    Requires "Space Grotesk", "JetBrains Mono" and "Anton" — all three come from
-   the Google Fonts @import at the top of src/index.css. */
+   the Google Fonts @import at the top of src/index.css.
+   Export draws photos on their own layer (lib/renderExportCard.ts), so the
+   placeholder gradient is for empty slots only ([data-label]). */
 const css = `
 .ktexportB{
   --hi:#eef2f5;--mid:#8a97a3;--dim:#5b6772;--cyan:#22d3ee;
@@ -105,7 +107,8 @@ const css = `
 }
 .ktexportB *{box-sizing:border-box;margin:0;padding:0}
 .ktexportB .b-photos{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr}
-.ktexportB .photo{position:relative;height:100%;overflow:hidden;background:
+.ktexportB .photo{position:relative;height:100%;overflow:hidden}
+.ktexportB .photo[data-label]{background:
   radial-gradient(120% 90% at 30% 15%,rgba(120,140,160,.16),transparent 60%),
   linear-gradient(160deg,#1a2129 0%,#0c1015 100%)}
 .ktexportB .photo::after{content:attr(data-label);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.25em;color:rgba(255,255,255,.16);text-transform:uppercase}

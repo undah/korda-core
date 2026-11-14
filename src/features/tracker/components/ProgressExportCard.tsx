@@ -191,7 +191,10 @@ function Metric({
 
 /* Approved "Clinical Readout" styles, scoped under .ktexport.
    Requires "Space Grotesk" and "JetBrains Mono" — both are loaded from the
-   Google Fonts @import at the top of src/index.css. */
+   Google Fonts @import at the top of src/index.css.
+   Export draws photos on their own layer (lib/renderExportCard.ts), so nothing
+   may paint beneath a photo: the placeholder gradient is for empty slots only
+   ([data-label]) and the divider is a shadow in the gap, not a background. */
 const css = `
 .ktexport{
   --bg:#0a0e12;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.05);
@@ -207,8 +210,10 @@ const css = `
 .ktexport .a-eyebrow{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.3em;color:var(--mid);text-transform:uppercase;margin-top:6px}
 .ktexport .a-range{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--dim);text-align:right;line-height:1.7}
 .ktexport .a-range b{color:var(--hi);font-weight:500}
-.ktexport .a-photos{display:grid;grid-template-columns:1fr 1fr;gap:3px;height:660px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--line)}
-.ktexport .photo{position:relative;height:100%;overflow:hidden;background:
+.ktexport .a-photos{display:grid;grid-template-columns:1fr 1fr;gap:3px;height:660px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ktexport .photo{position:relative;height:100%;overflow:hidden}
+.ktexport .photo+.photo{box-shadow:-3px 0 0 var(--line)}
+.ktexport .photo[data-label]{background:
   radial-gradient(120% 90% at 30% 15%,rgba(120,140,160,.16),transparent 60%),
   linear-gradient(160deg,#1a2129 0%,#0c1015 100%)}
 .ktexport .photo::after{content:attr(data-label);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:.25em;color:rgba(255,255,255,.16);text-transform:uppercase}
